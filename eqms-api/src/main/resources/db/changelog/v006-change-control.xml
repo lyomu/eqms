@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <!-- Change Control module (Milestone 4). Regulated table: version + soft delete + audit cols. -->
+
+    <changeSet id="v006-001-change-controls" author="eqms">
+        <createTable tableName="change_controls">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_change_controls" nullable="false"/>
+            </column>
+            <column name="change_number" type="VARCHAR(40)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_change_controls_number"/>
+            </column>
+            <column name="title" type="VARCHAR(400)"><constraints nullable="false"/></column>
+            <column name="description" type="TEXT"/>
+            <column name="change_type" type="VARCHAR(20)"><constraints nullable="false"/></column>
+            <column name="status" type="VARCHAR(40)"><constraints nullable="false"/></column>
+            <column name="justification" type="TEXT"/>
+            <column name="effectiveness_check_required" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="target_implementation_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="implemented_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="closed_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="submitted_by" type="BIGINT"/>
+            <!-- regulated columns -->
+            <column name="version" type="INT" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="updated_by" type="BIGINT"/>
+            <column name="deleted_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+        <createIndex tableName="change_controls" indexName="ix_change_controls_status">
+            <column name="status"/>
+        </createIndex>
+        <createIndex tableName="change_controls" indexName="ix_change_controls_type">
+            <column name="change_type"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

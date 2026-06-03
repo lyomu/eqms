@@ -38,7 +38,7 @@
             GRANT SELECT, INSERT, UPDATE ON
                 sites, departments, roles, permissions, users, user_roles,
                 role_permissions, attachments, record_sequences,
-                documents, document_read_assignments
+                documents, document_read_assignments, change_controls
             TO ${app_role_name};
 
             -- Append-only audit trail: SELECT + INSERT only.
