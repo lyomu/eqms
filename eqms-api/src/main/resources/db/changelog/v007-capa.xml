@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <!-- CAPA module (Milestone 5): the CAPA record + its corrective/preventive action items,
+         plus the new CAPA permissions (granted to ADMIN/QA_MANAGER/AUTHOR). -->
+
+    <changeSet id="v007-001-capas" author="eqms">
+        <createTable tableName="capas">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_capas" nullable="false"/>
+            </column>
+            <column name="capa_number" type="VARCHAR(40)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_capas_number"/>
+            </column>
+            <column name="title" type="VARCHAR(400)"><constraints nullable="false"/></column>
+            <column name="description" type="TEXT"/>
+            <column name="source" type="VARCHAR(40)"><constraints nullable="false"/></column>
+            <column name="root_cause" type="TEXT"/>
+            <column name="status" type="VARCHAR(40)"><constraints nullable="false"/></column>
+            <column name="effectiveness_check_required" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="effectiveness_check_result" type="TEXT"/>
+            <column name="due_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="closed_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="submitted_by" type="BIGINT"/>
+            <column name="version" type="INT" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="updated_by" type="BIGINT"/>
+            <column name="deleted_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+        <createIndex tableName="capas" indexName="ix_capas_status"><column name="status"/></createIndex>
+    </changeSet>
+
+    <changeSet id="v007-002-capa-actions" author="eqms">
+        <createTable tableName="capa_actions">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_capa_actions" nullable="false"/>
+            </column>
+            <column name="capa_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="action_type" type="VARCHAR(20)"><constraints nullable="false"/></column>
+            <column name="description" type="TEXT"><constraints nullable="false"/></column>
+            <column name="assigned_to" type="BIGINT"/>
+            <column name="due_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="completed_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="version" type="INT" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="updated_by" type="BIGINT"/>
+            <column name="deleted_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="capa_actions" baseColumnNames="capa_id"
+                constraintName="fk_capa_actions_capa" referencedTableName="capas" referencedColumnNames="id"/>
+        <createIndex tableName="capa_actions" indexName="ix_capa_actions_capa"><column name="capa_id"/></createIndex>
+    </changeSet>
+
+    <changeSet id="v007-003-capa-permissions" author="eqms">
+        <comment>New CAPA permissions, granted to ADMIN (both), QA_MANAGER (approve), AUTHOR (create).</comment>
+        <sql dbms="postgresql"><![CDATA[
+            INSERT INTO permissions (code, description, version, created_at, updated_at) VALUES
+              ('CAPA_CREATE',  'Create and progress CAPA records', 0, now(), now()),
+              ('CAPA_APPROVE', 'Approve and close CAPA records',   0, now(), now());
+
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r JOIN permissions p ON p.code IN ('CAPA_CREATE','CAPA_APPROVE')
+            WHERE r.name = 'ADMIN';
+
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r JOIN permissions p ON p.code = 'CAPA_APPROVE'
+            WHERE r.name = 'QA_MANAGER';
+
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r JOIN permissions p ON p.code = 'CAPA_CREATE'
+            WHERE r.name = 'AUTHOR';
+        ]]></sql>
+        <rollback>
+            <sql dbms="postgresql">
+                DELETE FROM role_permissions WHERE permission_id IN
+                    (SELECT id FROM permissions WHERE code IN ('CAPA_CREATE','CAPA_APPROVE'));
+                DELETE FROM permissions WHERE code IN ('CAPA_CREATE','CAPA_APPROVE');
+            </sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

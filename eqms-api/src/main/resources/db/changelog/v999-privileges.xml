@@ -38,7 +38,8 @@
             GRANT SELECT, INSERT, UPDATE ON
                 sites, departments, roles, permissions, users, user_roles,
                 role_permissions, attachments, record_sequences,
-                documents, document_read_assignments, change_controls
+                documents, document_read_assignments, change_controls,
+                capas, capa_actions
             TO ${app_role_name};
 
             -- Append-only audit trail: SELECT + INSERT only.
