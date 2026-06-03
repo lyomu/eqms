@@ -39,7 +39,7 @@
                 sites, departments, roles, permissions, users, user_roles,
                 role_permissions, attachments, record_sequences,
                 documents, document_read_assignments, change_controls,
-                capas, capa_actions, deviations
+                capas, capa_actions, deviations, products
             TO ${app_role_name};
 
             -- Append-only audit trail: SELECT + INSERT only.
