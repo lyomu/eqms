@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <!-- Document Control module (Milestone 3). Regulated tables: version + soft delete + audit cols. -->
+
+    <changeSet id="v005-001-documents" author="eqms">
+        <createTable tableName="documents">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_documents" nullable="false"/>
+            </column>
+            <column name="document_number" type="VARCHAR(40)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_documents_number"/>
+            </column>
+            <column name="title" type="VARCHAR(400)"><constraints nullable="false"/></column>
+            <column name="document_type" type="VARCHAR(40)"><constraints nullable="false"/></column>
+            <column name="status" type="VARCHAR(40)"><constraints nullable="false"/></column>
+            <column name="content" type="TEXT"/>
+            <column name="major_version" type="INT" defaultValueNumeric="1"><constraints nullable="false"/></column>
+            <column name="effective_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="next_review_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="review_period_months" type="INT"/>
+            <column name="superseded_by_id" type="BIGINT"/>
+            <column name="submitted_by" type="BIGINT"/>
+            <!-- regulated columns -->
+            <column name="version" type="INT" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="updated_by" type="BIGINT"/>
+            <column name="deleted_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="documents" baseColumnNames="superseded_by_id"
+                constraintName="fk_documents_superseded_by"
+                referencedTableName="documents" referencedColumnNames="id"/>
+        <createIndex tableName="documents" indexName="ix_documents_status"><column name="status"/></createIndex>
+        <createIndex tableName="documents" indexName="ix_documents_type"><column name="document_type"/></createIndex>
+        <createIndex tableName="documents" indexName="ix_documents_next_review"><column name="next_review_date"/></createIndex>
+    </changeSet>
+
+    <changeSet id="v005-002-document-read-assignments" author="eqms">
+        <createTable tableName="document_read_assignments">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_document_read_assignments" nullable="false"/>
+            </column>
+            <column name="document_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="assigned_to" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="assigned_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="assigned_by" type="BIGINT"/>
+            <column name="acknowledged_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="version" type="INT" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="updated_by" type="BIGINT"/>
+            <column name="deleted_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="document_read_assignments" baseColumnNames="document_id"
+                constraintName="fk_read_assignments_document"
+                referencedTableName="documents" referencedColumnNames="id"/>
+        <createIndex tableName="document_read_assignments" indexName="ix_read_assignments_document">
+            <column name="document_id"/>
+        </createIndex>
+        <createIndex tableName="document_read_assignments" indexName="ix_read_assignments_assignee">
+            <column name="assigned_to"/>
+        </createIndex>
+        <sql dbms="postgresql">
+            CREATE UNIQUE INDEX uq_read_assignments_active ON document_read_assignments (document_id, assigned_to)
+            WHERE deleted_at IS NULL;
+        </sql>
+        <rollback><sql dbms="postgresql">DROP INDEX IF EXISTS uq_read_assignments_active;</sql></rollback>
+    </changeSet>
+
+</databaseChangeLog>

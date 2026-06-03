@@ -37,7 +37,8 @@
             -- Regulated MUTABLE tables: SELECT, INSERT, UPDATE (NO DELETE -> soft delete only).
             GRANT SELECT, INSERT, UPDATE ON
                 sites, departments, roles, permissions, users, user_roles,
-                role_permissions, attachments, record_sequences
+                role_permissions, attachments, record_sequences,
+                documents, document_read_assignments
             TO ${app_role_name};
 
             -- Append-only audit trail: SELECT + INSERT only.
