@@ -77,4 +77,53 @@ public class ElectronicSignature {
     protected ElectronicSignature() {
         // for JPA
     }
+
+    private ElectronicSignature(Builder b) {
+        this.recordType = b.recordType;
+        this.recordId = b.recordId;
+        this.userId = b.userId;
+        this.signerFullName = b.signerFullName;
+        this.signatureMeaning = b.signatureMeaning;
+        this.meaningStatement = b.meaningStatement;
+        this.signedAt = b.signedAt;
+        this.hmacSha256 = b.hmacSha256;
+        this.hmacKeyId = b.hmacKeyId;
+        this.ipAddress = b.ipAddress;
+        this.userAgent = b.userAgent;
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    /** Build a new signature. {@code SignatureService} is the only intended caller. */
+    public static final class Builder {
+        private String recordType;
+        private String recordId;
+        private Long userId;
+        private String signerFullName;
+        private SignatureMeaning signatureMeaning;
+        private String meaningStatement;
+        private Instant signedAt;
+        private String hmacSha256;
+        private String hmacKeyId;
+        private String ipAddress;
+        private String userAgent;
+
+        public Builder recordType(String v) { this.recordType = v; return this; }
+        public Builder recordId(String v) { this.recordId = v; return this; }
+        public Builder userId(Long v) { this.userId = v; return this; }
+        public Builder signerFullName(String v) { this.signerFullName = v; return this; }
+        public Builder signatureMeaning(SignatureMeaning v) { this.signatureMeaning = v; return this; }
+        public Builder meaningStatement(String v) { this.meaningStatement = v; return this; }
+        public Builder signedAt(Instant v) { this.signedAt = v; return this; }
+        public Builder hmacSha256(String v) { this.hmacSha256 = v; return this; }
+        public Builder hmacKeyId(String v) { this.hmacKeyId = v; return this; }
+        public Builder ipAddress(String v) { this.ipAddress = v; return this; }
+        public Builder userAgent(String v) { this.userAgent = v; return this; }
+
+        public ElectronicSignature build() {
+            return new ElectronicSignature(this);
+        }
+    }
 }
