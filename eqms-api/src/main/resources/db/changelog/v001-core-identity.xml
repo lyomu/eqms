@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <!-- ===== sites ===== -->
+    <changeSet id="v001-001-sites" author="eqms">
+        <createTable tableName="sites">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_sites" nullable="false"/>
+            </column>
+            <column name="code" type="VARCHAR(20)"><constraints nullable="false" unique="true" uniqueConstraintName="uq_sites_code"/></column>
+            <column name="name" type="VARCHAR(200)"><constraints nullable="false"/></column>
+            <column name="timezone" type="VARCHAR(64)" defaultValue="UTC"><constraints nullable="false"/></column>
+            <!-- regulated columns -->
+            <column name="version" type="INT" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="updated_by" type="BIGINT"/>
+            <column name="deleted_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+    </changeSet>
+
+    <!-- ===== departments ===== -->
+    <changeSet id="v001-002-departments" author="eqms">
+        <createTable tableName="departments">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_departments" nullable="false"/>
+            </column>
+            <column name="site_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="code" type="VARCHAR(20)"><constraints nullable="false"/></column>
+            <column name="name" type="VARCHAR(200)"><constraints nullable="false"/></column>
+            <column name="version" type="INT" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="updated_by" type="BIGINT"/>
+            <column name="deleted_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="departments" baseColumnNames="site_id"
+                constraintName="fk_departments_site"
+                referencedTableName="sites" referencedColumnNames="id"/>
+        <addUniqueConstraint tableName="departments" columnNames="site_id, code"
+                constraintName="uq_departments_site_code"/>
+    </changeSet>
+
+    <!-- ===== roles ===== -->
+    <changeSet id="v001-003-roles" author="eqms">
+        <createTable tableName="roles">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_roles" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(80)"><constraints nullable="false" unique="true" uniqueConstraintName="uq_roles_name"/></column>
+            <column name="description" type="VARCHAR(400)"/>
+            <column name="is_system" type="BOOLEAN" defaultValueBoolean="false"><constraints nullable="false"/></column>
+            <column name="version" type="INT" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="updated_by" type="BIGINT"/>
+            <column name="deleted_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+    </changeSet>
+
+    <!-- ===== permissions ===== -->
+    <changeSet id="v001-004-permissions" author="eqms">
+        <createTable tableName="permissions">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_permissions" nullable="false"/>
+            </column>
+            <column name="code" type="VARCHAR(80)"><constraints nullable="false" unique="true" uniqueConstraintName="uq_permissions_code"/></column>
+            <column name="description" type="VARCHAR(400)"/>
+            <column name="version" type="INT" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="updated_by" type="BIGINT"/>
+            <column name="deleted_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+    </changeSet>
+
+    <!-- ===== users ===== -->
+    <changeSet id="v001-005-users" author="eqms">
+        <createTable tableName="users">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_users" nullable="false"/>
+            </column>
+            <column name="email" type="VARCHAR(255)"><constraints nullable="false" unique="true" uniqueConstraintName="uq_users_email"/></column>
+            <column name="username" type="VARCHAR(80)"><constraints nullable="false" unique="true" uniqueConstraintName="uq_users_username"/></column>
+            <column name="full_name" type="VARCHAR(200)"><constraints nullable="false"/></column>
+            <column name="password_hash" type="VARCHAR(255)"><constraints nullable="false"/></column>
+            <column name="mfa_secret" type="VARCHAR(255)"/>
+            <column name="mfa_enabled" type="BOOLEAN" defaultValueBoolean="false"><constraints nullable="false"/></column>
+            <column name="status" type="VARCHAR(20)" defaultValue="ACTIVE"><constraints nullable="false"/></column>
+            <column name="failed_login_attempts" type="INT" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="locked_until" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="last_login_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="site_id" type="BIGINT"/>
+            <column name="department_id" type="BIGINT"/>
+            <column name="version" type="INT" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="updated_by" type="BIGINT"/>
+            <column name="deleted_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="users" baseColumnNames="site_id"
+                constraintName="fk_users_site" referencedTableName="sites" referencedColumnNames="id"/>
+        <addForeignKeyConstraint baseTableName="users" baseColumnNames="department_id"
+                constraintName="fk_users_department" referencedTableName="departments" referencedColumnNames="id"/>
+    </changeSet>
+
+    <!-- ===== user_roles (explicit join, soft-deletable revocation) ===== -->
+    <changeSet id="v001-006-user-roles" author="eqms">
+        <createTable tableName="user_roles">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_user_roles" nullable="false"/>
+            </column>
+            <column name="user_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="role_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="granted_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="granted_by" type="BIGINT"/>
+            <column name="version" type="INT" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="updated_by" type="BIGINT"/>
+            <column name="deleted_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="user_roles" baseColumnNames="user_id"
+                constraintName="fk_user_roles_user" referencedTableName="users" referencedColumnNames="id"/>
+        <addForeignKeyConstraint baseTableName="user_roles" baseColumnNames="role_id"
+                constraintName="fk_user_roles_role" referencedTableName="roles" referencedColumnNames="id"/>
+        <!-- Partial unique: one ACTIVE assignment per (user, role); revoked rows are retained for audit. -->
+        <sql dbms="postgresql">
+            CREATE UNIQUE INDEX uq_user_roles_active ON user_roles (user_id, role_id) WHERE deleted_at IS NULL;
+        </sql>
+        <rollback><sql dbms="postgresql">DROP INDEX IF EXISTS uq_user_roles_active;</sql></rollback>
+    </changeSet>
+
+    <!-- ===== role_permissions (explicit join) ===== -->
+    <changeSet id="v001-007-role-permissions" author="eqms">
+        <createTable tableName="role_permissions">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_role_permissions" nullable="false"/>
+            </column>
+            <column name="role_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="permission_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="version" type="INT" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="updated_by" type="BIGINT"/>
+            <column name="deleted_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="role_permissions" baseColumnNames="role_id"
+                constraintName="fk_role_permissions_role" referencedTableName="roles" referencedColumnNames="id"/>
+        <addForeignKeyConstraint baseTableName="role_permissions" baseColumnNames="permission_id"
+                constraintName="fk_role_permissions_permission" referencedTableName="permissions" referencedColumnNames="id"/>
+        <sql dbms="postgresql">
+            CREATE UNIQUE INDEX uq_role_permissions_active ON role_permissions (role_id, permission_id) WHERE deleted_at IS NULL;
+        </sql>
+        <rollback><sql dbms="postgresql">DROP INDEX IF EXISTS uq_role_permissions_active;</sql></rollback>
+    </changeSet>
+
+</databaseChangeLog>

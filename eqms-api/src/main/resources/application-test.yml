@@ -1,0 +1,23 @@
+# Integration-test profile.
+#
+# Tests connect to the PostgreSQL started by docker-compose (localhost:5432). The Spring
+# datasource uses the DDL owner (eqms_owner) so Liquibase can create the schema, the eqms_app
+# role, and the grants on context startup. The least-privilege eqms_app role is exercised
+# directly by the privilege-enforcement test via its own JDBC connection.
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/eqms
+    username: eqms_owner
+    password: owner_dev_pw
+  jpa:
+    hibernate:
+      ddl-auto: none
+  liquibase:
+    parameters:
+      app_role_name: eqms_app
+      app_role_password: app_dev_pw
+
+eqms:
+  signature:
+    hmac-key: test-hmac-key
+    hmac-key-id: test-1

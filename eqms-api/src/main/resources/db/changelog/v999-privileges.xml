@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <!--
+      Least-privilege grants for the runtime application role (CLAUDE.md rules 1 & 2).
+      Runs as the DDL owner. Enforces, at the database:
+        * NO DELETE on any regulated table  -> forces soft delete
+        * audit_logs / electronic_signatures: SELECT + INSERT only -> append-only / immutable
+      This is layer 1 of defense; the v002 immutability triggers are layer 2.
+    -->
+
+    <changeSet id="v999-001-create-app-role" author="eqms" runAlways="true">
+        <comment>Fallback role creation (e.g. under TestContainers where the docker init script did not run).</comment>
+        <sql dbms="postgresql" splitStatements="false"><![CDATA[
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${app_role_name}') THEN
+                    EXECUTE format('CREATE ROLE %I LOGIN PASSWORD %L', '${app_role_name}', '${app_role_password}');
+                END IF;
+            END
+            $$;
+        ]]></sql>
+    </changeSet>
+
+    <changeSet id="v999-002-grants" author="eqms" runAlways="true">
+        <comment>Idempotent grants; safe to re-apply as new regulated tables are added.</comment>
+        <sql dbms="postgresql" splitStatements="true"><![CDATA[
+            GRANT USAGE ON SCHEMA public TO ${app_role_name};
+
+            -- Default deny, then grant the minimum each table class needs.
+            REVOKE ALL ON ALL TABLES IN SCHEMA public FROM ${app_role_name};
+
+            -- Regulated MUTABLE tables: SELECT, INSERT, UPDATE (NO DELETE -> soft delete only).
+            GRANT SELECT, INSERT, UPDATE ON
+                sites, departments, roles, permissions, users, user_roles,
+                role_permissions, attachments, record_sequences
+            TO ${app_role_name};
+
+            -- Append-only audit trail: SELECT + INSERT only.
+            GRANT SELECT, INSERT ON audit_logs TO ${app_role_name};
+
+            -- Immutable signatures: SELECT + INSERT only.
+            GRANT SELECT, INSERT ON electronic_signatures TO ${app_role_name};
+
+            -- Identity-column / sequence usage.
+            GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ${app_role_name};
+        ]]></sql>
+    </changeSet>
+
+</databaseChangeLog>

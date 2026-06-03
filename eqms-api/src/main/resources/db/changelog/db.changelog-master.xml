@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <!--
+      Password used when the privileges changeset has to create the least-privilege app role
+      (e.g. under TestContainers, where the docker init script did not run). In real
+      deployments the role pre-exists and this value is unused. Override per environment with:
+        spring.liquibase.parameters.app_role_password=<secret>
+    -->
+    <property name="app_role_password" value="app_dev_pw" dbms="postgresql"/>
+    <property name="app_role_name" value="eqms_app" dbms="postgresql"/>
+
+    <include file="db/changelog/v000-extensions.xml"/>
+    <include file="db/changelog/v001-core-identity.xml"/>
+    <include file="db/changelog/v002-audit-signatures.xml"/>
+    <include file="db/changelog/v003-attachments-sequences.xml"/>
+    <include file="db/changelog/v999-privileges.xml"/>
+
+</databaseChangeLog>

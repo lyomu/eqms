@@ -1,0 +1,26 @@
+# Local development profile.
+#
+# Two connections by design (CLAUDE.md rules 1 & 2):
+#   * spring.datasource  -> the LEAST-PRIVILEGE runtime role (eqms_app). The application
+#     runs as this role, so it physically cannot DELETE regulated rows or mutate audit_logs.
+#   * spring.liquibase   -> the DDL OWNER (eqms_owner). Only migrations run with DDL rights.
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/${POSTGRES_DB:eqms}
+    username: eqms_app
+    password: ${EQMS_APP_PASSWORD:app_dev_pw}
+    hikari:
+      pool-name: eqms-app-pool
+      maximum-pool-size: 10
+  liquibase:
+    url: jdbc:postgresql://localhost:5432/${POSTGRES_DB:eqms}
+    user: ${POSTGRES_USER:eqms_owner}
+    password: ${POSTGRES_PASSWORD:owner_dev_pw}
+    parameters:
+      app_role_name: eqms_app
+      app_role_password: ${EQMS_APP_PASSWORD:app_dev_pw}
+
+logging:
+  level:
+    liquibase: INFO
+    org.hibernate.SQL: WARN

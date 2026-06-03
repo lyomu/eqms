@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <!-- ===== attachments ===== -->
+    <changeSet id="v003-001-attachments" author="eqms">
+        <createTable tableName="attachments">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_attachments" nullable="false"/>
+            </column>
+            <column name="record_type" type="VARCHAR(80)"><constraints nullable="false"/></column>
+            <column name="record_id" type="VARCHAR(80)"><constraints nullable="false"/></column>
+            <column name="file_name" type="VARCHAR(400)"><constraints nullable="false"/></column>
+            <column name="content_type" type="VARCHAR(160)"><constraints nullable="false"/></column>
+            <column name="size_bytes" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="storage_key" type="VARCHAR(500)"><constraints nullable="false" unique="true" uniqueConstraintName="uq_attachments_storage_key"/></column>
+            <column name="sha256" type="VARCHAR(64)"><constraints nullable="false"/></column>
+            <column name="uploaded_by" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="uploaded_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="version" type="INT" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="updated_by" type="BIGINT"/>
+            <column name="deleted_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+        <createIndex tableName="attachments" indexName="ix_attachments_record">
+            <column name="record_type"/>
+            <column name="record_id"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- ===== record_sequences ===== -->
+    <changeSet id="v003-002-record-sequences" author="eqms">
+        <comment>Concurrency-safe numbering via SELECT ... FOR UPDATE (compliance rule 6).</comment>
+        <createTable tableName="record_sequences">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_record_sequences" nullable="false"/>
+            </column>
+            <column name="module_code" type="VARCHAR(20)"><constraints nullable="false"/></column>
+            <column name="year" type="INT"><constraints nullable="false"/></column>
+            <column name="prefix" type="VARCHAR(20)"><constraints nullable="false"/></column>
+            <column name="current_value" type="BIGINT" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="padding" type="INT" defaultValueNumeric="3"><constraints nullable="false"/></column>
+            <column name="format" type="VARCHAR(60)" defaultValue="{prefix}-{year}-{seq}"><constraints nullable="false"/></column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="version" type="INT" defaultValueNumeric="0"><constraints nullable="false"/></column>
+        </createTable>
+        <addUniqueConstraint tableName="record_sequences" columnNames="module_code, year"
+                constraintName="uq_record_sequences_module_year"/>
+    </changeSet>
+
+</databaseChangeLog>

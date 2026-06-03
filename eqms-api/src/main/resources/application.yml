@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: eqms-api
+  jpa:
+    open-in-view: false
+    hibernate:
+      # Liquibase owns the schema. Hibernate must never auto-DDL a regulated database.
+      ddl-auto: none
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+        format_sql: false
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when_authorized
+
+# Electronic-signature HMAC config (used from Milestone 2). Override per environment.
+eqms:
+  signature:
+    hmac-key: ${EQMS_SIGNATURE_HMAC_KEY:dev-only-change-me}
+    hmac-key-id: ${EQMS_SIGNATURE_HMAC_KEY_ID:dev-1}

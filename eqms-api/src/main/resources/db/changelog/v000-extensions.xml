@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <changeSet id="v000-001-extensions" author="eqms">
+        <comment>Enable pgcrypto (digest/HMAC helpers used by the signature ceremony later).</comment>
+        <sql dbms="postgresql">CREATE EXTENSION IF NOT EXISTS pgcrypto;</sql>
+        <rollback><sql dbms="postgresql">DROP EXTENSION IF EXISTS pgcrypto;</sql></rollback>
+    </changeSet>
+
+</databaseChangeLog>

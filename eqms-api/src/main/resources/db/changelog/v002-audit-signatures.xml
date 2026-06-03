@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <!-- ===== audit_logs (APPEND-ONLY) ===== -->
+    <changeSet id="v002-001-audit-logs" author="eqms">
+        <comment>Append-only audit trail (compliance rule 1). No version, no deleted_at, no updates.</comment>
+        <createTable tableName="audit_logs">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_audit_logs" nullable="false"/>
+            </column>
+            <column name="record_type" type="VARCHAR(80)"><constraints nullable="false"/></column>
+            <column name="record_id" type="VARCHAR(80)"><constraints nullable="false"/></column>
+            <column name="action" type="VARCHAR(40)"><constraints nullable="false"/></column>
+            <column name="field_name" type="VARCHAR(120)"/>
+            <column name="old_value" type="TEXT"/>
+            <column name="new_value" type="TEXT"/>
+            <column name="reason_for_change" type="TEXT"/>
+            <column name="user_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="user_full_name" type="VARCHAR(200)"><constraints nullable="false"/></column>
+            <column name="utc_timestamp" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="ip_address" type="VARCHAR(45)"/>
+            <column name="user_agent" type="TEXT"/>
+        </createTable>
+        <createIndex tableName="audit_logs" indexName="ix_audit_logs_record">
+            <column name="record_type"/>
+            <column name="record_id"/>
+        </createIndex>
+        <createIndex tableName="audit_logs" indexName="ix_audit_logs_user"><column name="user_id"/></createIndex>
+        <createIndex tableName="audit_logs" indexName="ix_audit_logs_ts"><column name="utc_timestamp"/></createIndex>
+    </changeSet>
+
+    <!-- ===== shared immutability trigger function ===== -->
+    <changeSet id="v002-002-immutability-fn" author="eqms" runOnChange="true">
+        <comment>Defense in depth: reject any UPDATE/DELETE at the database, independent of grants.</comment>
+        <sql dbms="postgresql" splitStatements="false"><![CDATA[
+            CREATE OR REPLACE FUNCTION eqms_reject_modification() RETURNS trigger AS $$
+            BEGIN
+                RAISE EXCEPTION 'Table % is append-only/immutable; % is not permitted (compliance rule)',
+                    TG_TABLE_NAME, TG_OP;
+            END;
+            $$ LANGUAGE plpgsql;
+        ]]></sql>
+        <rollback><sql dbms="postgresql">DROP FUNCTION IF EXISTS eqms_reject_modification();</sql></rollback>
+    </changeSet>
+
+    <changeSet id="v002-003-audit-logs-immutable-trigger" author="eqms">
+        <sql dbms="postgresql" splitStatements="false"><![CDATA[
+            CREATE TRIGGER audit_logs_immutable
+            BEFORE UPDATE OR DELETE ON audit_logs
+            FOR EACH ROW EXECUTE FUNCTION eqms_reject_modification();
+        ]]></sql>
+        <rollback><sql dbms="postgresql">DROP TRIGGER IF EXISTS audit_logs_immutable ON audit_logs;</sql></rollback>
+    </changeSet>
+
+    <!-- ===== electronic_signatures (IMMUTABLE) ===== -->
+    <changeSet id="v002-004-electronic-signatures" author="eqms">
+        <createTable tableName="electronic_signatures">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_electronic_signatures" nullable="false"/>
+            </column>
+            <column name="record_type" type="VARCHAR(80)"><constraints nullable="false"/></column>
+            <column name="record_id" type="VARCHAR(80)"><constraints nullable="false"/></column>
+            <column name="user_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="signer_full_name" type="VARCHAR(200)"><constraints nullable="false"/></column>
+            <column name="signature_meaning" type="VARCHAR(20)"><constraints nullable="false"/></column>
+            <column name="meaning_statement" type="TEXT"><constraints nullable="false"/></column>
+            <column name="signed_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="hmac_sha256" type="VARCHAR(64)"><constraints nullable="false"/></column>
+            <column name="hmac_key_id" type="VARCHAR(40)"><constraints nullable="false"/></column>
+            <column name="ip_address" type="VARCHAR(45)"/>
+            <column name="user_agent" type="TEXT"/>
+        </createTable>
+        <createIndex tableName="electronic_signatures" indexName="ix_esig_record">
+            <column name="record_type"/>
+            <column name="record_id"/>
+        </createIndex>
+        <!-- Controlled vocabulary enforced at the database (mirrors SignatureMeaning enum). -->
+        <sql dbms="postgresql"><![CDATA[
+            ALTER TABLE electronic_signatures
+            ADD CONSTRAINT ck_esig_meaning
+            CHECK (signature_meaning IN ('Authored','Reviewed','Approved','Released','Rejected','Acknowledged'));
+        ]]></sql>
+        <rollback>
+            <sql dbms="postgresql">ALTER TABLE electronic_signatures DROP CONSTRAINT IF EXISTS ck_esig_meaning;</sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="v002-005-esig-immutable-trigger" author="eqms">
+        <sql dbms="postgresql" splitStatements="false"><![CDATA[
+            CREATE TRIGGER electronic_signatures_immutable
+            BEFORE UPDATE OR DELETE ON electronic_signatures
+            FOR EACH ROW EXECUTE FUNCTION eqms_reject_modification();
+        ]]></sql>
+        <rollback><sql dbms="postgresql">DROP TRIGGER IF EXISTS electronic_signatures_immutable ON electronic_signatures;</sql></rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -1,0 +1,64 @@
+# Local development infrastructure for the eQMS.
+# Brings up PostgreSQL (regulated data), Redis (cache/jobs, used in later milestones),
+# and MinIO (S3-compatible attachment storage, used in later milestones).
+#
+#   docker compose up -d
+#
+# The Postgres container runs docker/postgres/init/*.sql once on first start to
+# create the least-privilege application role (eqms_app). See that file and CLAUDE.md
+# (compliance rules 1 & 2) for why the runtime role is separated from the DDL owner.
+services:
+  postgres:
+    image: postgres:15
+    container_name: eqms-postgres
+    environment:
+      # The container superuser doubles as the Liquibase/DDL owner for local dev.
+      POSTGRES_USER: ${POSTGRES_USER:-eqms_owner}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-owner_dev_pw}
+      POSTGRES_DB: ${POSTGRES_DB:-eqms}
+      # Consumed by the init script to set the runtime app-role password.
+      EQMS_APP_PASSWORD: ${EQMS_APP_PASSWORD:-app_dev_pw}
+    ports:
+      - "5432:5432"
+    volumes:
+      - eqms_pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-eqms_owner} -d ${POSTGRES_DB:-eqms}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    container_name: eqms-redis
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: eqms-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # web console
+    volumes:
+      - eqms_miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  eqms_pgdata:
+  eqms_miniodata:
