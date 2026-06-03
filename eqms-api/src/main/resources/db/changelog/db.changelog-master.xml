@@ -22,6 +22,7 @@
     <include file="db/changelog/v005-documents.xml"/>
     <include file="db/changelog/v006-change-control.xml"/>
     <include file="db/changelog/v007-capa.xml"/>
+    <include file="db/changelog/v008-deviations.xml"/>
     <include file="db/changelog/v999-privileges.xml"/>
 
 </databaseChangeLog>

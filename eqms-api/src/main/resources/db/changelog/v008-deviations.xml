@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <!-- Deviations module (Milestone 6). Regulated table + new DEVIATION permissions. -->
+
+    <changeSet id="v008-001-deviations" author="eqms">
+        <createTable tableName="deviations">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_deviations" nullable="false"/>
+            </column>
+            <column name="deviation_number" type="VARCHAR(40)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_deviations_number"/>
+            </column>
+            <column name="title" type="VARCHAR(400)"><constraints nullable="false"/></column>
+            <column name="description" type="TEXT"/>
+            <column name="severity" type="VARCHAR(20)"><constraints nullable="false"/></column>
+            <column name="status" type="VARCHAR(40)"><constraints nullable="false"/></column>
+            <column name="root_cause" type="TEXT"/>
+            <column name="immediate_action" type="TEXT"/>
+            <column name="occurred_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="closed_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="submitted_by" type="BIGINT"/>
+            <column name="version" type="INT" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="updated_by" type="BIGINT"/>
+            <column name="deleted_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+        <createIndex tableName="deviations" indexName="ix_deviations_status"><column name="status"/></createIndex>
+        <createIndex tableName="deviations" indexName="ix_deviations_severity"><column name="severity"/></createIndex>
+    </changeSet>
+
+    <changeSet id="v008-002-deviation-permissions" author="eqms">
+        <sql dbms="postgresql"><![CDATA[
+            INSERT INTO permissions (code, description, version, created_at, updated_at) VALUES
+              ('DEVIATION_CREATE',  'Create and progress deviations', 0, now(), now()),
+              ('DEVIATION_APPROVE', 'Approve and close deviations',    0, now(), now());
+
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r JOIN permissions p ON p.code IN ('DEVIATION_CREATE','DEVIATION_APPROVE')
+            WHERE r.name = 'ADMIN';
+
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r JOIN permissions p ON p.code = 'DEVIATION_APPROVE'
+            WHERE r.name = 'QA_MANAGER';
+
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r JOIN permissions p ON p.code = 'DEVIATION_CREATE'
+            WHERE r.name = 'AUTHOR';
+        ]]></sql>
+        <rollback>
+            <sql dbms="postgresql">
+                DELETE FROM role_permissions WHERE permission_id IN
+                    (SELECT id FROM permissions WHERE code IN ('DEVIATION_CREATE','DEVIATION_APPROVE'));
+                DELETE FROM permissions WHERE code IN ('DEVIATION_CREATE','DEVIATION_APPROVE');
+            </sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
