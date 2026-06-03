@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <!-- Baseline RBAC reference data. The bootstrap admin USER is created at runtime
+         (BootstrapAdminInitializer) because its password must be Argon2id-hashed. -->
+
+    <changeSet id="v004-001-seed-roles" author="eqms">
+        <sql dbms="postgresql"><![CDATA[
+            INSERT INTO roles (name, description, is_system, version, created_at, updated_at) VALUES
+              ('ADMIN',      'System administrator',            true, 0, now(), now()),
+              ('QA_MANAGER', 'Quality assurance manager',       true, 0, now(), now()),
+              ('REVIEWER',   'Reviews regulated records',       true, 0, now(), now()),
+              ('AUTHOR',     'Authors regulated records',       true, 0, now(), now()),
+              ('OPERATOR',   'Operational user',                true, 0, now(), now());
+        ]]></sql>
+        <rollback>
+            <sql dbms="postgresql">DELETE FROM roles WHERE name IN ('ADMIN','QA_MANAGER','REVIEWER','AUTHOR','OPERATOR');</sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="v004-002-seed-permissions" author="eqms">
+        <sql dbms="postgresql"><![CDATA[
+            INSERT INTO permissions (code, description, version, created_at, updated_at) VALUES
+              ('DOCUMENT_CREATE',   'Create documents',          0, now(), now()),
+              ('DOCUMENT_REVIEW',   'Review documents',          0, now(), now()),
+              ('DOCUMENT_APPROVE',  'Approve documents',         0, now(), now()),
+              ('DOCUMENT_OBSOLETE', 'Obsolete documents',        0, now(), now()),
+              ('CHANGE_CREATE',     'Create change controls',    0, now(), now()),
+              ('CHANGE_APPROVE',    'Approve change controls',   0, now(), now()),
+              ('AUDIT_VIEW',        'View the audit trail',      0, now(), now()),
+              ('USER_MANAGE',       'Manage users and roles',    0, now(), now());
+        ]]></sql>
+        <rollback>
+            <sql dbms="postgresql">DELETE FROM permissions WHERE code IN
+              ('DOCUMENT_CREATE','DOCUMENT_REVIEW','DOCUMENT_APPROVE','DOCUMENT_OBSOLETE',
+               'CHANGE_CREATE','CHANGE_APPROVE','AUDIT_VIEW','USER_MANAGE');</sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="v004-003-seed-role-permissions" author="eqms">
+        <comment>Assign permissions to roles. ADMIN gets everything; others get a least-privilege subset.</comment>
+        <sql dbms="postgresql"><![CDATA[
+            -- ADMIN: all permissions
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r CROSS JOIN permissions p
+            WHERE r.name = 'ADMIN';
+
+            -- QA_MANAGER: review/approve documents + approve changes + view audit
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r JOIN permissions p
+              ON p.code IN ('DOCUMENT_REVIEW','DOCUMENT_APPROVE','CHANGE_APPROVE','AUDIT_VIEW')
+            WHERE r.name = 'QA_MANAGER';
+
+            -- REVIEWER: review documents + view audit
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r JOIN permissions p
+              ON p.code IN ('DOCUMENT_REVIEW','AUDIT_VIEW')
+            WHERE r.name = 'REVIEWER';
+
+            -- AUTHOR: create documents + create changes
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r JOIN permissions p
+              ON p.code IN ('DOCUMENT_CREATE','CHANGE_CREATE')
+            WHERE r.name = 'AUTHOR';
+            -- OPERATOR: no permissions by default
+        ]]></sql>
+        <rollback>
+            <sql dbms="postgresql">DELETE FROM role_permissions WHERE role_id IN (SELECT id FROM roles WHERE name IN
+              ('ADMIN','QA_MANAGER','REVIEWER','AUTHOR','OPERATOR'));</sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -16,6 +16,12 @@ spring:
 
 server:
   port: 8080
+  servlet:
+    session:
+      timeout: 30m            # idle session timeout (compliance: bounded sessions)
+      cookie:
+        http-only: true
+        same-site: strict
 
 management:
   endpoints:
@@ -26,8 +32,17 @@ management:
     health:
       show-details: when_authorized
 
-# Electronic-signature HMAC config (used from Milestone 2). Override per environment.
 eqms:
+  # Authentication / lockout policy.
+  auth:
+    max-failed-attempts: 5
+    lockout-minutes: 15
+    totp-issuer: eQMS
+  # Bootstrap admin (created on startup if absent). Password comes from EQMS_BOOTSTRAP_ADMIN_PASSWORD.
+  bootstrap:
+    admin-email: admin@eqms.local
+    admin-username: admin
+  # Electronic-signature HMAC config (used from Milestone 2). Override per environment.
   signature:
     hmac-key: ${EQMS_SIGNATURE_HMAC_KEY:dev-only-change-me}
     hmac-key-id: ${EQMS_SIGNATURE_HMAC_KEY_ID:dev-1}

@@ -8,18 +8,13 @@ import java.util.Optional;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.auditing.DateTimeProvider;
-import org.springframework.data.domain.AuditorAware;
 
 /**
- * Wires Spring Data JPA auditing to the server UTC {@link Clock} and to the current user.
+ * Wires Spring Data JPA auditing to the server UTC {@link Clock}.
  *
- * <ul>
- *   <li>{@code utcDateTimeProvider} feeds {@code @CreatedDate}/{@code @LastModifiedDate}
- *       from the UTC clock (compliance rule 3).</li>
- *   <li>{@code auditorAware} feeds {@code @CreatedBy}/{@code @LastModifiedBy}. In Milestone 0
- *       there is no authentication yet, so it returns empty; Milestone 1 replaces this with
- *       the authenticated principal's user id.</li>
- * </ul>
+ * <p>{@code utcDateTimeProvider} feeds {@code @CreatedDate}/{@code @LastModifiedDate} from the UTC
+ * clock (compliance rule 3). The {@code @CreatedBy}/{@code @LastModifiedBy} auditor is provided by
+ * {@code com.eqms.auth.SecurityAuditorAware} (the authenticated principal's user id).</p>
  */
 @Configuration
 public class JpaAuditingConfig {
@@ -28,14 +23,5 @@ public class JpaAuditingConfig {
     @Bean
     public DateTimeProvider utcDateTimeProvider(Clock utcClock) {
         return () -> Optional.<TemporalAccessor>of(Instant.now(utcClock));
-    }
-
-    /**
-     * Resolves the acting user id for {@code @CreatedBy}/{@code @LastModifiedBy}.
-     * Placeholder until Spring Security is introduced in Milestone 1.
-     */
-    @Bean
-    public AuditorAware<Long> auditorAware() {
-        return Optional::empty;
     }
 }

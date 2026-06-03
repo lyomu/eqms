@@ -18,6 +18,7 @@
     <include file="db/changelog/v001-core-identity.xml"/>
     <include file="db/changelog/v002-audit-signatures.xml"/>
     <include file="db/changelog/v003-attachments-sequences.xml"/>
+    <include file="db/changelog/v004-seed-auth.xml"/>
     <include file="db/changelog/v999-privileges.xml"/>
 
 </databaseChangeLog>
