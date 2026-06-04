@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <!-- Complaint Management module (Milestone 11). 5 tables + COMPLAINT permissions. -->
+
+    <changeSet id="v013-001-complaints" author="eqms">
+        <createTable tableName="complaints">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_complaints" nullable="false"/>
+            </column>
+            <column name="complaint_no" type="VARCHAR(40)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_complaints_no"/>
+            </column>
+            <column name="product_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="complaint_description" type="TEXT"><constraints nullable="false"/></column>
+            <column name="source" type="VARCHAR(20)"><constraints nullable="false"/></column>
+            <column name="severity" type="VARCHAR(20)"><constraints nullable="false"/></column>
+            <column name="reported_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="reported_by" type="VARCHAR(200)"/>
+            <column name="owner_id" type="BIGINT"/>
+            <column name="status" type="VARCHAR(40)"><constraints nullable="false"/></column>
+            <column name="submitted_by" type="BIGINT"/>
+            <column name="closed_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="version" type="INT" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="updated_by" type="BIGINT"/>
+            <column name="deleted_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+        <createIndex tableName="complaints" indexName="ix_complaints_status"><column name="status"/></createIndex>
+        <createIndex tableName="complaints" indexName="ix_complaints_severity"><column name="severity"/></createIndex>
+        <createIndex tableName="complaints" indexName="ix_complaints_source"><column name="source"/></createIndex>
+    </changeSet>
+
+    <changeSet id="v013-002-complaint-investigation" author="eqms">
+        <createTable tableName="complaint_investigation">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_complaint_investigation" nullable="false"/>
+            </column>
+            <column name="complaint_id" type="BIGINT">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_complaint_investigation"
+                             foreignKeyName="fk_ci_complaint" references="complaints(id)"/>
+            </column>
+            <column name="investigation_findings" type="TEXT"/>
+            <column name="investigator_id" type="BIGINT"/>
+            <column name="investigation_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="root_cause" type="TEXT"/>
+            <column name="root_cause_method" type="VARCHAR(60)"/>
+            <column name="impact_on_product" type="TEXT"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="v013-003-complaint-resolution" author="eqms">
+        <createTable tableName="complaint_resolution">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_complaint_resolution" nullable="false"/>
+            </column>
+            <column name="complaint_id" type="BIGINT">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_complaint_resolution"
+                             foreignKeyName="fk_cr_complaint" references="complaints(id)"/>
+            </column>
+            <column name="resolution_description" type="TEXT"><constraints nullable="false"/></column>
+            <column name="resolution_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="resolved_by" type="BIGINT"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="v013-004-complaint-capa-link" author="eqms">
+        <createTable tableName="complaint_capa_link">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_complaint_capa_link" nullable="false"/>
+            </column>
+            <column name="complaint_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_ccl_complaint" references="complaints(id)"/>
+            </column>
+            <column name="capa_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_ccl_capa" references="capas(id)"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+        </createTable>
+        <addUniqueConstraint tableName="complaint_capa_link"
+                             columnNames="complaint_id, capa_id" constraintName="uq_complaint_capa"/>
+    </changeSet>
+
+    <changeSet id="v013-005-complaint-timeline" author="eqms">
+        <createTable tableName="complaint_timeline">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_complaint_timeline" nullable="false"/>
+            </column>
+            <column name="complaint_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_ct_complaint" references="complaints(id)"/>
+            </column>
+            <column name="event" type="VARCHAR(120)"><constraints nullable="false"/></column>
+            <column name="event_date" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="notes" type="TEXT"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+        </createTable>
+        <createIndex tableName="complaint_timeline" indexName="ix_ct_complaint">
+            <column name="complaint_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v013-006-complaint-permissions" author="eqms">
+        <sql dbms="postgresql"><![CDATA[
+            INSERT INTO permissions (code, description, version, created_at, updated_at) VALUES
+              ('COMPLAINT_CREATE',  'Create and progress complaints',           0, now(), now()),
+              ('COMPLAINT_APPROVE', 'Acknowledge and close complaints',         0, now(), now());
+
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r JOIN permissions p ON p.code IN ('COMPLAINT_CREATE','COMPLAINT_APPROVE')
+            WHERE r.name = 'ADMIN';
+
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r JOIN permissions p ON p.code = 'COMPLAINT_APPROVE'
+            WHERE r.name = 'QA_MANAGER';
+
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r JOIN permissions p ON p.code = 'COMPLAINT_CREATE'
+            WHERE r.name = 'AUTHOR';
+        ]]></sql>
+        <rollback>
+            <sql dbms="postgresql">
+                DELETE FROM role_permissions WHERE permission_id IN
+                    (SELECT id FROM permissions WHERE code IN ('COMPLAINT_CREATE','COMPLAINT_APPROVE'));
+                DELETE FROM permissions WHERE code IN ('COMPLAINT_CREATE','COMPLAINT_APPROVE');
+            </sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
