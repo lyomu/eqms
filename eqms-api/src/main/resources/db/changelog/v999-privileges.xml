@@ -46,7 +46,11 @@
                 complaints, complaint_investigation, complaint_resolution,
                 complaint_capa_link, complaint_timeline,
                 audits, audit_findings, audit_capa_link, audit_follow_up,
-                risks, risk_analysis, risk_mitigation, risk_control_effectiveness
+                risks, risk_analysis, risk_mitigation, risk_control_effectiveness,
+                suppliers, supplier_qualifications, supplier_certifications,
+                supplier_performance, supplier_findings, supplier_capa_link,
+                training_programs, training_assignments, training_auto_rules,
+                training_completion_audit
             TO ${app_role_name};
 
             -- Append-only audit trail: SELECT + INSERT only.
