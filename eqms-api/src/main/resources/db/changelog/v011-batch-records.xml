@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <!-- Electronic Batch Records module (Milestone 9). 6 tables + BATCH permissions. -->
+
+    <changeSet id="v011-001-batch-records" author="eqms">
+        <createTable tableName="batch_records">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_batch_records" nullable="false"/>
+            </column>
+            <column name="batch_no" type="VARCHAR(40)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_batch_records_no"/>
+            </column>
+            <column name="product_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="product_code" type="VARCHAR(40)"><constraints nullable="false"/></column>
+            <column name="batch_size" type="DECIMAL(15,3)"><constraints nullable="false"/></column>
+            <column name="unit" type="VARCHAR(20)"><constraints nullable="false"/></column>
+            <column name="manufacturing_start_date" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="manufacturing_end_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="notes" type="TEXT"/>
+            <column name="status" type="VARCHAR(40)"><constraints nullable="false"/></column>
+            <column name="submitted_by" type="BIGINT"/>
+            <column name="released_by" type="BIGINT"/>
+            <column name="released_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="version" type="INT" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="updated_by" type="BIGINT"/>
+            <column name="deleted_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+        <createIndex tableName="batch_records" indexName="ix_batch_records_status"><column name="status"/></createIndex>
+        <createIndex tableName="batch_records" indexName="ix_batch_records_product"><column name="product_id"/></createIndex>
+    </changeSet>
+
+    <changeSet id="v011-002-batch-production-steps" author="eqms">
+        <createTable tableName="batch_production_steps">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_batch_production_steps" nullable="false"/>
+            </column>
+            <column name="batch_record_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_bps_batch" references="batch_records(id)"/>
+            </column>
+            <column name="step_number" type="INT"><constraints nullable="false"/></column>
+            <column name="step_description" type="TEXT"><constraints nullable="false"/></column>
+            <column name="equipment_used" type="VARCHAR(200)"/>
+            <column name="operator_id" type="BIGINT"/>
+            <column name="start_time" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="end_time" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="parameters_recorded" type="TEXT"/>
+            <column name="anomalies_noted" type="TEXT"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+        </createTable>
+        <createIndex tableName="batch_production_steps" indexName="ix_bps_batch_id">
+            <column name="batch_record_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v011-003-batch-materials-used" author="eqms">
+        <createTable tableName="batch_materials_used">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_batch_materials_used" nullable="false"/>
+            </column>
+            <column name="batch_record_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_bmu_batch" references="batch_records(id)"/>
+            </column>
+            <column name="material_id" type="BIGINT"/>
+            <column name="material_code" type="VARCHAR(40)"><constraints nullable="false"/></column>
+            <column name="lot_number" type="VARCHAR(100)"><constraints nullable="false"/></column>
+            <column name="supplier" type="VARCHAR(200)"/>
+            <column name="quantity_used" type="DECIMAL(15,3)"><constraints nullable="false"/></column>
+            <column name="unit" type="VARCHAR(20)"><constraints nullable="false"/></column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+        </createTable>
+        <createIndex tableName="batch_materials_used" indexName="ix_bmu_batch_id">
+            <column name="batch_record_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v011-004-batch-qc-results" author="eqms">
+        <createTable tableName="batch_qc_results">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_batch_qc_results" nullable="false"/>
+            </column>
+            <column name="batch_record_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_bqc_batch" references="batch_records(id)"/>
+            </column>
+            <column name="test_method" type="VARCHAR(200)"><constraints nullable="false"/></column>
+            <column name="specification_limit" type="VARCHAR(200)"><constraints nullable="false"/></column>
+            <column name="actual_result" type="VARCHAR(200)"><constraints nullable="false"/></column>
+            <column name="test_date" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="test_status" type="VARCHAR(10)"><constraints nullable="false"/></column>
+            <column name="test_lab" type="VARCHAR(200)"/>
+            <column name="approved_by" type="BIGINT"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+        </createTable>
+        <createIndex tableName="batch_qc_results" indexName="ix_bqc_batch_id">
+            <column name="batch_record_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v011-005-batch-deviations-link" author="eqms">
+        <createTable tableName="batch_deviations_link">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_batch_deviations_link" nullable="false"/>
+            </column>
+            <column name="batch_record_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_bdl_batch" references="batch_records(id)"/>
+            </column>
+            <column name="deviation_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+        </createTable>
+        <addUniqueConstraint tableName="batch_deviations_link"
+                             columnNames="batch_record_id, deviation_id"
+                             constraintName="uq_batch_deviation"/>
+    </changeSet>
+
+    <changeSet id="v011-006-batch-products-produced" author="eqms">
+        <createTable tableName="batch_products_produced">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_batch_products_produced" nullable="false"/>
+            </column>
+            <column name="batch_record_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_bpp_batch" references="batch_records(id)"/>
+            </column>
+            <column name="product_id" type="BIGINT"/>
+            <column name="product_code" type="VARCHAR(40)"><constraints nullable="false"/></column>
+            <column name="lot_number_assigned" type="VARCHAR(100)"><constraints nullable="false"/></column>
+            <column name="quantity" type="DECIMAL(15,3)"><constraints nullable="false"/></column>
+            <column name="unit" type="VARCHAR(20)"><constraints nullable="false"/></column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+        </createTable>
+        <createIndex tableName="batch_products_produced" indexName="ix_bpp_batch_id">
+            <column name="batch_record_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v011-007-batch-permissions" author="eqms">
+        <sql dbms="postgresql"><![CDATA[
+            INSERT INTO permissions (code, description, version, created_at, updated_at) VALUES
+              ('BATCH_CREATE',  'Create and record batch records',       0, now(), now()),
+              ('BATCH_RELEASE', 'QA review and release batch records',   0, now(), now());
+
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r JOIN permissions p ON p.code IN ('BATCH_CREATE','BATCH_RELEASE')
+            WHERE r.name = 'ADMIN';
+
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r JOIN permissions p ON p.code = 'BATCH_RELEASE'
+            WHERE r.name = 'QA_MANAGER';
+
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r JOIN permissions p ON p.code = 'BATCH_CREATE'
+            WHERE r.name = 'AUTHOR';
+        ]]></sql>
+        <rollback>
+            <sql dbms="postgresql">
+                DELETE FROM role_permissions WHERE permission_id IN
+                    (SELECT id FROM permissions WHERE code IN ('BATCH_CREATE','BATCH_RELEASE'));
+                DELETE FROM permissions WHERE code IN ('BATCH_CREATE','BATCH_RELEASE');
+            </sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
