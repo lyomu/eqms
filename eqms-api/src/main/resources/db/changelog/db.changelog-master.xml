@@ -28,6 +28,7 @@
     <include file="db/changelog/v011-batch-records.xml"/>
     <include file="db/changelog/v012-notifications.xml"/>
     <include file="db/changelog/v013-complaints.xml"/>
+    <include file="db/changelog/v014-audits.xml"/>
     <include file="db/changelog/v999-privileges.xml"/>
 
 </databaseChangeLog>

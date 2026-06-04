@@ -44,7 +44,8 @@
                 batch_qc_results, batch_deviations_link, batch_products_produced,
                 notifications,
                 complaints, complaint_investigation, complaint_resolution,
-                complaint_capa_link, complaint_timeline
+                complaint_capa_link, complaint_timeline,
+                audits, audit_findings, audit_capa_link, audit_follow_up
             TO ${app_role_name};
 
             -- Append-only audit trail: SELECT + INSERT only.
