@@ -55,6 +55,14 @@
             <artifactId>liquibase-core</artifactId>
         </dependency>
 
+        <!-- Apache POI: .xlsx report export (Milestone 10). Not managed by the Spring Boot BOM,
+             so the version is pinned explicitly. -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.2.5</version>
+        </dependency>
+
         <!-- PostgreSQL driver -->
         <dependency>
             <groupId>org.postgresql</groupId>

@@ -41,7 +41,8 @@
                 documents, document_read_assignments, change_controls,
                 capas, capa_actions, deviations, products, materials,
                 batch_records, batch_production_steps, batch_materials_used,
-                batch_qc_results, batch_deviations_link, batch_products_produced
+                batch_qc_results, batch_deviations_link, batch_products_produced,
+                notifications
             TO ${app_role_name};
 
             -- Append-only audit trail: SELECT + INSERT only.

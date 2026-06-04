@@ -13,4 +13,6 @@ public interface DeviationRepository extends JpaRepository<Deviation, Long> {
     Optional<Deviation> findByDeviationNumber(String deviationNumber);
 
     Page<Deviation> findByDeviationStatus(DeviationStatus status, Pageable pageable);
+
+    long countByDeviationStatus(DeviationStatus status);
 }

@@ -17,4 +17,6 @@ public interface BatchRecordRepository extends JpaRepository<BatchRecord, Long> 
     Page<BatchRecord> findByProductId(Long productId, Pageable pageable);
 
     Page<BatchRecord> findByBatchStatusAndProductId(BatchStatus status, Long productId, Pageable pageable);
+
+    long countByBatchStatus(BatchStatus status);
 }

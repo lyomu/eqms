@@ -16,8 +16,14 @@ spring:
     parameters:
       app_role_name: eqms_app
       app_role_password: app_dev_pw
+  # Allow the integration tests to override the async taskExecutor with a synchronous one.
+  main:
+    allow-bean-definition-overriding: true
 
 eqms:
   signature:
     hmac-key: test-hmac-key
     hmac-key-id: test-1
+  dashboard:
+    # Disable the dashboard TTL cache in tests so each query reflects current data deterministically.
+    cache-ttl-seconds: 0

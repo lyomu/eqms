@@ -25,6 +25,8 @@ import com.eqms.documents.dto.CreateDocumentRequest;
 import com.eqms.documents.dto.DocumentResponse;
 import com.eqms.documents.dto.PageResponse;
 import com.eqms.documents.dto.ReadAssignmentResponse;
+import com.eqms.notifications.NotificationDispatcher;
+import com.eqms.notifications.NotificationType;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -43,9 +45,11 @@ public class DocumentController {
     private static final String SIGNED_IN_SESSION = "EQMS_SIGNED_IN_SESSION";
 
     private final DocumentService documentService;
+    private final NotificationDispatcher notifications;
 
-    public DocumentController(DocumentService documentService) {
+    public DocumentController(DocumentService documentService, NotificationDispatcher notifications) {
         this.documentService = documentService;
+        this.notifications = notifications;
     }
 
     @GetMapping
@@ -80,8 +84,15 @@ public class DocumentController {
     public DocumentResponse submitForReview(@PathVariable Long id, @Valid @RequestBody ActionRequest request,
                                             @AuthenticationPrincipal UserPrincipal principal,
                                             HttpServletRequest http) {
-        return DocumentResponse.from(documentService.submitForReview(id, request.expectedVersion(),
-                request.reason(), principal.getId(), principal.getFullName(), clientIp(http), userAgent(http)));
+        Document document = documentService.submitForReview(id, request.expectedVersion(),
+                request.reason(), principal.getId(), principal.getFullName(), clientIp(http), userAgent(http));
+        // Notify reviewers (async, after the transactional action succeeded). The submitter is excluded.
+        notifications.dispatchToAuthority("DOCUMENT_REVIEW", principal.getId(),
+                NotificationType.DOCUMENT_SUBMITTED_FOR_REVIEW,
+                "Document " + document.getDocumentNumber() + " submitted for review",
+                "A document is awaiting your review.",
+                "Document", String.valueOf(document.getId()));
+        return DocumentResponse.from(document);
     }
 
     @PostMapping("/{id}/submit-for-approval")
@@ -89,8 +100,14 @@ public class DocumentController {
     public DocumentResponse submitForApproval(@PathVariable Long id, @Valid @RequestBody ActionRequest request,
                                               @AuthenticationPrincipal UserPrincipal principal,
                                               HttpServletRequest http) {
-        return DocumentResponse.from(documentService.submitForApproval(id, request.expectedVersion(),
-                request.reason(), principal.getId(), principal.getFullName(), clientIp(http), userAgent(http)));
+        Document document = documentService.submitForApproval(id, request.expectedVersion(),
+                request.reason(), principal.getId(), principal.getFullName(), clientIp(http), userAgent(http));
+        notifications.dispatchToAuthority("DOCUMENT_APPROVE", principal.getId(),
+                NotificationType.DOCUMENT_PENDING_APPROVAL,
+                "Document " + document.getDocumentNumber() + " pending approval",
+                "A document is awaiting your approval.",
+                "Document", String.valueOf(document.getId()));
+        return DocumentResponse.from(document);
     }
 
     @PostMapping("/{id}/approve")

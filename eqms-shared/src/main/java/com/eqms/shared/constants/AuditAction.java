@@ -27,5 +27,7 @@ public enum AuditAction {
     /** An electronic signature was applied. */
     SIGN,
     /** Authentication event (login/logout/lockout) — relevant from Milestone 1. */
-    LOGIN
+    LOGIN,
+    /** Regulated data was exported (e.g. a report download). Captured for traceability (Milestone 10). */
+    EXPORT
 }

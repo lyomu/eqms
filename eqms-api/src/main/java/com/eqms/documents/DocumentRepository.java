@@ -18,6 +18,8 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
 
     Page<Document> findByDocumentStatus(DocumentStatus status, Pageable pageable);
 
+    long countByDocumentStatus(DocumentStatus status);
+
     /** Effective documents whose periodic review is due on or before the given instant. */
     @Query("""
             select d from Document d

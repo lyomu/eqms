@@ -13,4 +13,6 @@ public interface MaterialRepository extends JpaRepository<Material, Long> {
     Optional<Material> findByMaterialCode(String materialCode);
 
     Page<Material> findByMaterialStatus(MaterialStatus status, Pageable pageable);
+
+    long countByMaterialStatus(MaterialStatus status);
 }
