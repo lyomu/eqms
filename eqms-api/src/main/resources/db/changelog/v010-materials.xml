@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <!-- Material Management module (Milestone 8). Regulated master-data table + MATERIAL permissions. -->
+
+    <changeSet id="v010-001-materials" author="eqms">
+        <createTable tableName="materials">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_materials" nullable="false"/>
+            </column>
+            <column name="material_code" type="VARCHAR(40)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_materials_code"/>
+            </column>
+            <column name="name" type="VARCHAR(400)"><constraints nullable="false"/></column>
+            <column name="description" type="TEXT"/>
+            <column name="material_type" type="VARCHAR(40)"><constraints nullable="false"/></column>
+            <column name="unit_of_measure" type="VARCHAR(20)"><constraints nullable="false"/></column>
+            <column name="specification" type="TEXT"/>
+            <column name="status" type="VARCHAR(40)"><constraints nullable="false"/></column>
+            <column name="submitted_by" type="BIGINT"/>
+            <column name="version" type="INT" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="updated_by" type="BIGINT"/>
+            <column name="deleted_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+        <createIndex tableName="materials" indexName="ix_materials_status"><column name="status"/></createIndex>
+        <createIndex tableName="materials" indexName="ix_materials_type"><column name="material_type"/></createIndex>
+    </changeSet>
+
+    <changeSet id="v010-002-material-permissions" author="eqms">
+        <sql dbms="postgresql"><![CDATA[
+            INSERT INTO permissions (code, description, version, created_at, updated_at) VALUES
+              ('MATERIAL_CREATE',  'Create and edit materials',          0, now(), now()),
+              ('MATERIAL_APPROVE', 'Approve and manage material status', 0, now(), now());
+
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r JOIN permissions p ON p.code IN ('MATERIAL_CREATE','MATERIAL_APPROVE')
+            WHERE r.name = 'ADMIN';
+
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r JOIN permissions p ON p.code = 'MATERIAL_APPROVE'
+            WHERE r.name = 'QA_MANAGER';
+
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r JOIN permissions p ON p.code = 'MATERIAL_CREATE'
+            WHERE r.name = 'AUTHOR';
+        ]]></sql>
+        <rollback>
+            <sql dbms="postgresql">
+                DELETE FROM role_permissions WHERE permission_id IN
+                    (SELECT id FROM permissions WHERE code IN ('MATERIAL_CREATE','MATERIAL_APPROVE'));
+                DELETE FROM permissions WHERE code IN ('MATERIAL_CREATE','MATERIAL_APPROVE');
+            </sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -24,6 +24,7 @@
     <include file="db/changelog/v007-capa.xml"/>
     <include file="db/changelog/v008-deviations.xml"/>
     <include file="db/changelog/v009-products.xml"/>
+    <include file="db/changelog/v010-materials.xml"/>
     <include file="db/changelog/v999-privileges.xml"/>
 
 </databaseChangeLog>
