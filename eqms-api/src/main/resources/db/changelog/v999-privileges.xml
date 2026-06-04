@@ -45,7 +45,8 @@
                 notifications,
                 complaints, complaint_investigation, complaint_resolution,
                 complaint_capa_link, complaint_timeline,
-                audits, audit_findings, audit_capa_link, audit_follow_up
+                audits, audit_findings, audit_capa_link, audit_follow_up,
+                risks, risk_analysis, risk_mitigation, risk_control_effectiveness
             TO ${app_role_name};
 
             -- Append-only audit trail: SELECT + INSERT only.
