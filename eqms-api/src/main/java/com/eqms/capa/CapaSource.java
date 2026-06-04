@@ -6,6 +6,7 @@ public enum CapaSource {
     AUDIT_FINDING,
     COMPLAINT,
     OOS,
+    SUPPLIER,
     INTERNAL,
     OTHER
 }

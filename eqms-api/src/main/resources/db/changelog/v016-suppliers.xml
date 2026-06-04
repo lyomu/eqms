@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <!-- Supplier Quality module (Milestone 14). 6 tables + SUPPLIER permissions. -->
+
+    <changeSet id="v016-001-suppliers" author="eqms">
+        <createTable tableName="suppliers">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_suppliers" nullable="false"/>
+            </column>
+            <column name="supplier_code" type="VARCHAR(40)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_suppliers_code"/>
+            </column>
+            <column name="supplier_name" type="VARCHAR(400)"><constraints nullable="false"/></column>
+            <column name="supplier_type" type="VARCHAR(30)"><constraints nullable="false"/></column>
+            <column name="contact_person" type="VARCHAR(200)"/>
+            <column name="email" type="VARCHAR(255)"/>
+            <column name="phone" type="VARCHAR(60)"/>
+            <column name="location" type="VARCHAR(400)"/>
+            <column name="status" type="VARCHAR(20)"><constraints nullable="false"/></column>
+            <column name="qualification_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="owner_id" type="BIGINT"/>
+            <column name="version" type="INT" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="updated_by" type="BIGINT"/>
+            <column name="deleted_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+        <createIndex tableName="suppliers" indexName="ix_suppliers_status"><column name="status"/></createIndex>
+    </changeSet>
+
+    <changeSet id="v016-002-supplier-qualifications" author="eqms">
+        <createTable tableName="supplier_qualifications">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_supplier_qualifications" nullable="false"/>
+            </column>
+            <column name="supplier_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_sq_supplier" references="suppliers(id)"/>
+            </column>
+            <column name="assessment_method" type="VARCHAR(80)"><constraints nullable="false"/></column>
+            <column name="assessment_date" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="assessor" type="VARCHAR(200)"/>
+            <column name="approval_status" type="VARCHAR(40)"/>
+            <column name="notes" type="TEXT"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+        </createTable>
+        <createIndex tableName="supplier_qualifications" indexName="ix_sq_supplier"><column name="supplier_id"/></createIndex>
+    </changeSet>
+
+    <changeSet id="v016-003-supplier-certifications" author="eqms">
+        <createTable tableName="supplier_certifications">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_supplier_certifications" nullable="false"/>
+            </column>
+            <column name="supplier_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_sc_supplier" references="suppliers(id)"/>
+            </column>
+            <column name="cert_type" type="VARCHAR(80)"><constraints nullable="false"/></column>
+            <column name="issue_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="expiry_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="file_path" type="VARCHAR(1000)"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+        </createTable>
+        <createIndex tableName="supplier_certifications" indexName="ix_sc_supplier"><column name="supplier_id"/></createIndex>
+    </changeSet>
+
+    <changeSet id="v016-004-supplier-performance" author="eqms">
+        <createTable tableName="supplier_performance">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_supplier_performance" nullable="false"/>
+            </column>
+            <column name="supplier_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_sp_supplier" references="suppliers(id)"/>
+            </column>
+            <column name="assessment_period_start" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="assessment_period_end" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="on_time_delivery_pct" type="DECIMAL(5,2)"/>
+            <column name="quality_acceptance_pct" type="DECIMAL(5,2)"/>
+            <column name="responsiveness_rating" type="INT"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+        </createTable>
+        <createIndex tableName="supplier_performance" indexName="ix_sp_supplier"><column name="supplier_id"/></createIndex>
+    </changeSet>
+
+    <changeSet id="v016-005-supplier-findings" author="eqms">
+        <createTable tableName="supplier_findings">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_supplier_findings" nullable="false"/>
+            </column>
+            <column name="supplier_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_sf_supplier" references="suppliers(id)"/>
+            </column>
+            <column name="finding_date" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="finding_description" type="TEXT"><constraints nullable="false"/></column>
+            <column name="severity" type="VARCHAR(20)"><constraints nullable="false"/></column>
+            <column name="root_cause" type="TEXT"/>
+            <column name="corrective_action_required" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+        </createTable>
+        <createIndex tableName="supplier_findings" indexName="ix_sf_supplier"><column name="supplier_id"/></createIndex>
+    </changeSet>
+
+    <changeSet id="v016-006-supplier-capa-link" author="eqms">
+        <createTable tableName="supplier_capa_link">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_supplier_capa_link" nullable="false"/>
+            </column>
+            <column name="supplier_finding_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_scl_finding" references="supplier_findings(id)"/>
+            </column>
+            <column name="capa_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_scl_capa" references="capas(id)"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+        </createTable>
+        <addUniqueConstraint tableName="supplier_capa_link"
+                             columnNames="supplier_finding_id, capa_id" constraintName="uq_supplier_finding_capa"/>
+    </changeSet>
+
+    <changeSet id="v016-007-supplier-permissions" author="eqms">
+        <sql dbms="postgresql"><![CDATA[
+            INSERT INTO permissions (code, description, version, created_at, updated_at) VALUES
+              ('SUPPLIER_CREATE',  'Create and manage suppliers',  0, now(), now()),
+              ('SUPPLIER_APPROVE', 'Qualify and approve suppliers', 0, now(), now());
+
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r JOIN permissions p ON p.code IN ('SUPPLIER_CREATE','SUPPLIER_APPROVE')
+            WHERE r.name = 'ADMIN';
+
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r JOIN permissions p ON p.code = 'SUPPLIER_APPROVE'
+            WHERE r.name = 'QA_MANAGER';
+
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r JOIN permissions p ON p.code = 'SUPPLIER_CREATE'
+            WHERE r.name = 'AUTHOR';
+        ]]></sql>
+        <rollback>
+            <sql dbms="postgresql">
+                DELETE FROM role_permissions WHERE permission_id IN
+                    (SELECT id FROM permissions WHERE code IN ('SUPPLIER_CREATE','SUPPLIER_APPROVE'));
+                DELETE FROM permissions WHERE code IN ('SUPPLIER_CREATE','SUPPLIER_APPROVE');
+            </sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
