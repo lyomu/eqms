@@ -142,10 +142,11 @@ class BatchRecordIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.materialsUsed[0].materialCode").value("MAT-2026-001"))
                 .andExpect(jsonPath("$.productsProduced[0].productCode").value("PROD-001"));
 
-        // Verify audit trail
+        // Verify audit trail (ordered newest-first; release STATUS_CHANGE is most recent)
         mockMvc.perform(get("/api/batch-records/" + id + "/audit-trail").session(operator.session))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].action").value("CREATE"));
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].action").value("STATUS_CHANGE"));
     }
 
     @Test
@@ -228,9 +229,15 @@ class BatchRecordIntegrationTest extends AbstractIntegrationTest {
     @Test
     void staleVersionIsRejected() throws Exception {
         Ctx operator = newUser("ADMIN");
-        create(operator);
         JsonNode batch = create(operator);
         long id = batch.get("id").asLong();
+
+        // Record a step so the QA-review precondition passes, isolating the version check.
+        mockMvc.perform(post("/api/batch-records/" + id + "/record-step").session(operator.session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(new RecordStepRequest(1, "Step 1", null, null,
+                                Instant.now(), null, null, null))))
+                .andExpect(status().isCreated());
 
         mockMvc.perform(post("/api/batch-records/" + id + "/qa-review").session(operator.session)
                         .contentType(MediaType.APPLICATION_JSON)
