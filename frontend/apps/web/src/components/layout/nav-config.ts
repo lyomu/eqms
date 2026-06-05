@@ -47,7 +47,7 @@ export const NAV_GROUPS: NavGroup[] = [
     heading: "Core Quality",
     items: [
       { label: "Document Control", href: "/documents", icon: FileText },
-      { label: "Change Control", href: "/change-control", icon: GitPullRequestArrow, comingSoon: true },
+      { label: "Change Control", href: "/change-control", icon: GitPullRequestArrow },
       { label: "Deviations", href: "/deviations", icon: TriangleAlert, comingSoon: true },
       { label: "Training", href: "/training", icon: GraduationCap, comingSoon: true },
     ],
