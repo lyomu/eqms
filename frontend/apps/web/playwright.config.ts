@@ -19,10 +19,12 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  // Run against a production build: all routes are precompiled, so tests don't flake on
+  // Next's lazy per-route dev compilation (which times out under parallel cold hits).
   webServer: {
-    command: `pnpm exec next dev -p ${PORT}`,
+    command: `pnpm exec next build && pnpm exec next start -p ${PORT}`,
     url: baseURL,
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    timeout: 240_000,
   },
 });

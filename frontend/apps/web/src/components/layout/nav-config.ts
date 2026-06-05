@@ -72,9 +72,9 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     heading: "Manufacturing & Production",
     items: [
-      { label: "Materials", href: "/materials", icon: Boxes, comingSoon: true },
+      { label: "Materials", href: "/materials", icon: Boxes },
       { label: "Batch Records", href: "/batch-records", icon: Beaker, comingSoon: true },
-      { label: "Products", href: "/products", icon: Package, comingSoon: true },
+      { label: "Products", href: "/products", icon: Package },
       { label: "Non-Conformance", href: "/non-conformances", icon: FileWarning, comingSoon: true },
       { label: "Management Review", href: "/management-reviews", icon: Presentation, comingSoon: true },
     ],
