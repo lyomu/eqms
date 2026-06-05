@@ -37,6 +37,7 @@ async function mockBackend(page: Page) {
 
   await page.route("**/api/auth/me", (r: Route) => r.fulfill(jsonBody(me)));
   await page.route("**/api/users", (r: Route) => r.fulfill(jsonBody(users)));
+  await page.route(/\/api\/notifications\/unread-count$/, (r: Route) => r.fulfill(jsonBody({ unread: 0 })));
   await page.route(/\/api\/capas\/\d+\/actions$/, (r: Route) => r.fulfill(jsonBody([])));
   await page.route(/\/api\/capas\/\d+\/audit-trail$/, (r: Route) => r.fulfill(jsonBody(audit)));
 

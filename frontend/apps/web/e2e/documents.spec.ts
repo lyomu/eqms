@@ -42,6 +42,7 @@ async function mockDocumentBackend(page: Page) {
 
   await page.route("**/api/auth/me", (r: Route) => r.fulfill(jsonBody(me)));
   await page.route("**/api/users", (r: Route) => r.fulfill(jsonBody(users)));
+  await page.route(/\/api\/notifications\/unread-count$/, (r: Route) => r.fulfill(jsonBody({ unread: 0 })));
   await page.route(/\/api\/attachments\//, (r: Route) => r.fulfill(jsonBody([])));
   await page.route(/\/api\/documents\/\d+\/versions$/, (r: Route) =>
     r.fulfill(jsonBody(doc ? [{ id: 1, majorVersion: 1, versionLabel: "1.0", status: doc.status, title: doc.title, content: doc.content, changeNotes: "Document created", createdBy: 1, createdByName: "John Demo", createdAt: "2026-06-05T10:00:00Z" }] : []))

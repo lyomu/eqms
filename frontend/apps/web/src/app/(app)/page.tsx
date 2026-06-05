@@ -19,6 +19,7 @@ import {
   useMyApprovals,
   useDueSoon,
   useOverdueItems,
+  useComplianceStatus,
 } from "@/hooks/useDashboard";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { TaskListCard } from "@/components/dashboard/TaskListCard";
@@ -34,6 +35,7 @@ export default function DashboardPage() {
   const approvals = useMyApprovals();
   const dueSoon = useDueSoon();
   const overdue = useOverdueItems();
+  const compliance = useComplianceStatus();
 
   return (
     <div className="space-y-6">
@@ -96,6 +98,20 @@ export default function DashboardPage() {
           </div>
         )}
       </section>
+
+      {/* Compliance posture */}
+      {compliance.data && (
+        <section aria-label="Compliance status">
+          <h2 className="mb-2 text-h3 text-brand-primary">Compliance Status</h2>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+            <StatCard label="Docs Due for Review" value={compliance.data.documentsDueForReview} icon={ClipboardList} />
+            <StatCard label="Overdue CAPAs" value={compliance.data.overdueCapas} icon={ClipboardCheck} />
+            <StatCard label="Overdue Changes" value={compliance.data.overdueChangeControls} icon={GitPullRequestArrow} />
+            <StatCard label="Open Deviations" value={compliance.data.openDeviations} icon={TriangleAlert} />
+            <StatCard label="Quarantined Batches" value={compliance.data.quarantinedBatches} icon={Beaker} />
+          </div>
+        </section>
+      )}
 
       {/* My Work summary */}
       <section aria-label="My work summary" className="grid grid-cols-1 gap-4 sm:grid-cols-3">

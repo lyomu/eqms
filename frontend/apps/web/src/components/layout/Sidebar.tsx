@@ -13,6 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/stores/ui-store";
 import { useAuth } from "@/hooks/useAuth";
+import { useUnreadCount } from "@/hooks/useNotifications";
 import { NAV_GROUPS } from "./nav-config";
 
 /**
@@ -30,6 +31,7 @@ export function Sidebar() {
   const toggleSidebar = useUiStore((s) => s.toggleSidebar);
   const setMobileOpen = useUiStore((s) => s.setMobileSidebarOpen);
   const { currentUser, logout } = useAuth();
+  const unread = useUnreadCount();
 
   const initials = currentUser?.fullName
     ? currentUser.fullName
@@ -79,16 +81,23 @@ export function Sidebar() {
             </span>
           </li>
           <li>
-            <span
+            <Link
+              href="/notifications"
+              onClick={() => setMobileOpen(false)}
+              aria-current={pathname === "/notifications" ? "page" : undefined}
               className={cn(
-                "flex cursor-not-allowed items-center gap-3 rounded-md px-3 py-2 text-body text-muted-foreground opacity-60"
+                "flex items-center gap-3 rounded-md px-3 py-2 text-body transition-colors",
+                pathname === "/notifications" ? "bg-brand-light font-medium text-brand-primary" : "text-foreground/80 hover:bg-accent"
               )}
-              aria-disabled="true"
-              title="Notifications (coming soon)"
             >
               <Bell className="h-5 w-5 shrink-0" aria-hidden="true" />
               {!collapsed && <span>Notifications</span>}
-            </span>
+              {!!unread.data && unread.data > 0 && (
+                <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-error px-1.5 text-[11px] font-medium text-white">
+                  {unread.data > 99 ? "99+" : unread.data}
+                </span>
+              )}
+            </Link>
           </li>
         </ul>
       </div>

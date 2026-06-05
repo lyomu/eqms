@@ -31,6 +31,7 @@ async function mockBackend(page: Page) {
 
   await page.route("**/api/auth/me", (r: Route) => r.fulfill(jsonBody(me)));
   await page.route("**/api/users", (r: Route) => r.fulfill(jsonBody(users)));
+  await page.route(/\/api\/notifications\/unread-count$/, (r: Route) => r.fulfill(jsonBody({ unread: 0 })));
   await page.route(/\/api\/materials\/\d+\/audit-trail$/, (r: Route) => r.fulfill(jsonBody(audit)));
   await page.route(/\/api\/materials\/\d+\/approve$/, (r: Route) => {
     mat.status = "APPROVED"; mat.version += 1;

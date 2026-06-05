@@ -1,5 +1,6 @@
 import {
   LayoutDashboard,
+  FileBarChart,
   FileText,
   GitPullRequestArrow,
   TriangleAlert,
@@ -41,7 +42,10 @@ export interface NavGroup {
 export const NAV_GROUPS: NavGroup[] = [
   {
     heading: "Overview",
-    items: [{ label: "Dashboard", href: "/", icon: LayoutDashboard }],
+    items: [
+      { label: "Dashboard", href: "/", icon: LayoutDashboard },
+      { label: "Reports", href: "/reports", icon: FileBarChart },
+    ],
   },
   {
     heading: "Core Quality",
@@ -73,7 +77,7 @@ export const NAV_GROUPS: NavGroup[] = [
     heading: "Manufacturing & Production",
     items: [
       { label: "Materials", href: "/materials", icon: Boxes },
-      { label: "Batch Records", href: "/batch-records", icon: Beaker, comingSoon: true },
+      { label: "Batch Records", href: "/batch-records", icon: Beaker },
       { label: "Products", href: "/products", icon: Package },
       { label: "Non-Conformance", href: "/non-conformances", icon: FileWarning, comingSoon: true },
       { label: "Management Review", href: "/management-reviews", icon: Presentation, comingSoon: true },

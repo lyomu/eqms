@@ -53,6 +53,8 @@ async function mockBackend(page: Page) {
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(data) });
 
   await page.route("**/api/auth/me", json(me));
+  await page.route(/\/api\/notifications\/unread-count$/, json({ unread: 0 }));
+  await page.route("**/api/dashboard/compliance-status", json({ documentsDueForReview: 0, overdueCapas: 0, overdueChangeControls: 0, openDeviations: 0, quarantinedBatches: 0 }));
   await page.route("**/api/dashboard/statistics", json(statistics));
   await page.route("**/api/dashboard/my-work", json(myWork));
   await page.route("**/api/dashboard/my-approvals", json(approvals));
