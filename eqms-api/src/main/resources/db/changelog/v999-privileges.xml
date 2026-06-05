@@ -50,7 +50,8 @@
                 suppliers, supplier_qualifications, supplier_certifications,
                 supplier_performance, supplier_findings, supplier_capa_link,
                 training_programs, training_assignments, training_auto_rules,
-                training_completion_audit
+                training_completion_audit,
+                equipment, calibrations, maintenance_history, equipment_specifications
             TO ${app_role_name};
 
             -- Append-only audit trail: SELECT + INSERT only.

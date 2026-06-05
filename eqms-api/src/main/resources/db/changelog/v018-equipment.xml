@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <!-- Equipment & Calibration Management (Milestone 16). 4 tables + EQUIPMENT permissions. -->
+
+    <changeSet id="v018-001-equipment" author="eqms">
+        <createTable tableName="equipment">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_equipment" nullable="false"/>
+            </column>
+            <column name="equipment_code" type="VARCHAR(40)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_equipment_code"/>
+            </column>
+            <column name="equipment_name" type="VARCHAR(200)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="equipment_type" type="VARCHAR(40)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="manufacturer" type="VARCHAR(200)"/>
+            <column name="model" type="VARCHAR(200)"/>
+            <column name="serial_number" type="VARCHAR(100)"/>
+            <column name="location" type="VARCHAR(200)"/>
+            <column name="owner_id" type="BIGINT"/>
+            <column name="acquisition_date" type="DATE"/>
+            <column name="calibration_frequency_months" type="INT"/>
+            <column name="next_calibration_date" type="DATE"/>
+            <column name="last_calibration_date" type="DATE"/>
+            <column name="status" type="VARCHAR(40)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="version" type="INT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_by" type="BIGINT"/>
+            <column name="deleted_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+        <createIndex tableName="equipment" indexName="ix_equipment_status">
+            <column name="status"/>
+        </createIndex>
+        <createIndex tableName="equipment" indexName="ix_equipment_type">
+            <column name="equipment_type"/>
+        </createIndex>
+        <createIndex tableName="equipment" indexName="ix_equipment_location">
+            <column name="location"/>
+        </createIndex>
+        <createIndex tableName="equipment" indexName="ix_equipment_next_cal">
+            <column name="next_calibration_date"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v018-002-calibrations" author="eqms">
+        <createTable tableName="calibrations">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_calibrations" nullable="false"/>
+            </column>
+            <column name="equipment_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_cal_equipment" references="equipment(id)"/>
+            </column>
+            <column name="calibration_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="calibration_due_date" type="DATE"/>
+            <column name="performed_by_id" type="BIGINT"/>
+            <column name="performed_by_name" type="VARCHAR(200)"/>
+            <column name="calibration_certificate_path" type="VARCHAR(500)"/>
+            <column name="results" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="next_calibration_date" type="DATE"/>
+            <column name="notes" type="TEXT"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createIndex tableName="calibrations" indexName="ix_calibrations_equipment_id">
+            <column name="equipment_id"/>
+        </createIndex>
+        <createIndex tableName="calibrations" indexName="ix_calibrations_date">
+            <column name="calibration_date"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v018-003-maintenance-history" author="eqms">
+        <createTable tableName="maintenance_history">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_maintenance_history" nullable="false"/>
+            </column>
+            <column name="equipment_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_maint_equipment" references="equipment(id)"/>
+            </column>
+            <column name="maintenance_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="maintenance_type" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="work_description" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="performed_by_id" type="BIGINT"/>
+            <column name="performed_by_name" type="VARCHAR(200)"/>
+            <column name="downtime_hours" type="DECIMAL(6,2)"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createIndex tableName="maintenance_history" indexName="ix_maint_equipment_id">
+            <column name="equipment_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v018-004-equipment-specifications" author="eqms">
+        <createTable tableName="equipment_specifications">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_equipment_specifications" nullable="false"/>
+            </column>
+            <column name="equipment_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_spec_equipment" references="equipment(id)"/>
+            </column>
+            <column name="specification_key" type="VARCHAR(200)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="specification_value" type="VARCHAR(500)"/>
+            <column name="unit" type="VARCHAR(50)"/>
+            <column name="acceptance_range_min" type="DECIMAL(20,6)"/>
+            <column name="acceptance_range_max" type="DECIMAL(20,6)"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createIndex tableName="equipment_specifications" indexName="ix_eqspec_equipment_id">
+            <column name="equipment_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v018-005-equipment-permissions" author="eqms">
+        <sql dbms="postgresql"><![CDATA[
+            INSERT INTO permissions (code, description, version, created_at, updated_at) VALUES
+              ('EQUIPMENT_CREATE',  'Register equipment and record calibrations/maintenance', 0, now(), now()),
+              ('EQUIPMENT_APPROVE', 'Finalize calibration outcomes and retire equipment',     0, now(), now());
+
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r JOIN permissions p ON p.code IN ('EQUIPMENT_CREATE','EQUIPMENT_APPROVE')
+            WHERE r.name = 'ADMIN';
+
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r JOIN permissions p ON p.code IN ('EQUIPMENT_CREATE','EQUIPMENT_APPROVE')
+            WHERE r.name = 'QA_MANAGER';
+
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r JOIN permissions p ON p.code = 'EQUIPMENT_CREATE'
+            WHERE r.name = 'AUTHOR';
+        ]]></sql>
+        <rollback>
+            <sql dbms="postgresql">
+                DELETE FROM role_permissions WHERE permission_id IN
+                    (SELECT id FROM permissions WHERE code IN ('EQUIPMENT_CREATE','EQUIPMENT_APPROVE'));
+                DELETE FROM permissions WHERE code IN ('EQUIPMENT_CREATE','EQUIPMENT_APPROVE');
+            </sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

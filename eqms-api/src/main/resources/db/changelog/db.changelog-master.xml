@@ -32,6 +32,7 @@
     <include file="db/changelog/v015-risks.xml"/>
     <include file="db/changelog/v016-suppliers.xml"/>
     <include file="db/changelog/v017-training.xml"/>
+    <include file="db/changelog/v018-equipment.xml"/>
     <include file="db/changelog/v999-privileges.xml"/>
 
 </databaseChangeLog>
