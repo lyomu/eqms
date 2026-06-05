@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <!-- Management Review (Milestone 19). 6 tables + MR permissions. -->
+
+    <changeSet id="v021-001-management-reviews" author="eqms">
+        <createTable tableName="management_reviews">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_management_reviews" nullable="false"/>
+            </column>
+            <column name="review_no" type="VARCHAR(40)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_management_reviews_no"/>
+            </column>
+            <column name="review_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="participants" type="TEXT"/>
+            <column name="scope" type="TEXT"/>
+            <column name="status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="submitted_by" type="BIGINT"/>
+            <column name="approved_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="version" type="INT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_by" type="BIGINT"/>
+            <column name="deleted_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+        <createIndex tableName="management_reviews" indexName="ix_mr_status">
+            <column name="status"/>
+        </createIndex>
+        <createIndex tableName="management_reviews" indexName="ix_mr_review_date">
+            <column name="review_date"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v021-002-review-metrics" author="eqms">
+        <createTable tableName="review_metrics">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_review_metrics" nullable="false"/>
+            </column>
+            <column name="management_review_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_rm_mr" references="management_reviews(id)"/>
+            </column>
+            <column name="metric_name" type="VARCHAR(120)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="metric_value" type="VARCHAR(120)"/>
+            <column name="period" type="VARCHAR(60)"/>
+            <column name="trend" type="VARCHAR(10)"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createIndex tableName="review_metrics" indexName="ix_rm_mr_id">
+            <column name="management_review_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v021-003-review-audit-results" author="eqms">
+        <createTable tableName="review_audit_results">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_review_audit_results" nullable="false"/>
+            </column>
+            <column name="management_review_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_rar_mr" references="management_reviews(id)"/>
+            </column>
+            <column name="audit_id" type="BIGINT"/>
+            <column name="critical_findings" type="INT" defaultValueNumeric="0"/>
+            <column name="major_findings" type="INT" defaultValueNumeric="0"/>
+            <column name="minor_findings" type="INT" defaultValueNumeric="0"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createIndex tableName="review_audit_results" indexName="ix_rar_mr_id">
+            <column name="management_review_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v021-004-review-product-feedback" author="eqms">
+        <createTable tableName="review_product_feedback">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_review_product_feedback" nullable="false"/>
+            </column>
+            <column name="management_review_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_rpf_mr" references="management_reviews(id)"/>
+            </column>
+            <column name="complaints_count" type="INT" defaultValueNumeric="0"/>
+            <column name="returns_count" type="INT" defaultValueNumeric="0"/>
+            <column name="serious_adverse_events" type="INT" defaultValueNumeric="0"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createIndex tableName="review_product_feedback" indexName="ix_rpf_mr_id">
+            <column name="management_review_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v021-005-review-action-items" author="eqms">
+        <createTable tableName="review_action_items">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_review_action_items" nullable="false"/>
+            </column>
+            <column name="management_review_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_rai_mr" references="management_reviews(id)"/>
+            </column>
+            <column name="action_description" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="owner_id" type="BIGINT"/>
+            <column name="due_date" type="DATE"/>
+            <column name="status" type="VARCHAR(15)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="completion_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="signature_id" type="BIGINT"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createIndex tableName="review_action_items" indexName="ix_rai_mr_id">
+            <column name="management_review_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v021-006-review-decisions" author="eqms">
+        <createTable tableName="review_decisions">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_review_decisions" nullable="false"/>
+            </column>
+            <column name="management_review_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_rd_mr" references="management_reviews(id)"/>
+            </column>
+            <column name="decision_description" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="decision_area" type="VARCHAR(120)"/>
+            <column name="impact" type="TEXT"/>
+            <column name="documented_by" type="BIGINT"/>
+            <column name="documented_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="signature_id" type="BIGINT"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createIndex tableName="review_decisions" indexName="ix_rd_mr_id">
+            <column name="management_review_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v021-007-mr-permissions" author="eqms">
+        <sql dbms="postgresql"><![CDATA[
+            INSERT INTO permissions (code, description, version, created_at, updated_at) VALUES
+              ('MR_MANAGE',  'Schedule management reviews and capture review inputs', 0, now(), now()),
+              ('MR_APPROVE', 'Approve and finalize management reviews',                0, now(), now());
+
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r JOIN permissions p ON p.code IN ('MR_MANAGE','MR_APPROVE')
+            WHERE r.name = 'ADMIN';
+
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r JOIN permissions p ON p.code IN ('MR_MANAGE','MR_APPROVE')
+            WHERE r.name = 'QA_MANAGER';
+
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r JOIN permissions p ON p.code = 'MR_MANAGE'
+            WHERE r.name = 'AUTHOR';
+        ]]></sql>
+        <rollback>
+            <sql dbms="postgresql">
+                DELETE FROM role_permissions WHERE permission_id IN
+                    (SELECT id FROM permissions WHERE code IN ('MR_MANAGE','MR_APPROVE'));
+                DELETE FROM permissions WHERE code IN ('MR_MANAGE','MR_APPROVE');
+            </sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
