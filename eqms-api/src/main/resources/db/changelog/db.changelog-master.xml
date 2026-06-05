@@ -36,6 +36,7 @@
     <include file="db/changelog/v019-oosmanagement.xml"/>
     <include file="db/changelog/v020-nonconformance.xml"/>
     <include file="db/changelog/v021-managementreview.xml"/>
+    <include file="db/changelog/v022-document-versions.xml"/>
     <include file="db/changelog/v999-privileges.xml"/>
 
 </databaseChangeLog>

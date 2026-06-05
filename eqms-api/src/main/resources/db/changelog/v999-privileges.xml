@@ -60,6 +60,9 @@
                 review_action_items, review_decisions
             TO ${app_role_name};
 
+            -- Append-only document version history: SELECT + INSERT only (immutable snapshots).
+            GRANT SELECT, INSERT ON document_versions TO ${app_role_name};
+
             -- Append-only audit trail: SELECT + INSERT only.
             GRANT SELECT, INSERT ON audit_logs TO ${app_role_name};
 

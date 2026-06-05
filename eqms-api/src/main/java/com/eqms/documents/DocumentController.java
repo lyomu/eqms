@@ -11,6 +11,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -25,6 +26,9 @@ import com.eqms.documents.dto.CreateDocumentRequest;
 import com.eqms.documents.dto.DocumentResponse;
 import com.eqms.documents.dto.PageResponse;
 import com.eqms.documents.dto.ReadAssignmentResponse;
+import com.eqms.documents.dto.SignatureResponse;
+import com.eqms.documents.dto.UpdateDocumentRequest;
+import com.eqms.documents.dto.VersionResponse;
 import com.eqms.notifications.NotificationDispatcher;
 import com.eqms.notifications.NotificationType;
 
@@ -77,6 +81,28 @@ public class DocumentController {
     @PreAuthorize("isAuthenticated()")
     public DocumentResponse get(@PathVariable Long id) {
         return DocumentResponse.from(documentService.get(id));
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('DOCUMENT_CREATE')")
+    public DocumentResponse update(@PathVariable Long id, @Valid @RequestBody UpdateDocumentRequest request,
+                                   @AuthenticationPrincipal UserPrincipal principal, HttpServletRequest http) {
+        Document document = documentService.update(id, request.expectedVersion(), request.title(),
+                request.type(), request.content(), request.reviewPeriodMonths(), request.reason(),
+                principal.getId(), principal.getFullName(), clientIp(http), userAgent(http));
+        return DocumentResponse.from(document);
+    }
+
+    @GetMapping("/{id}/versions")
+    @PreAuthorize("isAuthenticated()")
+    public List<VersionResponse> versions(@PathVariable Long id) {
+        return documentService.versions(id).stream().map(VersionResponse::from).toList();
+    }
+
+    @GetMapping("/{id}/approvals")
+    @PreAuthorize("isAuthenticated()")
+    public List<SignatureResponse> approvals(@PathVariable Long id) {
+        return documentService.signatures(id).stream().map(SignatureResponse::from).toList();
     }
 
     @PostMapping("/{id}/submit-for-review")

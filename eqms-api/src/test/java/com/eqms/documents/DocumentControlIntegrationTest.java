@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -25,6 +26,7 @@ import com.eqms.auth.mfa.TotpService;
 import com.eqms.documents.dto.ActionRequest;
 import com.eqms.documents.dto.ApproveRequest;
 import com.eqms.documents.dto.CreateDocumentRequest;
+import com.eqms.documents.dto.UpdateDocumentRequest;
 import com.eqms.identity.Role;
 import com.eqms.identity.RoleRepository;
 import com.eqms.identity.User;
@@ -133,6 +135,83 @@ class DocumentControlIntegrationTest extends AbstractIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(new CreateDocumentRequest("Nope", DocumentType.SOP, "Body", null))))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void editDraftUpdatesFieldsAndIsAudited() throws Exception {
+        Ctx author = newUser("ADMIN");
+        JsonNode created = create(author, new CreateDocumentRequest("Draft SOP", DocumentType.SOP, "Body", 12));
+        long id = created.get("id").asLong();
+        int version = created.get("version").asInt();
+
+        mockMvc.perform(put("/api/documents/" + id).session(author.session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(new UpdateDocumentRequest(version, "Draft SOP (revised)", DocumentType.SOP,
+                                "Revised body", 24, "Clarified scope"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("Draft SOP (revised)"))
+                .andExpect(jsonPath("$.content").value("Revised body"));
+
+        MvcResult trail = mockMvc.perform(get("/api/documents/" + id + "/audit-trail").session(author.session))
+                .andExpect(status().isOk()).andReturn();
+        assertThat(trail.getResponse().getContentAsString())
+                .contains("title").contains("Clarified scope");
+    }
+
+    @Test
+    void editIsRejectedOnceNotDraft() throws Exception {
+        Ctx author = newUser("ADMIN");
+        JsonNode created = create(author, new CreateDocumentRequest("Lock SOP", DocumentType.SOP, "Body", null));
+        long id = created.get("id").asLong();
+        int version = created.get("version").asInt();
+        version = action(author, id, "submit-for-review", version, "UNDER_REVIEW");
+
+        mockMvc.perform(put("/api/documents/" + id).session(author.session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(new UpdateDocumentRequest(version, "Nope", DocumentType.SOP, "x", null, "edit"))))
+                .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    void versionsAndApprovalsAreExposed() throws Exception {
+        Ctx author = newUser("ADMIN");
+        Ctx approver = newUser("ADMIN");
+
+        JsonNode created = create(author, new CreateDocumentRequest("Versioned SOP", DocumentType.SOP, "Body", null));
+        long id = created.get("id").asLong();
+        int version = created.get("version").asInt();
+
+        // One snapshot at creation (DRAFT).
+        mockMvc.perform(get("/api/documents/" + id + "/versions").session(author.session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].status").value("DRAFT"));
+
+        version = action(author, id, "submit-for-review", version, "UNDER_REVIEW");
+        version = action(author, id, "submit-for-approval", version, "PENDING_APPROVAL");
+        String code = totpService.generateCode(approver.secret, totpService.currentTimeStep());
+        mockMvc.perform(post("/api/documents/" + id + "/approve").session(approver.session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(new ApproveRequest(version, "Approved for release", PASSWORD, code,
+                                "I approve this document."))))
+                .andExpect(status().isOk());
+
+        // A second snapshot at approval (APPROVED) + a signature on the approvals endpoint.
+        mockMvc.perform(get("/api/documents/" + id + "/versions").session(approver.session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2));
+        mockMvc.perform(get("/api/documents/" + id + "/approvals").session(approver.session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].meaning").value("Approved"));
+    }
+
+    @Test
+    void usersDirectoryIsListedForAuthenticated() throws Exception {
+        Ctx user = newUser("ADMIN");
+        mockMvc.perform(get("/api/users").session(user.session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.id == " + user.userId + ")].email").exists());
     }
 
     // --- helpers ---------------------------------------------------------------------------

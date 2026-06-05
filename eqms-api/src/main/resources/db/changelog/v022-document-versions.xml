@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <!--
+      Document version history (Milestone 3 frontend extension). An immutable, append-only
+      snapshot of a document's title/content/status captured at meaningful points (creation and
+      approval). Like electronic_signatures, rows are never updated or deleted, so the app role
+      gets SELECT + INSERT only (granted in v999-privileges).
+    -->
+
+    <changeSet id="v022-001-document-versions" author="eqms">
+        <createTable tableName="document_versions">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_document_versions" nullable="false"/>
+            </column>
+            <column name="document_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="major_version" type="INT"><constraints nullable="false"/></column>
+            <column name="version_label" type="VARCHAR(40)"><constraints nullable="false"/></column>
+            <column name="status" type="VARCHAR(40)"><constraints nullable="false"/></column>
+            <column name="title" type="VARCHAR(400)"><constraints nullable="false"/></column>
+            <column name="content" type="TEXT"/>
+            <column name="change_notes" type="TEXT"/>
+            <column name="created_by" type="BIGINT"/>
+            <column name="created_by_name" type="VARCHAR(200)"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="document_versions" baseColumnNames="document_id"
+                constraintName="fk_document_versions_document"
+                referencedTableName="documents" referencedColumnNames="id"/>
+        <createIndex tableName="document_versions" indexName="ix_document_versions_document">
+            <column name="document_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

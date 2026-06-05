@@ -18,9 +18,13 @@ import com.eqms.common.ResourceNotFoundException;
 import com.eqms.sequences.SequenceService;
 import com.eqms.shared.constants.AuditAction;
 import com.eqms.shared.constants.SignatureMeaning;
+import com.eqms.signatures.ElectronicSignature;
+import com.eqms.signatures.ElectronicSignatureRepository;
 import com.eqms.signatures.SignatureRequest;
 import com.eqms.signatures.SignatureService;
+import com.eqms.workflows.StaleVersionException;
 import com.eqms.workflows.TransitionRequest;
+import com.eqms.workflows.WorkflowException;
 import com.eqms.workflows.WorkflowService;
 
 /**
@@ -33,6 +37,8 @@ public class DocumentService {
 
     private final DocumentRepository documentRepository;
     private final DocumentReadAssignmentRepository readAssignmentRepository;
+    private final DocumentVersionRepository versionRepository;
+    private final ElectronicSignatureRepository signatureRepository;
     private final SequenceService sequenceService;
     private final WorkflowService workflowService;
     private final SignatureService signatureService;
@@ -41,10 +47,14 @@ public class DocumentService {
 
     public DocumentService(DocumentRepository documentRepository,
                            DocumentReadAssignmentRepository readAssignmentRepository,
+                           DocumentVersionRepository versionRepository,
+                           ElectronicSignatureRepository signatureRepository,
                            SequenceService sequenceService, WorkflowService workflowService,
                            SignatureService signatureService, AuditService auditService, Clock utcClock) {
         this.documentRepository = documentRepository;
         this.readAssignmentRepository = readAssignmentRepository;
+        this.versionRepository = versionRepository;
+        this.signatureRepository = signatureRepository;
         this.sequenceService = sequenceService;
         this.workflowService = workflowService;
         this.signatureService = signatureService;
@@ -76,6 +86,7 @@ public class DocumentService {
                 .userId(actorId).userFullName(actorName)
                 .ipAddress(ip).userAgent(userAgent)
                 .build());
+        snapshotVersion(document, "Document created", actorId, actorName);
         return document;
     }
 
@@ -89,6 +100,37 @@ public class DocumentService {
     @Transactional(readOnly = true)
     public Document get(Long id) {
         return require(id);
+    }
+
+    /**
+     * Edit a Draft document's metadata/content. Permitted only while in DRAFT (else 422); the
+     * optimistic-lock check (rule 5) rejects a stale expected version (409). Each changed field is
+     * written to the audit trail.
+     */
+    @Transactional
+    public Document update(Long id, int expectedVersion, String title, DocumentType type, String content,
+                           Integer reviewPeriodMonths, String reason,
+                           Long actorId, String actorName, String ip, String userAgent) {
+        Document document = require(id);
+        if (document.getDocumentStatus() != DocumentStatus.DRAFT) {
+            throw new WorkflowException("Document can only be edited while in Draft");
+        }
+        if (document.getVersion() != expectedVersion) {
+            throw new StaleVersionException("Document was modified by someone else; reload and retry");
+        }
+
+        auditField(document, "title", document.getTitle(), title, reason, actorId, actorName, ip, userAgent);
+        auditField(document, "document_type", document.getDocumentType().name(), type.name(), reason, actorId, actorName, ip, userAgent);
+        auditField(document, "content", document.getContent(), content, reason, actorId, actorName, ip, userAgent);
+        auditField(document, "review_period_months",
+                String.valueOf(document.getReviewPeriodMonths()), String.valueOf(reviewPeriodMonths),
+                reason, actorId, actorName, ip, userAgent);
+
+        document.setTitle(title);
+        document.setDocumentType(type);
+        document.setContent(content);
+        document.setReviewPeriodMonths(reviewPeriodMonths);
+        return documentRepository.save(document);
     }
 
     @Transactional
@@ -132,6 +174,7 @@ public class DocumentService {
                 .build());
 
         transition(document, DocumentWorkflow.APPROVE, expectedVersion, reason, actorId, actorName, ip, userAgent);
+        snapshotVersion(document, reason != null ? reason : "Approved", actorId, actorName);
         return document;
     }
 
@@ -214,6 +257,52 @@ public class DocumentService {
     public List<AuditLog> auditTrail(Long id) {
         require(id);
         return auditService.trailFor(DocumentWorkflow.RECORD_TYPE, String.valueOf(id));
+    }
+
+    /** Read-only version-history snapshots for a document, newest first. */
+    @Transactional(readOnly = true)
+    public List<DocumentVersion> versions(Long id) {
+        require(id);
+        return versionRepository.findByDocumentIdOrderByCreatedAtDesc(id);
+    }
+
+    /** Read-only electronic signatures applied to a document, newest first (Approvals tab). */
+    @Transactional(readOnly = true)
+    public List<ElectronicSignature> signatures(Long id) {
+        require(id);
+        return signatureRepository.findByRecordTypeAndRecordIdOrderBySignedAtDesc(
+                DocumentWorkflow.RECORD_TYPE, String.valueOf(id));
+    }
+
+    /** Write an immutable version snapshot of the document's current state. */
+    private void snapshotVersion(Document document, String changeNotes, Long actorId, String actorName) {
+        versionRepository.save(DocumentVersion.builder()
+                .documentId(document.getId())
+                .majorVersion(document.getMajorVersion())
+                .versionLabel(document.getMajorVersion() + ".0")
+                .status(document.getDocumentStatus().name())
+                .title(document.getTitle())
+                .content(document.getContent())
+                .changeNotes(changeNotes)
+                .createdBy(actorId).createdByName(actorName)
+                .createdAt(Instant.now(clock))
+                .build());
+    }
+
+    /** Record an audit entry for a single changed field (no-op when the value is unchanged). */
+    private void auditField(Document document, String field, String oldValue, String newValue, String reason,
+                            Long actorId, String actorName, String ip, String userAgent) {
+        if (java.util.Objects.equals(oldValue, newValue)) {
+            return;
+        }
+        auditService.record(AuditEntryRequest.builder()
+                .recordType(DocumentWorkflow.RECORD_TYPE).recordId(String.valueOf(document.getId()))
+                .action(AuditAction.UPDATE)
+                .fieldName(field).oldValue(oldValue).newValue(newValue)
+                .reasonForChange(reason != null ? reason : "Document edited")
+                .userId(actorId).userFullName(actorName)
+                .ipAddress(ip).userAgent(userAgent)
+                .build());
     }
 
     private void transition(Document document, String action, int expectedVersion, String reason,
