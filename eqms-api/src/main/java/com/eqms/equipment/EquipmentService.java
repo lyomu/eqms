@@ -15,6 +15,9 @@ import com.eqms.audit.AuditEntryRequest;
 import com.eqms.audit.AuditLog;
 import com.eqms.audit.AuditService;
 import com.eqms.common.ResourceNotFoundException;
+import com.eqms.deviations.DeviationSeverity;
+import com.eqms.deviations.DeviationService;
+import com.eqms.deviations.dto.CreateDeviationRequest;
 import com.eqms.equipment.dto.AddSpecificationRequest;
 import com.eqms.equipment.dto.CalibrationFailRequest;
 import com.eqms.equipment.dto.CalibrationPassRequest;
@@ -42,6 +45,7 @@ public class EquipmentService {
     private final EquipmentSpecificationRepository specificationRepository;
     private final SequenceService sequenceService;
     private final WorkflowService workflowService;
+    private final DeviationService deviationService;
     private final AuditService auditService;
     private final Clock clock;
 
@@ -51,6 +55,7 @@ public class EquipmentService {
                             EquipmentSpecificationRepository specificationRepository,
                             SequenceService sequenceService,
                             WorkflowService workflowService,
+                            DeviationService deviationService,
                             AuditService auditService,
                             Clock utcClock) {
         this.equipmentRepository = equipmentRepository;
@@ -59,6 +64,7 @@ public class EquipmentService {
         this.specificationRepository = specificationRepository;
         this.sequenceService = sequenceService;
         this.workflowService = workflowService;
+        this.deviationService = deviationService;
         this.auditService = auditService;
         this.clock = utcClock;
     }
@@ -214,6 +220,19 @@ public class EquipmentService {
                 actorId, actorName, ip, ua);
         audit(id, AuditAction.UPDATE, "calibration_result", null, "FAIL",
                 "Calibration record: FAIL — investigation required", actorId, actorName, ip, ua);
+
+        // Regulatory requirement: calibration failure must be investigated via a formal Deviation (M16 spec).
+        deviationService.create(
+                new CreateDeviationRequest(
+                        "Calibration failure: " + equipment.getEquipmentName() + " (" + equipment.getEquipmentCode() + ")",
+                        DeviationSeverity.MAJOR,
+                        "Equipment " + equipment.getEquipmentCode() + " failed calibration on "
+                                + request.calibrationDate() + ". "
+                                + (request.notes() != null ? request.notes() : "No additional notes."),
+                        "Equipment quarantined and marked Out of Calibration. Investigation required before return to service.",
+                        request.calibrationDate().atStartOfDay(java.time.ZoneOffset.UTC).toInstant()),
+                actorId, actorName, ip, ua);
+
         return equipment;
     }
 

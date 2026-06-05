@@ -1,15 +1,23 @@
 package com.eqms.notifications;
 
-/**
- * Notification event categories. Only event types whose source module exists are wired today;
- * Training/Audit/Complaint types will be added with their milestones (M11/M12/M15).
- */
 public enum NotificationType {
+    // Document / change workflows
     DOCUMENT_SUBMITTED_FOR_REVIEW,
     DOCUMENT_PENDING_APPROVAL,
     CHANGE_SUBMITTED,
+
+    // Investigation / corrective
     CAPA_ASSIGNED,
     DEVIATION_ASSIGNED,
+
+    // Scheduled reminders
+    CALIBRATION_DUE,
+    TRAINING_OVERDUE,
+    OOS_STALE,
+    NC_STALE,
+    MANAGEMENT_REVIEW_OVERDUE,
+
+    // Generic
     TASK_OVERDUE,
     GENERAL
 }

@@ -1,6 +1,7 @@
 package com.eqms.support;
 
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
 /**
@@ -21,6 +22,7 @@ import org.springframework.test.context.ActiveProfiles;
  */
 @SpringBootTest
 @ActiveProfiles("test")
+@Import(TestStorageConfig.class)
 public abstract class AbstractIntegrationTest {
 
     /** JDBC URL of the docker-compose PostgreSQL. */

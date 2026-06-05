@@ -8,6 +8,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import com.eqms.attachments.StorageException;
 import com.eqms.workflows.SelfApprovalException;
 import com.eqms.workflows.StaleVersionException;
 import com.eqms.workflows.WorkflowException;
@@ -44,6 +45,11 @@ public class ApiExceptionHandler {
     @ExceptionHandler(WorkflowException.class)
     public ResponseEntity<ErrorResponse> handleWorkflow(WorkflowException ex) {
         return build(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
+    }
+
+    @ExceptionHandler(StorageException.class)
+    public ResponseEntity<ErrorResponse> handleStorage(StorageException ex) {
+        return build(HttpStatus.SERVICE_UNAVAILABLE, "Object storage error: " + ex.getMessage());
     }
 
     @ExceptionHandler(BadCredentialsException.class)

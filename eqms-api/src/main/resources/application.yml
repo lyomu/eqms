@@ -46,3 +46,14 @@ eqms:
   signature:
     hmac-key: ${EQMS_SIGNATURE_HMAC_KEY:dev-only-change-me}
     hmac-key-id: ${EQMS_SIGNATURE_HMAC_KEY_ID:dev-1}
+  # S3-compatible object storage for regulated attachments.
+  # Locally MinIO runs at http://localhost:9000 — see docker-compose.yml.
+  # In production set EQMS_STORAGE_ENDPOINT_URL to your AWS region endpoint or remove it entirely.
+  storage:
+    endpoint-url: ${EQMS_STORAGE_ENDPOINT_URL:http://localhost:9000}
+    region: ${EQMS_STORAGE_REGION:us-east-1}
+    bucket: ${EQMS_STORAGE_BUCKET:eqms-attachments}
+    access-key: ${EQMS_STORAGE_ACCESS_KEY:minioadmin}
+    secret-key: ${EQMS_STORAGE_SECRET_KEY:minioadmin}
+    # path-style-access must be true for MinIO; set false for AWS S3 in production.
+    path-style-access: ${EQMS_STORAGE_PATH_STYLE:true}

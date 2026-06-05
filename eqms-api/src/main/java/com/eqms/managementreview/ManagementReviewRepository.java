@@ -17,4 +17,7 @@ public interface ManagementReviewRepository extends JpaRepository<ManagementRevi
     Page<ManagementReview> findByMrStatus(MrStatus status, Pageable pageable);
 
     List<ManagementReview> findByReviewDateLessThanOrderByReviewDateDesc(LocalDate reviewDate);
+
+    /** SCHEDULED reviews whose date has already passed — used for overdue-review reminders. */
+    List<ManagementReview> findByMrStatusAndReviewDateBefore(MrStatus status, LocalDate date);
 }
