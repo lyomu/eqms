@@ -48,14 +48,14 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: "Document Control", href: "/documents", icon: FileText },
       { label: "Change Control", href: "/change-control", icon: GitPullRequestArrow },
-      { label: "Deviations", href: "/deviations", icon: TriangleAlert, comingSoon: true },
+      { label: "Deviations", href: "/deviations", icon: TriangleAlert },
       { label: "Training", href: "/training", icon: GraduationCap, comingSoon: true },
     ],
   },
   {
     heading: "Investigation & Corrective",
     items: [
-      { label: "CAPA", href: "/capa", icon: ClipboardCheck, comingSoon: true },
+      { label: "CAPA", href: "/capa", icon: ClipboardCheck },
       { label: "Complaints", href: "/complaints", icon: MessageSquareWarning, comingSoon: true },
       { label: "OOS", href: "/oos", icon: FlaskConical, comingSoon: true },
     ],

@@ -33,6 +33,8 @@ interface SignatureModalProps {
   /** Performs the signed action; throws on failure (the modal maps the error). */
   onSign: (creds: SignatureCredentials) => Promise<void>;
   successMessage?: string;
+  /** Optional extra fields rendered above the credentials (e.g. an effectiveness-result note). */
+  children?: React.ReactNode;
 }
 
 const MEANINGS = ["Authored", "Reviewed", "Approved", "Released"] as const;
@@ -53,6 +55,7 @@ export function SignatureModal({
   isPending,
   onSign,
   successMessage = "Signed successfully",
+  children,
 }: SignatureModalProps) {
   const [meaning, setMeaning] = useState<string>("Approved");
   const [password, setPassword] = useState("");
@@ -116,6 +119,8 @@ export function SignatureModal({
         </div>
 
         {error && <ErrorAlert title="Couldn't sign" message={error} />}
+
+        {children}
 
         <div className="space-y-1.5">
           <Label htmlFor="sig-meaning">Signature meaning</Label>
