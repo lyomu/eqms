@@ -2,11 +2,20 @@ import {
   LayoutDashboard,
   FileText,
   GitPullRequestArrow,
-  ClipboardCheck,
   TriangleAlert,
-  Package,
-  Boxes,
+  GraduationCap,
+  ClipboardCheck,
+  MessageSquareWarning,
   FlaskConical,
+  ClipboardList,
+  ShieldAlert,
+  Wrench,
+  Truck,
+  Boxes,
+  Beaker,
+  Package,
+  FileWarning,
+  Presentation,
   type LucideIcon,
 } from "lucide-react";
 
@@ -14,7 +23,7 @@ export interface NavItem {
   label: string;
   href: string;
   icon: LucideIcon;
-  /** Modules not yet built (post-M0). Rendered disabled until their milestone lands. */
+  /** Modules not yet built (post-M1). Rendered disabled until their milestone lands. */
   comingSoon?: boolean;
 }
 
@@ -24,9 +33,10 @@ export interface NavGroup {
 }
 
 /**
- * Sidebar navigation. Only Dashboard is live at Milestone 0; module routes are
- * placeholders flagged `comingSoon` and get wired up at their respective milestones
- * (M3 Documents, M4 Change Control, ...).
+ * Sidebar navigation — all 16 eQMS modules, grouped per CLAUDE-FRONTEND.md.
+ * Only the Dashboard is live at Milestone 1; module routes are placeholders flagged
+ * `comingSoon` and get wired up at their respective milestones (M3 Documents, M4
+ * Change Control, …).
  */
 export const NAV_GROUPS: NavGroup[] = [
   {
@@ -36,18 +46,37 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     heading: "Core Quality",
     items: [
-      { label: "Documents", href: "/documents", icon: FileText, comingSoon: true },
+      { label: "Document Control", href: "/documents", icon: FileText, comingSoon: true },
       { label: "Change Control", href: "/change-control", icon: GitPullRequestArrow, comingSoon: true },
-      { label: "CAPA", href: "/capa", icon: ClipboardCheck, comingSoon: true },
       { label: "Deviations", href: "/deviations", icon: TriangleAlert, comingSoon: true },
+      { label: "Training", href: "/training", icon: GraduationCap, comingSoon: true },
     ],
   },
   {
-    heading: "Manufacturing",
+    heading: "Investigation & Corrective",
     items: [
-      { label: "Products", href: "/products", icon: Package, comingSoon: true },
+      { label: "CAPA", href: "/capa", icon: ClipboardCheck, comingSoon: true },
+      { label: "Complaints", href: "/complaints", icon: MessageSquareWarning, comingSoon: true },
+      { label: "OOS", href: "/oos", icon: FlaskConical, comingSoon: true },
+    ],
+  },
+  {
+    heading: "Compliance & Oversight",
+    items: [
+      { label: "Audits", href: "/audits", icon: ClipboardList, comingSoon: true },
+      { label: "Risk", href: "/risks", icon: ShieldAlert, comingSoon: true },
+      { label: "Equipment", href: "/equipment", icon: Wrench, comingSoon: true },
+      { label: "Suppliers", href: "/suppliers", icon: Truck, comingSoon: true },
+    ],
+  },
+  {
+    heading: "Manufacturing & Production",
+    items: [
       { label: "Materials", href: "/materials", icon: Boxes, comingSoon: true },
-      { label: "Batch Records", href: "/batch-records", icon: FlaskConical, comingSoon: true },
+      { label: "Batch Records", href: "/batch-records", icon: Beaker, comingSoon: true },
+      { label: "Products", href: "/products", icon: Package, comingSoon: true },
+      { label: "Non-Conformance", href: "/non-conformances", icon: FileWarning, comingSoon: true },
+      { label: "Management Review", href: "/management-reviews", icon: Presentation, comingSoon: true },
     ],
   },
 ];
