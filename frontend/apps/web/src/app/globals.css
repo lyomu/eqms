@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/**
+ * Design tokens (SimplerQMS). shadcn semantic CSS vars in HSL so components stay
+ * themeable; `--primary` maps to brand primary blue #1F4E79, `--secondary` to #2E75B6.
+ */
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 210 29% 16%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 210 29% 16%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 29% 16%;
+
+    /* #1F4E79 */
+    --primary: 209 59% 30%;
+    --primary-foreground: 0 0% 100%;
+
+    /* #2E75B6 */
+    --secondary: 209 60% 45%;
+    --secondary-foreground: 0 0% 100%;
+
+    /* #D6E4F0 light blue */
+    --muted: 209 56% 89%;
+    --muted-foreground: 210 16% 40%;
+
+    --accent: 209 56% 89%;
+    --accent-foreground: 209 59% 30%;
+
+    /* #DC3545 */
+    --destructive: 354 70% 54%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 20% 88%;
+    --input: 214 20% 85%;
+    --ring: 209 59% 30%;
+
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-size: 14px; /* body default */
+    line-height: 22px;
+  }
+}
+
+/* Typography helpers mirroring the Tailwind fontSize scale */
+@layer components {
+  .h1 {
+    @apply text-h1 text-brand-primary;
+  }
+  .h2 {
+    @apply text-h2 text-brand-primary;
+  }
+  .h3 {
+    @apply text-h3;
+  }
+  .form-label {
+    @apply text-label text-foreground;
+  }
+}

@@ -22,11 +22,27 @@ Deviations, CAPA, Products, Materials, Batch Records, Dashboard, Notifications, 
 - Language: TypeScript (strict mode)
 - Styling: Tailwind CSS + shadcn/ui
 - State: React Query (server) + Zustand (client UI state)
-- Auth: Spring Security OAuth2 via httpOnly cookie
+- Auth: Spring Security **stateful session cookie** (`JSESSIONID`, HttpOnly,
+  SameSite=Strict). NOT a JWT/bearer token; there is no refresh endpoint.
 - Forms: React Hook Form + Zod
-- HTTP: axios with interceptors (token refresh, error handling)
+- HTTP: axios (`withCredentials: true`) with a single response interceptor for error
+  handling. No Authorization header, no token refresh.
 - Testing: Playwright (e2e) + Vitest + React Testing Library (unit)
-- Monorepo: pnpm workspaces (apps/web, apps/desktop)
+- Monorepo: pnpm workspaces. Frontend lives at `frontend/` (workspace root) with the
+  Next app at `frontend/apps/web`, alongside the backend Maven modules in the same git repo.
+
+## Backend integration (decided in M0)
+- **Same-origin via Next.js rewrite proxy.** The browser calls `/api/*` on the Next
+  origin; `next.config.mjs` rewrites to `BACKEND_ORIGIN` (default `http://localhost:8080`).
+  This keeps the session cookie first-party (SameSite=Strict works) and needs **no CORS on
+  the backend**. Never hardcode the backend URL in client code.
+- **Auth is two-step with mandatory MFA**: `POST /api/auth/login` (email+password) returns a
+  status string (`MFA_REQUIRED` | `ENROLLMENT_REQUIRED` | `INVALID_CREDENTIALS` | `LOCKED`),
+  then `POST /api/auth/mfa/verify` (`{code}`); `POST /api/auth/mfa/enroll` for first-time
+  setup. `GET /api/auth/me` hydrates the current user; `isAuthenticated` derives from it.
+- **CSRF**: backend has CSRF disabled for now (planned Milestone 1.x). The axios client
+  carries an inert CSRF header seam (`CSRF_ENABLED=false` in `src/lib/api.ts`) — flip it on
+  when the backend issues an `XSRF-TOKEN` cookie; mutating requests will echo `X-XSRF-TOKEN`.
 
 ## NON-NEGOTIABLE RULES FOR FRONTEND
 
@@ -40,10 +56,10 @@ Deviations, CAPA, Products, Materials, Batch Records, Dashboard, Notifications, 
    - Signatures not generated locally.
    - Timestamps from backend response.
 
-3. TOKENS ARE HTTPONLY + SECURE.
-   - JWT in httpOnly cookie (not localStorage).
-   - Backend sets on login.
-   - Auto-refresh via secure endpoint.
+3. SESSION COOKIE IS HTTPONLY + SECURE (NOT A TOKEN IN JS).
+   - Auth rides a server-side session cookie (JSESSIONID), set by the backend on login.
+   - Never store any token/credential in localStorage or JS-readable state.
+   - No client-side JWT, no auto-refresh: a 401 means the session is gone → go to /login.
 
 4. ALL API CALLS HAVE ERROR HANDLING.
    - 401 → redirect to login
@@ -74,12 +90,25 @@ Deviations, CAPA, Products, Materials, Batch Records, Dashboard, Notifications, 
 - Error: #DC3545
 - Spacing: 16px default
 - Border radius: 4–8px
-- Font: Arial or Open Sans
+- Font: Open Sans (Arial fallback)
+
+### Shell conventions (cues from SimplerQMS, established in M0)
+- **Light left sidebar** (white bg, right border, blue `eQMS` wordmark, gray outline
+  icons). Active item = light-blue pill (`bg-brand-light`) + `text-brand-primary`.
+  Top of sidebar: Search + Notifications. Bottom: user identity, Settings, Logout.
+- **No heavy top bar on desktop** — pages render their own `h1` title (+ tabs). The
+  `Header` is mobile-only (hamburger + wordmark); the sidebar is a slide-over on mobile.
+- **Status as `Badge` pills** (`components/ui/badge.tsx`) with semantic variants
+  (neutral/info/success/warning/error), mirroring SimplerQMS list states
+  ("About Due", "Closed", "Active", "Overdue").
+- Reusable primitives live in `components/ui/`; one component per file; use `cn()` from
+  `lib/utils`. Module-specific components go under `components/<module>/`.
+- Typography scale is in the Tailwind config: `text-h1/h2/h3/body/label`.
 
 ## Milestone Sequence (19 total)
 
 **Phase 1 MVP (Months 1–3):**
-- M0: Foundation (Next.js, login, MFA, layouts, design system)
+- M0: Foundation (Next.js, login, MFA, layouts, design system) ✅
 - M1: Dashboard + Navigation
 - M2: Generic list/detail template
 - M3: Document Control UI

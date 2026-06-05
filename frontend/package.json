@@ -1,0 +1,15 @@
+{
+  "name": "eqms-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pharmaceutical eQMS frontend — pnpm workspace root",
+  "scripts": {
+    "dev": "pnpm --filter @eqms/web dev",
+    "build": "pnpm --filter @eqms/web build",
+    "lint": "pnpm --filter @eqms/web lint",
+    "typecheck": "pnpm --filter @eqms/web typecheck"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

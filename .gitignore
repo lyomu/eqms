@@ -5,6 +5,15 @@ target/
 !.mvn/wrapper/maven-wrapper.jar
 .mvn/timing.properties
 
+# --- Frontend (Node / Next.js / pnpm) ---
+node_modules/
+.next/
+out/
+.turbo/
+next-env.d.ts
+*.tsbuildinfo
+.env*.local
+
 # --- IDE ---
 .idea/
 *.iml
