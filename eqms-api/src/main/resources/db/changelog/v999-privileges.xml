@@ -53,7 +53,9 @@
                 training_completion_audit,
                 equipment, calibrations, maintenance_history, equipment_specifications,
                 oos_cases, oos_initial_assessment, oos_repeat_testing, oos_investigation,
-                oos_disposition, oos_capa_link
+                oos_disposition, oos_capa_link,
+                non_conformances, non_conformance_investigation, non_conformance_disposition,
+                non_conformance_use_as_is_approval, non_conformance_capa_link
             TO ${app_role_name};
 
             -- Append-only audit trail: SELECT + INSERT only.

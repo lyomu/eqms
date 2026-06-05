@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <!-- Non-Conformance Management (Milestone 18). 5 tables + NC permissions. -->
+
+    <changeSet id="v020-001-non-conformances" author="eqms">
+        <createTable tableName="non_conformances">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_non_conformances" nullable="false"/>
+            </column>
+            <column name="nc_no" type="VARCHAR(40)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_non_conformances_no"/>
+            </column>
+            <column name="title" type="VARCHAR(200)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="nc_type" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="affected_item_id" type="BIGINT"/>
+            <column name="affected_item_type" type="VARCHAR(60)"/>
+            <column name="discovered_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="discovered_by" type="VARCHAR(200)"/>
+            <column name="owner_id" type="BIGINT"/>
+            <column name="status" type="VARCHAR(40)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="submitted_by" type="BIGINT"/>
+            <column name="closed_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="version" type="INT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_by" type="BIGINT"/>
+            <column name="deleted_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+        <createIndex tableName="non_conformances" indexName="ix_nc_status">
+            <column name="status"/>
+        </createIndex>
+        <createIndex tableName="non_conformances" indexName="ix_nc_type">
+            <column name="nc_type"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v020-002-nc-investigation" author="eqms">
+        <createTable tableName="non_conformance_investigation">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_nc_investigation" nullable="false"/>
+            </column>
+            <column name="nc_id" type="BIGINT">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_nc_investigation"
+                             foreignKeyName="fk_nci_nc" references="non_conformances(id)"/>
+            </column>
+            <column name="investigation_findings" type="TEXT"/>
+            <column name="root_cause" type="TEXT"/>
+            <column name="investigator_id" type="BIGINT"/>
+            <column name="investigation_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="v020-003-nc-disposition" author="eqms">
+        <createTable tableName="non_conformance_disposition">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_nc_disposition" nullable="false"/>
+            </column>
+            <column name="nc_id" type="BIGINT">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_nc_disposition"
+                             foreignKeyName="fk_ncd_nc" references="non_conformances(id)"/>
+            </column>
+            <column name="disposition" type="VARCHAR(30)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="rationale" type="TEXT"/>
+            <column name="rework_specifications" type="TEXT"/>
+            <column name="rework_completed" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="approved_by" type="BIGINT"/>
+            <column name="approved_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="signature_id" type="BIGINT"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="v020-004-nc-use-as-is-approval" author="eqms">
+        <createTable tableName="non_conformance_use_as_is_approval">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_nc_use_as_is" nullable="false"/>
+            </column>
+            <column name="nc_id" type="BIGINT">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_nc_use_as_is"
+                             foreignKeyName="fk_ncu_nc" references="non_conformances(id)"/>
+            </column>
+            <column name="use_as_is_justification" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="risk_assessment" type="TEXT"/>
+            <column name="approved_by" type="BIGINT"/>
+            <column name="approved_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="signature_id" type="BIGINT"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="v020-005-nc-capa-link" author="eqms">
+        <createTable tableName="non_conformance_capa_link">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_nc_capa_link" nullable="false"/>
+            </column>
+            <column name="nc_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_nccl_nc" references="non_conformances(id)"/>
+            </column>
+            <column name="capa_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createIndex tableName="non_conformance_capa_link" indexName="ix_nccl_nc_id">
+            <column name="nc_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v020-006-nc-permissions" author="eqms">
+        <sql dbms="postgresql"><![CDATA[
+            INSERT INTO permissions (code, description, version, created_at, updated_at) VALUES
+              ('NC_CREATE',  'Raise and progress non-conformances',                 0, now(), now()),
+              ('NC_APPROVE', 'Approve dispositions and close non-conformances',      0, now(), now());
+
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r JOIN permissions p ON p.code IN ('NC_CREATE','NC_APPROVE')
+            WHERE r.name = 'ADMIN';
+
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r JOIN permissions p ON p.code IN ('NC_CREATE','NC_APPROVE')
+            WHERE r.name = 'QA_MANAGER';
+
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r JOIN permissions p ON p.code = 'NC_CREATE'
+            WHERE r.name = 'AUTHOR';
+        ]]></sql>
+        <rollback>
+            <sql dbms="postgresql">
+                DELETE FROM role_permissions WHERE permission_id IN
+                    (SELECT id FROM permissions WHERE code IN ('NC_CREATE','NC_APPROVE'));
+                DELETE FROM permissions WHERE code IN ('NC_CREATE','NC_APPROVE');
+            </sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
