@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <!-- OOS Management (Milestone 17). 6 tables + OOS permissions. -->
+
+    <changeSet id="v019-001-oos-cases" author="eqms">
+        <createTable tableName="oos_cases">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_oos_cases" nullable="false"/>
+            </column>
+            <column name="oos_no" type="VARCHAR(40)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_oos_no"/>
+            </column>
+            <column name="product_id" type="BIGINT"/>
+            <column name="test_method" type="VARCHAR(200)"/>
+            <column name="specification_limit_min" type="DECIMAL(20,6)"/>
+            <column name="specification_limit_max" type="DECIMAL(20,6)"/>
+            <column name="reported_result" type="VARCHAR(200)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="reported_date" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="reported_by_id" type="BIGINT"/>
+            <column name="reported_by_name" type="VARCHAR(200)"/>
+            <column name="status" type="VARCHAR(40)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="submitted_by" type="BIGINT"/>
+            <column name="closed_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="version" type="INT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_by" type="BIGINT"/>
+            <column name="deleted_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+        <createIndex tableName="oos_cases" indexName="ix_oos_status">
+            <column name="status"/>
+        </createIndex>
+        <createIndex tableName="oos_cases" indexName="ix_oos_product_id">
+            <column name="product_id"/>
+        </createIndex>
+        <createIndex tableName="oos_cases" indexName="ix_oos_reported_date">
+            <column name="reported_date"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v019-002-oos-initial-assessment" author="eqms">
+        <createTable tableName="oos_initial_assessment">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_oos_initial_assessment" nullable="false"/>
+            </column>
+            <column name="oos_id" type="BIGINT">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_oos_ia"
+                             foreignKeyName="fk_ia_oos" references="oos_cases(id)"/>
+            </column>
+            <column name="assessment_findings" type="TEXT"/>
+            <column name="likely_cause" type="VARCHAR(40)"/>
+            <column name="assessor_id" type="BIGINT"/>
+            <column name="assessment_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="v019-003-oos-repeat-testing" author="eqms">
+        <createTable tableName="oos_repeat_testing">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_oos_repeat_testing" nullable="false"/>
+            </column>
+            <column name="oos_id" type="BIGINT">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_oos_rt"
+                             foreignKeyName="fk_rt_oos" references="oos_cases(id)"/>
+            </column>
+            <column name="repeat_ordered_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="repeat_result" type="VARCHAR(20)"/>
+            <column name="repeat_test_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="test_technician_id" type="BIGINT"/>
+            <column name="test_technician_name" type="VARCHAR(200)"/>
+            <column name="notes" type="TEXT"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="v019-004-oos-investigation" author="eqms">
+        <createTable tableName="oos_investigation">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_oos_investigation" nullable="false"/>
+            </column>
+            <column name="oos_id" type="BIGINT">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_oos_inv"
+                             foreignKeyName="fk_inv_oos" references="oos_cases(id)"/>
+            </column>
+            <column name="investigation_findings" type="TEXT"/>
+            <column name="root_cause" type="TEXT"/>
+            <column name="root_cause_method" type="VARCHAR(60)"/>
+            <column name="investigator_id" type="BIGINT"/>
+            <column name="investigation_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="v019-005-oos-disposition" author="eqms">
+        <createTable tableName="oos_disposition">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_oos_disposition" nullable="false"/>
+            </column>
+            <column name="oos_id" type="BIGINT">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_oos_disp"
+                             foreignKeyName="fk_disp_oos" references="oos_cases(id)"/>
+            </column>
+            <column name="disposition" type="VARCHAR(30)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="rationale" type="TEXT"/>
+            <column name="approved_by" type="BIGINT"/>
+            <column name="approved_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="signature_id" type="BIGINT"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="v019-006-oos-capa-link" author="eqms">
+        <createTable tableName="oos_capa_link">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_oos_capa_link" nullable="false"/>
+            </column>
+            <column name="oos_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_ocl_oos" references="oos_cases(id)"/>
+            </column>
+            <column name="capa_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createIndex tableName="oos_capa_link" indexName="ix_ocl_oos_id">
+            <column name="oos_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v019-007-oos-permissions" author="eqms">
+        <sql dbms="postgresql"><![CDATA[
+            INSERT INTO permissions (code, description, version, created_at, updated_at) VALUES
+              ('OOS_CREATE',  'Report and progress OOS investigations',    0, now(), now()),
+              ('OOS_APPROVE', 'Determine disposition and close OOS cases', 0, now(), now());
+
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r JOIN permissions p ON p.code IN ('OOS_CREATE','OOS_APPROVE')
+            WHERE r.name = 'ADMIN';
+
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r JOIN permissions p ON p.code IN ('OOS_CREATE','OOS_APPROVE')
+            WHERE r.name = 'QA_MANAGER';
+
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r JOIN permissions p ON p.code = 'OOS_CREATE'
+            WHERE r.name = 'AUTHOR';
+        ]]></sql>
+        <rollback>
+            <sql dbms="postgresql">
+                DELETE FROM role_permissions WHERE permission_id IN
+                    (SELECT id FROM permissions WHERE code IN ('OOS_CREATE','OOS_APPROVE'));
+                DELETE FROM permissions WHERE code IN ('OOS_CREATE','OOS_APPROVE');
+            </sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
