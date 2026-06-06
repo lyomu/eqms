@@ -62,8 +62,7 @@ const config: Config = {
         },
       },
       fontFamily: {
-        // CLAUDE-FRONTEND.md: Arial or Open Sans
-        sans: ["var(--font-open-sans)", "Arial", "Helvetica", "sans-serif"],
+        sans: ["var(--font-dm-sans)", "Arial", "Helvetica", "sans-serif"],
       },
       fontSize: {
         // Typographic scale: H1/H2/H3, body, label
