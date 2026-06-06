@@ -95,6 +95,13 @@ public class NonConformanceController {
         return detail(service.get(id));
     }
 
+    @PostMapping("/{id}/approve-use-as-is")
+    @PreAuthorize("hasAuthority('NC_APPROVE')")
+    public NonConformanceResponse approveUseAsIs(@PathVariable Long id, @Valid @RequestBody UseAsIsApprovalRequest request,
+                                                 @AuthenticationPrincipal UserPrincipal p, HttpServletRequest http) {
+        return requestApproval(id, request, p, http);
+    }
+
     @PostMapping("/{id}/determine-disposition")
     @PreAuthorize("hasAuthority('NC_APPROVE')")
     public NonConformanceResponse determineDisposition(@PathVariable Long id,
@@ -113,6 +120,13 @@ public class NonConformanceController {
     public NonConformanceResponse implementAction(@PathVariable Long id, @Valid @RequestBody ImplementActionRequest request,
                                                   @AuthenticationPrincipal UserPrincipal p, HttpServletRequest http) {
         return detail(service.implementAction(id, request, p.getId(), p.getFullName(), ip(http), ua(http)));
+    }
+
+    @PostMapping("/{id}/verify-rework")
+    @PreAuthorize("hasAuthority('NC_CREATE')")
+    public NonConformanceResponse verifyRework(@PathVariable Long id, @Valid @RequestBody ImplementActionRequest request,
+                                               @AuthenticationPrincipal UserPrincipal p, HttpServletRequest http) {
+        return implementAction(id, request, p, http);
     }
 
     @PostMapping("/{id}/create-capa")

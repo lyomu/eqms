@@ -79,8 +79,8 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Materials", href: "/materials", icon: Boxes },
       { label: "Batch Records", href: "/batch-records", icon: Beaker },
       { label: "Products", href: "/products", icon: Package },
-      { label: "Non-Conformance", href: "/non-conformances", icon: FileWarning, comingSoon: true },
-      { label: "Management Review", href: "/management-reviews", icon: Presentation, comingSoon: true },
+      { label: "Non-Conformance", href: "/non-conformances", icon: FileWarning },
+      { label: "Management Review", href: "/management-reviews", icon: Presentation },
     ],
   },
 ];

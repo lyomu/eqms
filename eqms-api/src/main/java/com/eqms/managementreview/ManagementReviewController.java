@@ -109,6 +109,13 @@ public class ManagementReviewController {
         return detail(service.get(id));
     }
 
+    @PostMapping("/{id}/add-action-item")
+    @PreAuthorize("hasAuthority('MR_MANAGE')")
+    public ManagementReviewResponse addActionItem(@PathVariable Long id, @Valid @RequestBody AddActionItemRequest request,
+                                                  @AuthenticationPrincipal UserPrincipal p, HttpServletRequest http) {
+        return addActionItems(id, request, p, http);
+    }
+
     @PostMapping("/{id}/record-decision")
     @PreAuthorize("hasAuthority('MR_MANAGE')")
     public ManagementReviewResponse recordDecision(@PathVariable Long id, @Valid @RequestBody RecordDecisionRequest request,
@@ -127,6 +134,13 @@ public class ManagementReviewController {
                 p.getId(), p.getFullName(), ip(http), ua(http)));
         session.setAttribute(SIGNED_IN_SESSION, Boolean.TRUE);
         return response;
+    }
+
+    @PostMapping("/{id}/approve-and-finalize")
+    @PreAuthorize("hasAuthority('MR_APPROVE')")
+    public ManagementReviewResponse approveAndFinalize(@PathVariable Long id, @Valid @RequestBody ApproveReviewRequest request,
+                                                       @AuthenticationPrincipal UserPrincipal p, HttpServletRequest http) {
+        return approve(id, request, p, http);
     }
 
     @GetMapping("/{id}/previous-actions")

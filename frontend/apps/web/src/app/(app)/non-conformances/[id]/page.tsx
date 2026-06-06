@@ -1,0 +1,43 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { ActionFormModal } from "@/components/common/ActionFormModal";
+import { AuditTrailTable } from "@/components/common/AuditTrailTable";
+import { SignatureModal } from "@/components/common/SignatureModal";
+import { NcDispositionBadge, NcStatusBadge, NcTypeBadge } from "@/components/nonconformances/NonConformanceBadges";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs } from "@/components/ui/tabs";
+import { ErrorAlert } from "@/components/ui/error-alert";
+import { LoadingScreen } from "@/components/ui/loading-spinner";
+import { useNonConformance, useNonConformanceAction, useNonConformanceTrail } from "@/hooks/useNonConformances";
+import { formatDate } from "@/lib/format";
+import { NC_DISPOSITION_LABELS, type NcDisposition } from "@/types/nonconformance";
+
+type TabKey = "details" | "investigation" | "disposition" | "rework" | "useAsIs" | "capa" | "trail";
+type ModalKey = null | "investigate" | "disposition" | "verify";
+const tabs = ["details", "investigation", "disposition", "rework", "useAsIs", "capa", "trail"].map((key) => ({ key, label: key === "useAsIs" ? "Use As Is Approval" : key === "capa" ? "Linked CAPA" : key[0].toUpperCase() + key.slice(1) }));
+
+export default function NonConformanceDetailPage() {
+  const id = Number(useParams().id);
+  const nc = useNonConformance(id);
+  const trail = useNonConformanceTrail(id);
+  const action = useNonConformanceAction(id);
+  const [tab, setTab] = useState<TabKey>("details");
+  const [modal, setModal] = useState<ModalKey>(null);
+  const [useAsIsOpen, setUseAsIsOpen] = useState(false);
+  const [closeOpen, setCloseOpen] = useState(false);
+  if (nc.isLoading) return <LoadingScreen label="Loading non-conformance..." />;
+  if (nc.isError || !nc.data) return <ErrorAlert title="Error" message="Failed to load this non-conformance." />;
+  const n = nc.data;
+  return <div className="space-y-4"><div className="flex flex-wrap items-start gap-3"><div><div className="text-label text-muted-foreground"><Link href="/non-conformances">Non-Conformances</Link> / {n.ncNo}</div><h1 className="text-h1 text-brand-primary">{n.title}</h1><div className="mt-1 flex gap-2"><NcTypeBadge type={n.ncType} /><NcStatusBadge status={n.status} /></div></div><div className="ml-auto flex flex-wrap gap-2"><Button onClick={() => setModal("investigate")}>Investigate</Button><Button variant="outline" onClick={() => setModal("disposition")}>Determine Disposition</Button><Button variant="outline" onClick={() => setUseAsIsOpen(true)}>Approve Use As Is</Button><Button variant="outline" onClick={() => setModal("verify")}>Verify Rework</Button><Button onClick={() => setCloseOpen(true)}>Close</Button></div></div><Card><CardContent className="grid grid-cols-1 gap-3 pt-4 md:grid-cols-5"><Field label="NC number" value={n.ncNo} /><Field label="Type" value={<NcTypeBadge type={n.ncType} />} /><Field label="Status" value={<NcStatusBadge status={n.status} />} /><Field label="Discovered" value={formatDate(n.discoveredDate)} /><Field label="Owner" value={n.ownerId ? `User #${n.ownerId}` : "Unassigned"} /></CardContent></Card><Card><CardHeader><Tabs tabs={tabs} active={tab} onChange={(k) => setTab(k as TabKey)} /></CardHeader><CardContent>{tab === "details" && <div className="space-y-3"><Block label="Description" value={n.description} /><Field label="Affected item" value={n.affectedItemType ?? "-"} /><Field label="Quarantine status" value={n.status === "CLOSED" ? "Released" : "Quarantined / blocked from use"} /></div>}{tab === "investigation" && <div className="space-y-3"><Block label="Findings" value={n.investigation?.investigationFindings ?? "No investigation yet."} /><Block label="Root cause" value={n.investigation?.rootCause ?? "-"} /><Field label="Investigator" value={n.investigation?.investigatorId ? `User #${n.investigation.investigatorId}` : "-"} /></div>}{tab === "disposition" && <div className="space-y-3">{n.disposition ? <><NcDispositionBadge disposition={n.disposition.disposition} /><Block label="Rationale" value={n.disposition.rationale} /></> : "No disposition yet."}</div>}{tab === "rework" && <div className="space-y-3"><Block label="Rework specifications" value={n.disposition?.reworkSpecifications ?? "No rework plan."} /><Field label="Status" value={n.disposition?.reworkCompleted ? "Completed" : "Pending"} /></div>}{tab === "useAsIs" && <div className="space-y-3"><Block label="Justification" value={n.useAsIsApproval?.useAsIsJustification ?? "Not approved."} /><Block label="Risk assessment" value={n.useAsIsApproval?.riskAssessment ?? "-"} /></div>}{tab === "capa" && <p className="text-body">{n.linkedCapaIds.length ? n.linkedCapaIds.map((c) => `CAPA #${c}`).join(", ") : "No linked CAPA."}</p>}{tab === "trail" && <AuditTrailTable entries={trail.data} isLoading={trail.isLoading} isError={trail.isError} />}</CardContent></Card>
+    <ActionFormModal open={modal === "investigate"} onOpenChange={(o) => !o && setModal(null)} title="Investigate" fields={[{ name: "investigationFindings", label: "Investigation findings", type: "textarea", required: true }, { name: "rootCause", label: "Root cause", type: "textarea" }]} isPending={action.isPending} onSubmit={async (v) => action.mutateAsync({ path: "investigate", body: { expectedVersion: n.version, investigationFindings: v.investigationFindings, rootCause: v.rootCause, reason: "NC investigation recorded" } })} />
+    <SignatureModal open={modal === "disposition"} onOpenChange={(o) => !o && setModal(null)} title="Determine Disposition" recordNumber={n.ncNo} recordTitle={n.title} recordNoun="non-conformance" isPending={action.isPending} onSign={async (c) => action.mutateAsync({ path: "determine-disposition", body: { expectedVersion: n.version, disposition: "REWORK" satisfies NcDisposition, rationale: c.reason || "Rework selected", reworkSpecifications: "Rework per approved plan", password: c.password, totpCode: c.totpCode, meaningStatement: c.meaningStatement } })} />
+    <ActionFormModal open={modal === "verify"} onOpenChange={(o) => !o && setModal(null)} title="Verify Rework Completion" fields={[{ name: "reason", label: "Verification findings", type: "textarea" }, { name: "reworkCompleted", label: "Result", type: "select", options: [{ value: "true", label: "Passed - return to inventory" }, { value: "false", label: "Failed" }] }]} isPending={action.isPending} submitLabel="Verify" onSubmit={async (v) => action.mutateAsync({ path: "verify-rework", body: { expectedVersion: n.version, reworkCompleted: v.reworkCompleted === "true", reason: v.reason || "Rework verified" } })} />
+    <SignatureModal open={useAsIsOpen} onOpenChange={setUseAsIsOpen} title="Approve Use As Is" recordNumber={n.ncNo} recordTitle={n.title} recordNoun="non-conformance" isPending={action.isPending} onSign={async (c) => action.mutateAsync({ path: "approve-use-as-is", body: { useAsIsJustification: c.reason || "Use as-is justified", riskAssessment: "Risks assessed and accepted", password: c.password, totpCode: c.totpCode, meaningStatement: c.meaningStatement } })} />
+    <SignatureModal open={closeOpen} onOpenChange={setCloseOpen} title="Close Non-Conformance" recordNumber={n.ncNo} recordTitle={n.title} recordNoun="non-conformance" isPending={action.isPending} onSign={async (c) => action.mutateAsync({ path: "close", body: { expectedVersion: n.version, reason: c.reason || "NC closed", password: c.password, totpCode: c.totpCode, meaningStatement: c.meaningStatement } })} /></div>;
+}
+function Field({ label, value }: { label: string; value: React.ReactNode }) { return <div><p className="text-label text-muted-foreground">{label}</p><div className="mt-0.5 text-body font-medium">{value}</div></div>; }
+function Block({ label, value }: { label: string; value: string }) { return <div><p className="text-label uppercase text-muted-foreground">{label}</p><p className="whitespace-pre-wrap text-body">{value}</p></div>; }
