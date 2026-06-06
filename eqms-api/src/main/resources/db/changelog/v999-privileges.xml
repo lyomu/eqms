@@ -40,7 +40,8 @@
                 role_permissions, attachments, record_sequences,
                 organizations, organization_sites, plans, modules, plan_modules,
                 organization_subscriptions, organization_licenses, organization_module_licenses,
-                platform_admins,
+                platform_admins, organization_settings,
+                numbering_schemes, organization_notification_templates,
                 documents, document_read_assignments, change_controls,
                 capas, capa_actions, deviations, products, materials,
                 batch_records, batch_production_steps, batch_materials_used,
@@ -68,6 +69,9 @@
 
             -- Append-only audit trail: SELECT + INSERT only.
             GRANT SELECT, INSERT ON audit_logs TO ${app_role_name};
+
+            -- Append-only organization admin settings audit trail.
+            GRANT SELECT, INSERT ON admin_settings_audit_logs TO ${app_role_name};
 
             -- Immutable signatures: SELECT + INSERT only.
             GRANT SELECT, INSERT ON electronic_signatures TO ${app_role_name};

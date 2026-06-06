@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <changeSet id="v025-001-organization-admin-settings" author="eqms">
+        <sql dbms="postgresql" splitStatements="false"><![CDATA[
+            CREATE TABLE IF NOT EXISTS organization_settings (
+                id BIGSERIAL PRIMARY KEY,
+                organization_id BIGINT NOT NULL REFERENCES organizations(id),
+                section VARCHAR(80) NOT NULL,
+                settings_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+                version INT NOT NULL DEFAULT 0,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                created_by BIGINT,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                updated_by BIGINT,
+                deleted_at TIMESTAMPTZ,
+                UNIQUE (organization_id, section)
+            );
+
+            CREATE TABLE IF NOT EXISTS admin_settings_audit_logs (
+                id BIGSERIAL PRIMARY KEY,
+                organization_id BIGINT NOT NULL REFERENCES organizations(id),
+                section VARCHAR(80) NOT NULL,
+                action VARCHAR(40) NOT NULL,
+                old_value JSONB,
+                new_value JSONB,
+                reason VARCHAR(500),
+                user_id BIGINT NOT NULL,
+                user_full_name VARCHAR(200) NOT NULL,
+                utc_timestamp TIMESTAMPTZ NOT NULL DEFAULT now(),
+                ip_address VARCHAR(80),
+                user_agent VARCHAR(500)
+            );
+
+            CREATE TABLE IF NOT EXISTS numbering_schemes (
+                id BIGSERIAL PRIMARY KEY,
+                organization_id BIGINT NOT NULL REFERENCES organizations(id),
+                module_code VARCHAR(80) NOT NULL,
+                prefix VARCHAR(40) NOT NULL,
+                format_pattern VARCHAR(120) NOT NULL,
+                next_sequence BIGINT NOT NULL DEFAULT 1,
+                yearly_reset BOOLEAN NOT NULL DEFAULT true,
+                version INT NOT NULL DEFAULT 0,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                created_by BIGINT,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                updated_by BIGINT,
+                deleted_at TIMESTAMPTZ,
+                UNIQUE (organization_id, module_code)
+            );
+
+            CREATE TABLE IF NOT EXISTS organization_notification_templates (
+                id BIGSERIAL PRIMARY KEY,
+                organization_id BIGINT NOT NULL REFERENCES organizations(id),
+                event_type VARCHAR(100) NOT NULL,
+                subject VARCHAR(240) NOT NULL,
+                body TEXT NOT NULL,
+                enabled BOOLEAN NOT NULL DEFAULT true,
+                version INT NOT NULL DEFAULT 0,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                created_by BIGINT,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                updated_by BIGINT,
+                deleted_at TIMESTAMPTZ,
+                UNIQUE (organization_id, event_type)
+            );
+
+            CREATE INDEX IF NOT EXISTS ix_org_settings_org_section ON organization_settings (organization_id, section);
+            CREATE INDEX IF NOT EXISTS ix_admin_settings_audit_org_ts ON admin_settings_audit_logs (organization_id, utc_timestamp DESC);
+            CREATE INDEX IF NOT EXISTS ix_numbering_schemes_org_module ON numbering_schemes (organization_id, module_code);
+            CREATE INDEX IF NOT EXISTS ix_org_notification_templates_org_event ON organization_notification_templates (organization_id, event_type);
+
+            DO $$
+            BEGIN
+                IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'eqms_reject_modification')
+                   AND NOT EXISTS (
+                       SELECT 1 FROM pg_trigger WHERE tgname = 'trg_admin_settings_audit_logs_immutable'
+                   ) THEN
+                    CREATE TRIGGER trg_admin_settings_audit_logs_immutable
+                        BEFORE UPDATE OR DELETE ON admin_settings_audit_logs
+                        FOR EACH ROW EXECUTE FUNCTION eqms_reject_modification();
+                END IF;
+            END
+            $$;
+        ]]></sql>
+    </changeSet>
+
+</databaseChangeLog>

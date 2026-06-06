@@ -9,6 +9,7 @@ import {
   Bell,
   Settings,
   LogOut,
+  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/stores/ui-store";
@@ -32,6 +33,9 @@ export function Sidebar() {
   const setMobileOpen = useUiStore((s) => s.setMobileSidebarOpen);
   const { currentUser, logout } = useAuth();
   const unread = useUnreadCount();
+  const isOrgAdmin = currentUser?.authorities.some(
+    (authority) => authority === "ROLE_ADMIN" || authority === "ADMIN"
+  );
 
   const initials = currentUser?.fullName
     ? currentUser.fullName
@@ -173,6 +177,24 @@ export function Sidebar() {
           )}
         </div>
         <ul className="space-y-1">
+          {isOrgAdmin && (
+            <li>
+              <Link
+                href="/admin/settings"
+                onClick={() => setMobileOpen(false)}
+                aria-current={pathname === "/admin/settings" ? "page" : undefined}
+                className={cn(
+                  "flex items-center gap-3 rounded-md px-3 py-2 text-body transition-colors",
+                  pathname.startsWith("/admin/settings")
+                    ? "bg-brand-light font-medium text-brand-primary"
+                    : "text-foreground/80 hover:bg-accent"
+                )}
+              >
+                <ShieldCheck className="h-5 w-5 shrink-0" aria-hidden="true" />
+                {!collapsed && <span>Organization Admin</span>}
+              </Link>
+            </li>
+          )}
           <li>
             <Link
               href="/settings"
