@@ -60,15 +60,15 @@ export const NAV_GROUPS: NavGroup[] = [
     heading: "Investigation & Corrective",
     items: [
       { label: "CAPA", href: "/capa", icon: ClipboardCheck },
-      { label: "Complaints", href: "/complaints", icon: MessageSquareWarning, comingSoon: true },
+      { label: "Complaints", href: "/complaints", icon: MessageSquareWarning },
       { label: "OOS", href: "/oos", icon: FlaskConical, comingSoon: true },
     ],
   },
   {
     heading: "Compliance & Oversight",
     items: [
-      { label: "Audits", href: "/audits", icon: ClipboardList, comingSoon: true },
-      { label: "Risk", href: "/risks", icon: ShieldAlert, comingSoon: true },
+      { label: "Audits", href: "/audits", icon: ClipboardList },
+      { label: "Risk", href: "/risks", icon: ShieldAlert },
       { label: "Equipment", href: "/equipment", icon: Wrench, comingSoon: true },
       { label: "Suppliers", href: "/suppliers", icon: Truck, comingSoon: true },
     ],

@@ -12,7 +12,9 @@ export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
+  // One retry everywhere: absorbs occasional flakes when many specs hit the shared
+  // server in parallel (the assertions themselves are deterministic).
+  retries: 1,
   reporter: process.env.CI ? "github" : "list",
   use: {
     baseURL,

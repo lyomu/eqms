@@ -116,6 +116,8 @@ test("create → submit → approve → audit trail", async ({ page }) => {
 
   // Create + submit for review in one step.
   await page.goto("/documents/new");
+  // Hide toasts: they sit top-right and can intercept clicks on header action buttons.
+  await page.addStyleTag({ content: "[data-sonner-toaster]{display:none !important}" });
   await page.getByLabel("Title *").fill("Cleaning Validation SOP");
   await page.getByLabel("Content *").fill("The procedure body.");
   await page.getByRole("button", { name: "Submit for Review" }).click();
