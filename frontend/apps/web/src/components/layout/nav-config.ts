@@ -17,9 +17,6 @@ import {
   Package,
   FileWarning,
   Presentation,
-  Building2,
-  BadgeCheck,
-  Blocks,
   type LucideIcon,
 } from "lucide-react";
 
@@ -48,14 +45,6 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: "Dashboard", href: "/", icon: LayoutDashboard },
       { label: "Reports", href: "/reports", icon: FileBarChart },
-    ],
-  },
-  {
-    heading: "Platform",
-    items: [
-      { label: "Organizations", href: "/platform/organizations", icon: Building2 },
-      { label: "Plans", href: "/platform/plans", icon: BadgeCheck },
-      { label: "Modules", href: "/platform/modules", icon: Blocks },
     ],
   },
   {

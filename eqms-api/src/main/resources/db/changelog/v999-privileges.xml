@@ -40,6 +40,7 @@
                 role_permissions, attachments, record_sequences,
                 organizations, organization_sites, plans, modules, plan_modules,
                 organization_subscriptions, organization_licenses, organization_module_licenses,
+                platform_admins,
                 documents, document_read_assignments, change_controls,
                 capas, capa_actions, deviations, products, materials,
                 batch_records, batch_production_steps, batch_materials_used,

@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,11 +14,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.eqms.auth.UserPrincipal;
+import com.eqms.platform.auth.PlatformAdminPrincipal;
 
 @RestController
 @RequestMapping("/api/platform")
-@PreAuthorize("hasAuthority('PLATFORM_ADMIN')")
 public class PlatformAdminController {
 
     private final PlatformAdminService service;
@@ -93,9 +91,9 @@ public class PlatformAdminController {
         return service.modules();
     }
 
-    private static UserPrincipal principal() {
+    private static PlatformAdminPrincipal principal() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !(authentication.getPrincipal() instanceof UserPrincipal principal)) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof PlatformAdminPrincipal principal)) {
             throw new AccessDeniedException("Platform admin session required");
         }
         return principal;

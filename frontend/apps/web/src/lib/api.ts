@@ -66,14 +66,17 @@ api.interceptors.response.use(
   (error: AxiosError) => {
     const status = error.response?.status;
     const url = error.config?.url ?? "";
-    const isAuthCall = url.includes("/api/auth/");
+    const isAuthCall = url.includes("/api/auth/") || url.includes("/api/platform/auth/");
 
     switch (status) {
       case 401:
         // Session expired/absent. No refresh exists -> send to login.
         // Skip for auth calls themselves so we don't redirect-loop on a bad login.
         if (typeof window !== "undefined" && !isAuthCall) {
-          window.location.assign("/login?session=expired");
+          const loginPath = url.startsWith("/api/platform/")
+            ? "/platform/login?session=expired"
+            : "/login?session=expired";
+          window.location.assign(loginPath);
         }
         break;
       case 403:

@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.eqms.audit.AuditService;
-import com.eqms.auth.UserPrincipal;
+import com.eqms.platform.auth.PlatformAdminPrincipal;
 import com.eqms.shared.constants.AuditAction;
 
 @Service
@@ -23,7 +23,7 @@ public class PlatformAdminService {
     }
 
     @Transactional
-    public Map<String, Object> createOrganization(OrganizationRequest request, UserPrincipal actor) {
+    public Map<String, Object> createOrganization(OrganizationRequest request, PlatformAdminPrincipal actor) {
         Long organizationId = jdbc.queryForObject("""
                 insert into organizations (code, name, legal_name, primary_contact_name, primary_contact_email, country, timezone, status, version, created_at, updated_at)
                 values (?, ?, ?, ?, ?, ?, ?, 'trialing', 0, now(), now())
@@ -91,7 +91,7 @@ public class PlatformAdminService {
     }
 
     @Transactional
-    public Map<String, Object> updateOrganization(Long id, OrganizationRequest request, UserPrincipal actor) {
+    public Map<String, Object> updateOrganization(Long id, OrganizationRequest request, PlatformAdminPrincipal actor) {
         jdbc.update("""
                 update organizations
                 set name = coalesce(?, name),
@@ -111,7 +111,7 @@ public class PlatformAdminService {
     }
 
     @Transactional
-    public Map<String, Object> suspend(Long id, UserPrincipal actor) {
+    public Map<String, Object> suspend(Long id, PlatformAdminPrincipal actor) {
         jdbc.update("""
                 update organizations
                 set status = 'suspended', suspended_at = now(), read_only_reason = 'Suspended by platform admin',
@@ -125,7 +125,7 @@ public class PlatformAdminService {
     }
 
     @Transactional
-    public Map<String, Object> reactivate(Long id, UserPrincipal actor) {
+    public Map<String, Object> reactivate(Long id, PlatformAdminPrincipal actor) {
         jdbc.update("""
                 update organizations
                 set status = 'active', suspended_at = null, read_only_reason = null,
@@ -139,7 +139,7 @@ public class PlatformAdminService {
     }
 
     @Transactional
-    public Map<String, Object> changePlan(Long id, ChangePlanRequest request, UserPrincipal actor) {
+    public Map<String, Object> changePlan(Long id, ChangePlanRequest request, PlatformAdminPrincipal actor) {
         Long planId = planId(request.planCode());
         jdbc.update("""
                 update organization_subscriptions
@@ -169,7 +169,7 @@ public class PlatformAdminService {
     }
 
     @Transactional
-    public Map<String, Object> setModule(Long id, ModuleToggleRequest request, boolean enabled, UserPrincipal actor) {
+    public Map<String, Object> setModule(Long id, ModuleToggleRequest request, boolean enabled, PlatformAdminPrincipal actor) {
         Long moduleId = moduleId(request.moduleCode());
         jdbc.update("""
                 insert into organization_module_licenses (organization_id, module_id, enabled, status, starts_at, expires_at, version, created_at, updated_at)
@@ -199,7 +199,7 @@ public class PlatformAdminService {
     }
 
     @Transactional
-    public Map<String, Object> createPlan(PlanRequest request, UserPrincipal actor) {
+    public Map<String, Object> createPlan(PlanRequest request, PlatformAdminPrincipal actor) {
         Long id = jdbc.queryForObject("""
                 insert into plans (code, name, description, user_limit, site_limit, is_custom, active, version, created_at, updated_at)
                 values (?, ?, ?, ?, ?, ?, true, 0, now(), now())
@@ -212,7 +212,7 @@ public class PlatformAdminService {
     }
 
     @Transactional
-    public Map<String, Object> updatePlan(Long id, PlanRequest request, UserPrincipal actor) {
+    public Map<String, Object> updatePlan(Long id, PlanRequest request, PlatformAdminPrincipal actor) {
         jdbc.update("""
                 update plans
                 set name = coalesce(?, name), description = coalesce(?, description),

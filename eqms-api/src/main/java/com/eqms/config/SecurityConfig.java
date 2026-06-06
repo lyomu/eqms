@@ -57,6 +57,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(reg -> reg
                         // Public: the first leg of login, and health probes.
                         .requestMatchers("/api/auth/login").permitAll()
+                        .requestMatchers("/api/platform/auth/login").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         // Everything else (incl. MFA step, /me, business endpoints) requires a session.
                         .anyRequest().authenticated())
