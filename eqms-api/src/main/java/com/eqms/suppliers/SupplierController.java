@@ -28,6 +28,7 @@ import com.eqms.suppliers.dto.IssueFindingRequest;
 import com.eqms.suppliers.dto.QualifySupplierRequest;
 import com.eqms.suppliers.dto.RecordAuditRequest;
 import com.eqms.suppliers.dto.RecordPerformanceRequest;
+import com.eqms.suppliers.dto.ScheduleSupplierAuditRequest;
 import com.eqms.suppliers.dto.SupplierCertificationResponse;
 import com.eqms.suppliers.dto.SupplierFindingResponse;
 import com.eqms.suppliers.dto.SupplierPerformanceResponse;
@@ -110,6 +111,22 @@ public class SupplierController {
                                                                      @AuthenticationPrincipal UserPrincipal p,
                                                                      HttpServletRequest http) {
         SupplierQualification q = service.recordAudit(id, request, p.getId(), p.getFullName(), ip(http), ua(http));
+        return ResponseEntity.status(HttpStatus.CREATED).body(SupplierQualificationResponse.from(q));
+    }
+
+    @PostMapping("/{id}/schedule-audit")
+    @PreAuthorize("hasAuthority('SUPPLIER_CREATE')")
+    public ResponseEntity<SupplierQualificationResponse> scheduleAudit(@PathVariable Long id,
+                                                                       @Valid @RequestBody ScheduleSupplierAuditRequest request,
+                                                                       @AuthenticationPrincipal UserPrincipal p,
+                                                                       HttpServletRequest http) {
+        RecordAuditRequest auditRequest = new RecordAuditRequest(
+                "Audit",
+                request.auditor() != null ? request.auditor() : p.getFullName(),
+                "SCHEDULED",
+                request.auditDate(),
+                "Supplier audit scheduled");
+        SupplierQualification q = service.recordAudit(id, auditRequest, p.getId(), p.getFullName(), ip(http), ua(http));
         return ResponseEntity.status(HttpStatus.CREATED).body(SupplierQualificationResponse.from(q));
     }
 

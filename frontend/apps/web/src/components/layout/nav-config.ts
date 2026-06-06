@@ -53,7 +53,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Document Control", href: "/documents", icon: FileText },
       { label: "Change Control", href: "/change-control", icon: GitPullRequestArrow },
       { label: "Deviations", href: "/deviations", icon: TriangleAlert },
-      { label: "Training", href: "/training", icon: GraduationCap, comingSoon: true },
+      { label: "Training", href: "/training", icon: GraduationCap },
     ],
   },
   {
@@ -70,7 +70,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Audits", href: "/audits", icon: ClipboardList },
       { label: "Risk", href: "/risks", icon: ShieldAlert },
       { label: "Equipment", href: "/equipment", icon: Wrench, comingSoon: true },
-      { label: "Suppliers", href: "/suppliers", icon: Truck, comingSoon: true },
+      { label: "Suppliers", href: "/suppliers", icon: Truck },
     ],
   },
   {

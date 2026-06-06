@@ -4,7 +4,8 @@ package com.eqms.training;
 public enum TrainingFrequency {
     ON_HIRE(0),
     ANNUAL(365),
-    BIENNIAL(730);
+    BIENNIAL(730),
+    AFTER_CHANGE(30);
 
     private final int days;
 

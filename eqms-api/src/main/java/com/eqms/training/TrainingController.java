@@ -20,8 +20,10 @@ import com.eqms.auth.UserPrincipal;
 import com.eqms.common.dto.AuditEntryResponse;
 import com.eqms.common.dto.PageResponse;
 import com.eqms.training.dto.AssignUserRequest;
+import com.eqms.training.dto.AssignUsersRequest;
 import com.eqms.training.dto.AssignmentResponse;
 import com.eqms.training.dto.ComplianceStatusResponse;
+import com.eqms.training.dto.CreateAutoRuleRequest;
 import com.eqms.training.dto.CreateRuleRequest;
 import com.eqms.training.dto.CreateTrainingRequest;
 import com.eqms.training.dto.RecordCompletionRequest;
@@ -98,6 +100,20 @@ public class TrainingController {
         return ResponseEntity.status(HttpStatus.CREATED).body(AssignmentResponse.from(a));
     }
 
+    @PostMapping("/{id}/assign-users")
+    @PreAuthorize("hasAuthority('TRAINING_MANAGE')")
+    public ResponseEntity<List<AssignmentResponse>> assignUsers(@PathVariable Long id,
+                                                                @Valid @RequestBody AssignUsersRequest request,
+                                                                @AuthenticationPrincipal UserPrincipal p,
+                                                                HttpServletRequest http) {
+        List<AssignmentResponse> assignments = request.userIds().stream()
+                .map(userId -> service.assignUser(id, new AssignUserRequest(userId, request.dueDate()),
+                        p.getId(), p.getFullName(), ip(http), ua(http)))
+                .map(AssignmentResponse::from)
+                .toList();
+        return ResponseEntity.status(HttpStatus.CREATED).body(assignments);
+    }
+
     @PostMapping("/{id}/record-completion")
     @PreAuthorize("isAuthenticated()")
     public AssignmentResponse recordCompletion(@PathVariable Long id,
@@ -112,6 +128,19 @@ public class TrainingController {
     public ResponseEntity<RuleResponse> createRule(@PathVariable Long id, @Valid @RequestBody CreateRuleRequest request,
                                                    @AuthenticationPrincipal UserPrincipal p, HttpServletRequest http) {
         TrainingAutoRule rule = service.createRule(id, request, p.getId(), p.getFullName(), ip(http), ua(http));
+        return ResponseEntity.status(HttpStatus.CREATED).body(RuleResponse.from(rule));
+    }
+
+    @PostMapping("/{id}/create-auto-rule")
+    @PreAuthorize("hasAuthority('TRAINING_MANAGE')")
+    public ResponseEntity<RuleResponse> createAutoRule(@PathVariable Long id,
+                                                       @Valid @RequestBody CreateAutoRuleRequest request,
+                                                       @AuthenticationPrincipal UserPrincipal p,
+                                                       HttpServletRequest http) {
+        TrainingAudience audience = TrainingAudience.valueOf(request.targetAudience().get(0));
+        TrainingAutoRule rule = service.createRule(id,
+                new CreateRuleRequest(request.triggerEvent(), audience, request.daysUntilDue()),
+                p.getId(), p.getFullName(), ip(http), ua(http));
         return ResponseEntity.status(HttpStatus.CREATED).body(RuleResponse.from(rule));
     }
 
