@@ -61,7 +61,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: "CAPA", href: "/capa", icon: ClipboardCheck },
       { label: "Complaints", href: "/complaints", icon: MessageSquareWarning },
-      { label: "OOS", href: "/oos", icon: FlaskConical, comingSoon: true },
+      { label: "OOS", href: "/oos", icon: FlaskConical },
     ],
   },
   {
@@ -69,7 +69,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: "Audits", href: "/audits", icon: ClipboardList },
       { label: "Risk", href: "/risks", icon: ShieldAlert },
-      { label: "Equipment", href: "/equipment", icon: Wrench, comingSoon: true },
+      { label: "Equipment", href: "/equipment", icon: Wrench },
       { label: "Suppliers", href: "/suppliers", icon: Truck },
     ],
   },
