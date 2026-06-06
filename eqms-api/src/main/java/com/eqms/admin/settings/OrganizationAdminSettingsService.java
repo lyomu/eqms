@@ -1,7 +1,7 @@
 package com.eqms.admin.settings;
 
 import java.time.Clock;
-import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.time.Year;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -176,7 +176,7 @@ public class OrganizationAdminSettingsService {
                 (organization_id, section, action, old_value, new_value, reason, user_id, user_full_name, utc_timestamp, ip_address, user_agent)
                 values (?, ?, ?, ?::jsonb, ?::jsonb, ?, ?, ?, ?, ?, ?)
                 """, orgId, section, action, toJson(oldValue), toJson(newValue), reason,
-                principal.getId(), principal.getFullName(), Instant.now(clock), ipAddress, userAgent);
+                principal.getId(), principal.getFullName(), OffsetDateTime.now(clock), ipAddress, userAgent);
     }
 
     private void validate(String section, Map<String, Object> settings) {

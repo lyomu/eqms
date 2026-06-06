@@ -1,7 +1,7 @@
 package com.eqms.platform.auth;
 
 import java.time.Clock;
-import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.Optional;
 
@@ -32,7 +32,7 @@ public class PlatformAuthService {
             throw new BadCredentialsException("Invalid platform credentials");
         }
         jdbc.update("update platform_admins set last_login_at = ?, updated_at = now(), version = version + 1 where id = ?",
-                Instant.now(clock), admin.id());
+                OffsetDateTime.now(clock), admin.id());
         return admin.toPrincipal();
     }
 
@@ -57,7 +57,17 @@ public class PlatformAuthService {
 
     @Transactional
     public void createBootstrapAdmin(String email, String fullName, String rawPassword) {
-        if (findByEmail(email).isPresent()) {
+        Optional<PlatformAdminRecord> existing = findByEmail(email);
+        if (existing.isPresent()) {
+            PlatformAdminRecord admin = existing.get();
+            if (!passwordEncoder.matches(rawPassword, admin.passwordHash()) || !"ACTIVE".equals(admin.status())) {
+                jdbc.update("""
+                        update platform_admins
+                        set full_name = ?, password_hash = ?, status = 'ACTIVE',
+                            updated_at = now(), version = version + 1
+                        where id = ?
+                        """, fullName, passwordEncoder.encode(rawPassword), admin.id());
+            }
             return;
         }
         jdbc.update("""
