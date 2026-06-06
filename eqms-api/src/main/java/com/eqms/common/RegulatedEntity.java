@@ -2,6 +2,9 @@ package com.eqms.common;
 
 import java.time.Instant;
 
+import org.hibernate.annotations.Filter;
+import org.hibernate.annotations.FilterDef;
+import org.hibernate.annotations.ParamDef;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
@@ -14,9 +17,12 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Version;
 import lombok.Getter;
 import lombok.Setter;
+
+import com.eqms.tenant.TenantContext;
 
 /**
  * Base class for every regulated <em>mutable</em> record. Provides the columns mandated
@@ -36,6 +42,8 @@ import lombok.Setter;
  */
 @MappedSuperclass
 @EntityListeners(AuditingEntityListener.class)
+@FilterDef(name = "organizationScope", parameters = @ParamDef(name = "organizationId", type = Long.class))
+@Filter(name = "organizationScope", condition = "(organization_id = :organizationId or organization_id is null)")
 @Getter
 @Setter
 public abstract class RegulatedEntity {
@@ -43,6 +51,13 @@ public abstract class RegulatedEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    /**
+     * Owning organization. Filled from {@link TenantContext} on create for normal requests.
+     * Some global/system rows may intentionally remain null.
+     */
+    @Column(name = "organization_id")
+    private Long organizationId;
 
     /** Optimistic-lock counter; managed by Hibernate (rule 5). */
     @Version
@@ -71,5 +86,12 @@ public abstract class RegulatedEntity {
 
     public boolean isDeleted() {
         return deletedAt != null;
+    }
+
+    @PrePersist
+    protected void assignOrganizationFromContext() {
+        if (organizationId == null) {
+            organizationId = TenantContext.getOrganizationId();
+        }
     }
 }

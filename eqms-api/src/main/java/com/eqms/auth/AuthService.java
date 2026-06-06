@@ -80,7 +80,7 @@ public class AuthService {
         userRepository.save(user);
 
         LoginStatus status = user.isMfaEnabled() ? LoginStatus.MFA_REQUIRED : LoginStatus.ENROLLMENT_REQUIRED;
-        return new LoginOutcome(user.getId(), user.getEmail(), user.getFullName(), status);
+        return new LoginOutcome(user.getId(), user.getOrganizationId(), user.getEmail(), user.getFullName(), status);
     }
 
     /** Begin TOTP enrollment: generate + store a pending secret, return the otpauth URI. */
@@ -117,7 +117,7 @@ public class AuthService {
                         : "Login succeeded (password + MFA)")
                 .ipAddress(ip).userAgent(userAgent)
                 .build());
-        return new LoginOutcome(user.getId(), user.getEmail(), user.getFullName(), LoginStatus.AUTHENTICATED);
+        return new LoginOutcome(user.getId(), user.getOrganizationId(), user.getEmail(), user.getFullName(), LoginStatus.AUTHENTICATED);
     }
 
     private boolean isLocked(User user) {

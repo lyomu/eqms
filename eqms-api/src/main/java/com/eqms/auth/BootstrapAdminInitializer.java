@@ -74,6 +74,7 @@ public class BootstrapAdminInitializer implements ApplicationRunner {
         admin.setPasswordHash(passwordEncoder.encode(adminPassword));
         admin.setMfaEnabled(false);
         admin.setStatus(User.UserStatus.ACTIVE);
+        admin.setOrganizationId(1L);
         admin = userRepository.save(admin);
 
         UserRole assignment = new UserRole();

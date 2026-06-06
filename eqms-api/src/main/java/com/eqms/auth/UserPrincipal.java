@@ -26,6 +26,7 @@ public class UserPrincipal implements UserDetails {
     public static final String PRE_AUTH_AUTHORITY = "ROLE_PRE_AUTH";
 
     private final Long id;
+    private final Long organizationId;
     private final String email;
     private final String fullName;
     private final String passwordHash;
@@ -33,10 +34,11 @@ public class UserPrincipal implements UserDetails {
     private final boolean accountNonLocked;
     private final Collection<? extends GrantedAuthority> authorities;
 
-    public UserPrincipal(Long id, String email, String fullName, String passwordHash,
+    public UserPrincipal(Long id, Long organizationId, String email, String fullName, String passwordHash,
                          boolean enabled, boolean accountNonLocked,
                          Collection<? extends GrantedAuthority> authorities) {
         this.id = id;
+        this.organizationId = organizationId;
         this.email = email;
         this.fullName = fullName;
         this.passwordHash = passwordHash;
@@ -47,18 +49,22 @@ public class UserPrincipal implements UserDetails {
 
     /** Full principal built from a loaded user plus its resolved authorities. */
     public static UserPrincipal of(User user, Collection<? extends GrantedAuthority> authorities) {
-        return new UserPrincipal(user.getId(), user.getEmail(), user.getFullName(),
+        return new UserPrincipal(user.getId(), user.getOrganizationId(), user.getEmail(), user.getFullName(),
                 user.getPasswordHash(), user.getStatus() == User.UserStatus.ACTIVE, true, authorities);
     }
 
     /** Limited principal used between the password step and the TOTP step. */
-    public static UserPrincipal preAuth(Long id, String email, String fullName) {
-        return new UserPrincipal(id, email, fullName, null, true, true,
+    public static UserPrincipal preAuth(Long id, Long organizationId, String email, String fullName) {
+        return new UserPrincipal(id, organizationId, email, fullName, null, true, true,
                 List.of(new SimpleGrantedAuthority(PRE_AUTH_AUTHORITY)));
     }
 
     public Long getId() {
         return id;
+    }
+
+    public Long getOrganizationId() {
+        return organizationId;
     }
 
     public String getEmail() {

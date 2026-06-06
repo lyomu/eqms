@@ -23,6 +23,7 @@ export interface MfaEnrollResponse {
 /** Response body of GET /api/auth/me — current identity + authorities (UX hints only). */
 export interface MeResponse {
   id: number;
+  organizationId: number | null;
   email: string;
   fullName: string;
   authorities: string[];

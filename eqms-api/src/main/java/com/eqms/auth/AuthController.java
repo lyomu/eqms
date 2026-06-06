@@ -67,7 +67,7 @@ public class AuthController {
             case MFA_REQUIRED, ENROLLMENT_REQUIRED -> {
                 // Establish a limited pre-auth session until TOTP is verified.
                 UserPrincipal principal = UserPrincipal.preAuth(
-                        outcome.userId(), outcome.email(), outcome.fullName());
+                        outcome.userId(), outcome.organizationId(), outcome.email(), outcome.fullName());
                 persistAuthentication(principal, httpRequest, httpResponse);
                 yield ResponseEntity.ok(new LoginResponse(outcome.status().name()));
             }
@@ -116,7 +116,7 @@ public class AuthController {
         List<String> authorities = principal.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority).sorted().toList();
         return ResponseEntity.ok(new MeResponse(
-                principal.getId(), principal.getEmail(), principal.getFullName(), authorities));
+                principal.getId(), principal.getOrganizationId(), principal.getEmail(), principal.getFullName(), authorities));
     }
 
     private void persistAuthentication(UserPrincipal principal, HttpServletRequest request,

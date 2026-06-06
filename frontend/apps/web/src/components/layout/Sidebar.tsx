@@ -174,14 +174,20 @@ export function Sidebar() {
         </div>
         <ul className="space-y-1">
           <li>
-            <span
-              className="flex cursor-not-allowed items-center gap-3 rounded-md px-3 py-2 text-body text-muted-foreground opacity-60"
-              aria-disabled="true"
-              title="Settings (coming soon)"
+            <Link
+              href="/settings"
+              onClick={() => setMobileOpen(false)}
+              aria-current={pathname === "/settings" ? "page" : undefined}
+              className={cn(
+                "flex items-center gap-3 rounded-md px-3 py-2 text-body transition-colors",
+                pathname === "/settings"
+                  ? "bg-brand-light font-medium text-brand-primary"
+                  : "text-foreground/80 hover:bg-accent"
+              )}
             >
               <Settings className="h-5 w-5 shrink-0" aria-hidden="true" />
               {!collapsed && <span>Settings</span>}
-            </span>
+            </Link>
           </li>
           <li>
             <button

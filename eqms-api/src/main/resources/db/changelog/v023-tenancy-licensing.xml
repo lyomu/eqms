@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <changeSet id="v023-001-tenancy-licensing" author="eqms">
+        <sql dbms="postgresql" splitStatements="false"><![CDATA[
+            CREATE TABLE IF NOT EXISTS organizations (
+                id BIGSERIAL PRIMARY KEY,
+                code VARCHAR(40) NOT NULL UNIQUE,
+                name VARCHAR(200) NOT NULL,
+                status VARCHAR(20) NOT NULL DEFAULT 'active',
+                legal_name VARCHAR(240),
+                primary_contact_name VARCHAR(200),
+                primary_contact_email VARCHAR(255),
+                country VARCHAR(120),
+                timezone VARCHAR(64) NOT NULL DEFAULT 'UTC',
+                read_only_reason VARCHAR(400),
+                suspended_at TIMESTAMPTZ,
+                version INT NOT NULL DEFAULT 0,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                created_by BIGINT,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                updated_by BIGINT,
+                deleted_at TIMESTAMPTZ,
+                CONSTRAINT ck_organizations_status CHECK (status IN ('trialing','active','past_due','expired','suspended','cancelled'))
+            );
+
+            INSERT INTO organizations (code, name, legal_name, primary_contact_email, status, version, created_at, updated_at)
+            VALUES ('DEFAULT', 'Default Organization', 'Default Organization', 'admin@eqms.local', 'active', 0, now(), now())
+            ON CONFLICT (code) DO NOTHING;
+
+            CREATE TABLE IF NOT EXISTS organization_sites (
+                id BIGSERIAL PRIMARY KEY,
+                organization_id BIGINT NOT NULL REFERENCES organizations(id),
+                code VARCHAR(40) NOT NULL,
+                name VARCHAR(200) NOT NULL,
+                timezone VARCHAR(64) NOT NULL DEFAULT 'UTC',
+                address VARCHAR(500),
+                active BOOLEAN NOT NULL DEFAULT true,
+                version INT NOT NULL DEFAULT 0,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                created_by BIGINT,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                updated_by BIGINT,
+                deleted_at TIMESTAMPTZ,
+                UNIQUE (organization_id, code)
+            );
+
+            CREATE TABLE IF NOT EXISTS plans (
+                id BIGSERIAL PRIMARY KEY,
+                code VARCHAR(40) NOT NULL UNIQUE,
+                name VARCHAR(120) NOT NULL,
+                description VARCHAR(500),
+                user_limit INT,
+                site_limit INT,
+                is_custom BOOLEAN NOT NULL DEFAULT false,
+                active BOOLEAN NOT NULL DEFAULT true,
+                version INT NOT NULL DEFAULT 0,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                created_by BIGINT,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                updated_by BIGINT,
+                deleted_at TIMESTAMPTZ
+            );
+
+            CREATE TABLE IF NOT EXISTS modules (
+                id BIGSERIAL PRIMARY KEY,
+                code VARCHAR(80) NOT NULL UNIQUE,
+                name VARCHAR(160) NOT NULL,
+                description VARCHAR(500),
+                active BOOLEAN NOT NULL DEFAULT true,
+                version INT NOT NULL DEFAULT 0,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                created_by BIGINT,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                updated_by BIGINT,
+                deleted_at TIMESTAMPTZ
+            );
+
+            CREATE TABLE IF NOT EXISTS plan_modules (
+                id BIGSERIAL PRIMARY KEY,
+                plan_id BIGINT NOT NULL REFERENCES plans(id),
+                module_id BIGINT NOT NULL REFERENCES modules(id),
+                included BOOLEAN NOT NULL DEFAULT true,
+                version INT NOT NULL DEFAULT 0,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                created_by BIGINT,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                updated_by BIGINT,
+                deleted_at TIMESTAMPTZ,
+                UNIQUE (plan_id, module_id)
+            );
+
+            CREATE TABLE IF NOT EXISTS organization_subscriptions (
+                id BIGSERIAL PRIMARY KEY,
+                organization_id BIGINT NOT NULL REFERENCES organizations(id),
+                plan_id BIGINT NOT NULL REFERENCES plans(id),
+                status VARCHAR(20) NOT NULL,
+                trial_ends_at TIMESTAMPTZ,
+                current_period_starts_at TIMESTAMPTZ,
+                current_period_ends_at TIMESTAMPTZ,
+                cancelled_at TIMESTAMPTZ,
+                version INT NOT NULL DEFAULT 0,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                created_by BIGINT,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                updated_by BIGINT,
+                deleted_at TIMESTAMPTZ,
+                CONSTRAINT ck_org_sub_status CHECK (status IN ('trialing','active','past_due','expired','suspended','cancelled'))
+            );
+
+            CREATE TABLE IF NOT EXISTS organization_licenses (
+                id BIGSERIAL PRIMARY KEY,
+                organization_id BIGINT NOT NULL REFERENCES organizations(id),
+                subscription_id BIGINT REFERENCES organization_subscriptions(id),
+                status VARCHAR(20) NOT NULL,
+                user_limit INT,
+                site_limit INT,
+                starts_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                expires_at TIMESTAMPTZ,
+                read_only_at TIMESTAMPTZ,
+                suspended_at TIMESTAMPTZ,
+                version INT NOT NULL DEFAULT 0,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                created_by BIGINT,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                updated_by BIGINT,
+                deleted_at TIMESTAMPTZ,
+                CONSTRAINT ck_org_license_status CHECK (status IN ('trialing','active','past_due','expired','suspended','cancelled'))
+            );
+
+            CREATE TABLE IF NOT EXISTS organization_module_licenses (
+                id BIGSERIAL PRIMARY KEY,
+                organization_id BIGINT NOT NULL REFERENCES organizations(id),
+                module_id BIGINT NOT NULL REFERENCES modules(id),
+                enabled BOOLEAN NOT NULL DEFAULT true,
+                status VARCHAR(20) NOT NULL DEFAULT 'active',
+                starts_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                expires_at TIMESTAMPTZ,
+                version INT NOT NULL DEFAULT 0,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                created_by BIGINT,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                updated_by BIGINT,
+                deleted_at TIMESTAMPTZ,
+                CONSTRAINT ck_org_module_license_status CHECK (status IN ('trialing','active','past_due','expired','suspended','cancelled')),
+                UNIQUE (organization_id, module_id)
+            );
+
+            INSERT INTO plans (code, name, description, user_limit, site_limit, is_custom, version, created_at, updated_at)
+            VALUES
+              ('starter', 'Starter', 'Core eQMS modules for small teams', 25, 1, false, 0, now(), now()),
+              ('professional', 'Professional', 'Expanded eQMS module access', 100, 5, false, 0, now(), now()),
+              ('enterprise', 'Enterprise', 'Full eQMS suite for multi-site organizations', NULL, NULL, false, 0, now(), now()),
+              ('custom', 'Custom', 'Custom negotiated module access and limits', NULL, NULL, true, 0, now(), now())
+            ON CONFLICT (code) DO NOTHING;
+
+            INSERT INTO modules (code, name, description, version, created_at, updated_at)
+            VALUES
+              ('documents', 'Documents', 'Document control and versioning', 0, now(), now()),
+              ('training', 'Training', 'Training programs and assignments', 0, now(), now()),
+              ('change_control', 'Change Control', 'Change request lifecycle', 0, now(), now()),
+              ('deviations', 'Deviations', 'Deviation investigations', 0, now(), now()),
+              ('capa', 'CAPA', 'Corrective and preventive actions', 0, now(), now()),
+              ('complaints', 'Complaints', 'Product complaint handling', 0, now(), now()),
+              ('audits', 'Audits', 'Internal and supplier audits', 0, now(), now()),
+              ('risk', 'Risk', 'Quality risk management', 0, now(), now()),
+              ('equipment', 'Equipment', 'Equipment, calibration, and maintenance', 0, now(), now()),
+              ('suppliers', 'Suppliers', 'Supplier quality management', 0, now(), now()),
+              ('materials', 'Materials', 'Material master and approval', 0, now(), now()),
+              ('batch_records', 'Batch Records', 'Batch manufacturing records', 0, now(), now()),
+              ('products', 'Products', 'Product master and release data', 0, now(), now()),
+              ('non_conformance', 'Non-Conformance', 'Non-conformance handling', 0, now(), now()),
+              ('oos', 'OOS', 'Out-of-specification management', 0, now(), now()),
+              ('management_review', 'Management Review', 'Management review process', 0, now(), now()),
+              ('reports', 'Reports', 'Reports and analytics', 0, now(), now())
+            ON CONFLICT (code) DO NOTHING;
+
+            INSERT INTO plan_modules (plan_id, module_id, included, version, created_at, updated_at)
+            SELECT p.id, m.id, true, 0, now(), now()
+            FROM plans p CROSS JOIN modules m
+            WHERE p.code IN ('enterprise','custom')
+            ON CONFLICT (plan_id, module_id) DO NOTHING;
+
+            INSERT INTO plan_modules (plan_id, module_id, included, version, created_at, updated_at)
+            SELECT p.id, m.id, true, 0, now(), now()
+            FROM plans p JOIN modules m ON m.code IN ('documents','training','deviations','capa','reports')
+            WHERE p.code = 'starter'
+            ON CONFLICT (plan_id, module_id) DO NOTHING;
+
+            INSERT INTO plan_modules (plan_id, module_id, included, version, created_at, updated_at)
+            SELECT p.id, m.id, true, 0, now(), now()
+            FROM plans p JOIN modules m ON m.code IN (
+                'documents','training','change_control','deviations','capa','complaints',
+                'audits','risk','equipment','suppliers','materials','reports'
+            )
+            WHERE p.code = 'professional'
+            ON CONFLICT (plan_id, module_id) DO NOTHING;
+
+            INSERT INTO organization_subscriptions (organization_id, plan_id, status, current_period_starts_at, current_period_ends_at, version, created_at, updated_at)
+            SELECT o.id, p.id, 'active', now(), now() + interval '1 year', 0, now(), now()
+            FROM organizations o CROSS JOIN plans p
+            WHERE o.code = 'DEFAULT' AND p.code = 'enterprise'
+              AND NOT EXISTS (SELECT 1 FROM organization_subscriptions s WHERE s.organization_id = o.id AND s.deleted_at IS NULL);
+
+            INSERT INTO organization_licenses (organization_id, subscription_id, status, starts_at, expires_at, user_limit, site_limit, version, created_at, updated_at)
+            SELECT s.organization_id, s.id, 'active', now(), now() + interval '1 year', p.user_limit, p.site_limit, 0, now(), now()
+            FROM organization_subscriptions s JOIN plans p ON p.id = s.plan_id
+            WHERE NOT EXISTS (SELECT 1 FROM organization_licenses l WHERE l.organization_id = s.organization_id AND l.deleted_at IS NULL);
+
+            INSERT INTO organization_module_licenses (organization_id, module_id, enabled, status, starts_at, expires_at, version, created_at, updated_at)
+            SELECT o.id, m.id, true, 'active', now(), now() + interval '1 year', 0, now(), now()
+            FROM organizations o CROSS JOIN modules m
+            WHERE o.code = 'DEFAULT'
+            ON CONFLICT (organization_id, module_id) DO NOTHING;
+
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS organization_id BIGINT;
+            UPDATE users SET organization_id = (SELECT id FROM organizations WHERE code = 'DEFAULT') WHERE organization_id IS NULL;
+
+            DO $$
+            DECLARE table_name text;
+            DECLARE tables text[] := ARRAY[
+                'sites','departments','roles','permissions','user_roles','role_permissions','attachments','record_sequences',
+                'documents','document_read_assignments','change_controls','capas','capa_actions','deviations','products','materials',
+                'batch_records','batch_production_steps','batch_materials_used','batch_qc_results','batch_deviations_link','batch_products_produced',
+                'notifications','complaints','complaint_investigation','complaint_resolution','complaint_capa_link','complaint_timeline',
+                'audits','audit_findings','audit_capa_link','audit_follow_up','risks','risk_analysis','risk_mitigation','risk_control_effectiveness',
+                'suppliers','supplier_qualifications','supplier_certifications','supplier_performance','supplier_findings','supplier_capa_link',
+                'training_programs','training_assignments','training_auto_rules','training_completion_audit',
+                'equipment','calibrations','maintenance_history','equipment_specifications',
+                'oos_cases','oos_initial_assessment','oos_repeat_testing','oos_investigation','oos_disposition','oos_capa_link',
+                'non_conformances','non_conformance_investigation','non_conformance_disposition','non_conformance_use_as_is_approval','non_conformance_capa_link',
+                'management_reviews','review_metrics','review_audit_results','review_product_feedback','review_action_items','review_decisions',
+                'document_versions'
+            ];
+            BEGIN
+                FOREACH table_name IN ARRAY tables LOOP
+                    EXECUTE format('ALTER TABLE %I ADD COLUMN IF NOT EXISTS organization_id BIGINT', table_name);
+                    EXECUTE format('UPDATE %I SET organization_id = (SELECT id FROM organizations WHERE code = %L) WHERE organization_id IS NULL', table_name, 'DEFAULT');
+                    EXECUTE format('CREATE INDEX IF NOT EXISTS ix_%s_organization_id ON %I (organization_id)', table_name, table_name);
+                END LOOP;
+            END $$;
+
+            ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS organization_id BIGINT;
+            CREATE INDEX IF NOT EXISTS ix_audit_logs_organization_id ON audit_logs (organization_id);
+            ALTER TABLE electronic_signatures ADD COLUMN IF NOT EXISTS organization_id BIGINT;
+            CREATE INDEX IF NOT EXISTS ix_electronic_signatures_organization_id ON electronic_signatures (organization_id);
+
+            CREATE INDEX IF NOT EXISTS ix_users_organization_status ON users (organization_id, status);
+            CREATE INDEX IF NOT EXISTS ix_org_subscriptions_org_status ON organization_subscriptions (organization_id, status);
+            CREATE INDEX IF NOT EXISTS ix_org_licenses_org_status ON organization_licenses (organization_id, status);
+            CREATE INDEX IF NOT EXISTS ix_org_module_licenses_org_module ON organization_module_licenses (organization_id, module_id);
+
+            INSERT INTO permissions (code, description, version, created_at, updated_at)
+            VALUES ('PLATFORM_ADMIN', 'Manage organizations, plans, and licensing', 0, now(), now())
+            ON CONFLICT (code) DO NOTHING;
+
+            INSERT INTO roles (name, description, is_system, version, created_at, updated_at)
+            VALUES ('PLATFORM_ADMIN', 'Platform super administrator', true, 0, now(), now())
+            ON CONFLICT (name) DO NOTHING;
+
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r CROSS JOIN permissions p
+            WHERE r.name IN ('ADMIN','PLATFORM_ADMIN') AND p.code = 'PLATFORM_ADMIN'
+            ON CONFLICT DO NOTHING;
+        ]]></sql>
+    </changeSet>
+
+</databaseChangeLog>
