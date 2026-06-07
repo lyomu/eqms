@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Download, Paperclip } from "lucide-react";
+import { Download, Eye, Paperclip } from "lucide-react";
 import {
   useDocument,
   useDocumentVersions,
@@ -22,6 +22,7 @@ import { LoadingScreen, LoadingSpinner } from "@/components/ui/loading-spinner";
 import { ErrorAlert } from "@/components/ui/error-alert";
 import { StatusBadge } from "@/components/documents/StatusBadge";
 import { ApprovalModal } from "@/components/documents/ApprovalModal";
+import { FilePreview, type PreviewTarget } from "@/components/common/FilePreview";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { DOCUMENT_TYPE_LABELS, type AttachmentResponse, type DocumentStatus } from "@/types/documents";
 
@@ -217,23 +218,44 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
 function Attachments({ documentId }: { documentId: number }) {
   const q = useDocumentAttachments(documentId);
   const items = (q.data as AttachmentResponse[] | undefined) ?? [];
+  const [preview, setPreview] = useState<PreviewTarget | null>(null);
+
   if (q.isLoading) return <LoadingSpinner label="Loading attachments…" />;
   if (items.length === 0) return <p className="text-label text-muted-foreground">No attachments.</p>;
   return (
-    <ul className="space-y-1">
-      {items.map((a) => (
-        <li key={a.id} className="flex items-center gap-2 text-body">
-          <Paperclip className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-          <span className="truncate">{a.fileName}</span>
-          <a
-            href={`/api/attachments/${a.id}/download`}
-            className="ml-auto inline-flex items-center gap-1 text-brand-secondary hover:underline"
-          >
-            <Download className="h-4 w-4" /> Download
-          </a>
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul className="space-y-1">
+        {items.map((a) => (
+          <li key={a.id} className="flex items-center gap-2 text-body">
+            <Paperclip className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+            <button
+              type="button"
+              onClick={() => setPreview({ id: a.id, fileName: a.fileName, contentType: a.contentType })}
+              className="truncate text-left text-brand-secondary hover:underline"
+              title="Preview"
+            >
+              {a.fileName}
+            </button>
+            <div className="ml-auto flex shrink-0 items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setPreview({ id: a.id, fileName: a.fileName, contentType: a.contentType })}
+                className="inline-flex items-center gap-1 text-brand-secondary hover:underline"
+              >
+                <Eye className="h-4 w-4" /> Preview
+              </button>
+              <a
+                href={`/api/attachments/${a.id}/download`}
+                className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
+              >
+                <Download className="h-4 w-4" /> Download
+              </a>
+            </div>
+          </li>
+        ))}
+      </ul>
+      <FilePreview attachment={preview} onClose={() => setPreview(null)} />
+    </>
   );
 }
 
