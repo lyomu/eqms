@@ -32,6 +32,8 @@ import com.eqms.auth.UserPrincipal;
 import com.eqms.capa.dto.CapaResponse;
 import com.eqms.common.dto.AuditEntryResponse;
 import com.eqms.common.dto.PageResponse;
+import com.eqms.notifications.NotificationDispatcher;
+import com.eqms.notifications.NotificationType;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -48,9 +50,11 @@ public class AuditController {
     private static final String SIGNED_IN_SESSION = "EQMS_SIGNED_IN_SESSION";
 
     private final AuditManagementService service;
+    private final NotificationDispatcher notifications;
 
-    public AuditController(AuditManagementService service) {
+    public AuditController(AuditManagementService service, NotificationDispatcher notifications) {
         this.service = service;
+        this.notifications = notifications;
     }
 
     @GetMapping
@@ -67,6 +71,11 @@ public class AuditController {
     public ResponseEntity<AuditResponse> create(@Valid @RequestBody CreateAuditRequest request,
                                                 @AuthenticationPrincipal UserPrincipal p, HttpServletRequest http) {
         Audit a = service.create(request, p.getId(), p.getFullName(), ip(http), ua(http));
+        notifications.dispatchToAuthority("AUDIT_VIEW", p.getId(),
+                NotificationType.AUDIT_SCHEDULED,
+                "Audit scheduled: " + a.getAuditNo(),
+                "A quality audit (" + a.getAuditTitle() + ") has been scheduled.",
+                "Audit", String.valueOf(a.getId()));
         return ResponseEntity.status(HttpStatus.CREATED).body(detail(a));
     }
 

@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,16 +26,13 @@ import com.eqms.oosmanagement.OosCaseRepository;
 import com.eqms.training.TrainingAssignment;
 import com.eqms.training.TrainingAssignmentRepository;
 
-import java.util.List;
-
 /**
- * Daily sweep for all QMS reminder notifications. Runs at 02:00 server time so it does not
- * fire during short integration-test runs. Each sweep method is also package-visible so tests can
- * invoke it directly.
+ * Daily sweep for all QMS reminder notifications. Runs at 02:00 server time.
+ * Uses {@link NotificationDispatcher#dispatchToUser} so each reminder generates
+ * both an in-app notification and an email to the responsible user.
  *
- * Thresholds (all configurable via constants here):
- *   - Calibration: equipment whose next-calibration-date is within 30 days (matching the
- *     existing due-for-calibration query window in EquipmentService).
+ * Thresholds:
+ *   - Calibration: equipment whose next-calibration-date is within 30 days.
  *   - Training: assignments whose due-date has already passed.
  *   - OOS: open cases reported more than 30 days ago (SLA per M17 spec).
  *   - NC: open non-conformances created more than 30 days ago.
@@ -55,7 +53,7 @@ public class OverdueNotificationJob {
     private final OosCaseRepository oosCaseRepository;
     private final NonConformanceRepository nonConformanceRepository;
     private final ManagementReviewRepository managementReviewRepository;
-    private final NotificationService notificationService;
+    private final NotificationDispatcher dispatcher;
     private final Clock clock;
 
     public OverdueNotificationJob(CapaRepository capaRepository,
@@ -64,7 +62,7 @@ public class OverdueNotificationJob {
                                   OosCaseRepository oosCaseRepository,
                                   NonConformanceRepository nonConformanceRepository,
                                   ManagementReviewRepository managementReviewRepository,
-                                  NotificationService notificationService,
+                                  NotificationDispatcher dispatcher,
                                   Clock utcClock) {
         this.capaRepository = capaRepository;
         this.equipmentRepository = equipmentRepository;
@@ -72,7 +70,7 @@ public class OverdueNotificationJob {
         this.oosCaseRepository = oosCaseRepository;
         this.nonConformanceRepository = nonConformanceRepository;
         this.managementReviewRepository = managementReviewRepository;
-        this.notificationService = notificationService;
+        this.dispatcher = dispatcher;
         this.clock = utcClock;
     }
 
@@ -86,27 +84,25 @@ public class OverdueNotificationJob {
         total += notifyStaleNc();
         total += notifyOverdueManagementReviews();
         if (total > 0) {
-            log.info("Daily QMS reminder sweep created {} notification(s)", total);
+            log.info("Daily QMS reminder sweep dispatched {} notification(s)", total);
         }
     }
 
-    /** Overdue open CAPAs — original M10 behaviour, preserved. */
     int notifyOverdueCapas() {
         Instant now = Instant.now(clock);
         int sent = 0;
         for (Capa capa : capaRepository.findOpenWithDueDateBetween(Instant.EPOCH, now)) {
             Long owner = capa.getCreatedBy() != null ? capa.getCreatedBy() : capa.getSubmittedBy();
             if (owner == null) continue;
-            notificationService.create(owner, NotificationType.TASK_OVERDUE,
+            dispatcher.dispatchToUser(owner, NotificationType.TASK_OVERDUE,
                     "CAPA " + capa.getCapaNumber() + " is overdue",
-                    "A CAPA you own has passed its due date and is still open.",
+                    "CAPA " + capa.getCapaNumber() + " has passed its due date and is still open.",
                     "Capa", String.valueOf(capa.getId()));
             sent++;
         }
         return sent;
     }
 
-    /** Equipment whose next calibration is due within the warning window. */
     int notifyCalibrationDue() {
         LocalDate cutoff = LocalDate.now(clock).plusDays(CALIBRATION_WARN_DAYS);
         List<Equipment> due = equipmentRepository.findDueForCalibration(cutoff,
@@ -115,7 +111,7 @@ public class OverdueNotificationJob {
         for (Equipment e : due) {
             Long owner = e.getOwnerId() != null ? e.getOwnerId() : e.getCreatedBy();
             if (owner == null) continue;
-            notificationService.create(owner, NotificationType.CALIBRATION_DUE,
+            dispatcher.dispatchToUser(owner, NotificationType.CALIBRATION_DUE,
                     "Calibration due: " + e.getEquipmentName(),
                     "Equipment " + e.getEquipmentCode() + " (" + e.getEquipmentName()
                             + ") has a calibration due on or before " + cutoff + ".",
@@ -125,24 +121,22 @@ public class OverdueNotificationJob {
         return sent;
     }
 
-    /** Training assignments whose due date has passed and are still incomplete. */
     int notifyOverdueTraining() {
         Instant now = Instant.now(clock);
         List<TrainingAssignment> overdue = trainingAssignmentRepository.findOpenDueBy(now);
         int sent = 0;
         for (TrainingAssignment a : overdue) {
-            Long owner = a.getUserId();
-            if (owner == null) continue;
-            notificationService.create(owner, NotificationType.TRAINING_OVERDUE,
+            if (a.getUserId() == null) continue;
+            dispatcher.dispatchToUser(a.getUserId(), NotificationType.TRAINING_OVERDUE,
                     "Training assignment overdue",
-                    "A training assignment is past its due date and has not been completed.",
+                    "A training assignment is past its due date and has not been completed. "
+                            + "Please complete it as soon as possible.",
                     "TrainingAssignment", String.valueOf(a.getId()));
             sent++;
         }
         return sent;
     }
 
-    /** Open OOS cases that have been open longer than the SLA threshold. */
     int notifyStaleOos() {
         Instant threshold = Instant.now(clock).minus(OOS_SLA);
         List<OosCase> stale = oosCaseRepository.findOpenReportedBefore(threshold);
@@ -150,16 +144,16 @@ public class OverdueNotificationJob {
         for (OosCase o : stale) {
             Long owner = o.getReportedById() != null ? o.getReportedById() : o.getCreatedBy();
             if (owner == null) continue;
-            notificationService.create(owner, NotificationType.OOS_STALE,
+            dispatcher.dispatchToUser(owner, NotificationType.OOS_STALE,
                     "OOS case " + o.getOosNo() + " has been open over 30 days",
-                    "OOS case " + o.getOosNo() + " was reported more than 30 days ago and is still open.",
+                    "OOS case " + o.getOosNo() + " was reported more than 30 days ago and is still open. "
+                            + "Please review and progress this case.",
                     "OosCase", String.valueOf(o.getId()));
             sent++;
         }
         return sent;
     }
 
-    /** Open non-conformances that have been open longer than the SLA threshold. */
     int notifyStaleNc() {
         Instant threshold = Instant.now(clock).minus(NC_SLA);
         List<NonConformance> stale = nonConformanceRepository.findOpenCreatedBefore(threshold);
@@ -167,16 +161,16 @@ public class OverdueNotificationJob {
         for (NonConformance nc : stale) {
             Long owner = nc.getOwnerId() != null ? nc.getOwnerId() : nc.getCreatedBy();
             if (owner == null) continue;
-            notificationService.create(owner, NotificationType.NC_STALE,
+            dispatcher.dispatchToUser(owner, NotificationType.NC_STALE,
                     "Non-conformance " + nc.getNcNo() + " has been open over 30 days",
-                    "Non-conformance " + nc.getNcNo() + " was raised more than 30 days ago and is still open.",
+                    "Non-conformance " + nc.getNcNo() + " was raised more than 30 days ago and is still open. "
+                            + "Please review and progress this item.",
                     "NonConformance", String.valueOf(nc.getId()));
             sent++;
         }
         return sent;
     }
 
-    /** SCHEDULED management reviews whose review date has already passed. */
     int notifyOverdueManagementReviews() {
         LocalDate today = LocalDate.now(clock);
         List<ManagementReview> overdue = managementReviewRepository
@@ -185,10 +179,10 @@ public class OverdueNotificationJob {
         for (ManagementReview mr : overdue) {
             Long owner = mr.getCreatedBy() != null ? mr.getCreatedBy() : mr.getSubmittedBy();
             if (owner == null) continue;
-            notificationService.create(owner, NotificationType.MANAGEMENT_REVIEW_OVERDUE,
+            dispatcher.dispatchToUser(owner, NotificationType.MANAGEMENT_REVIEW_OVERDUE,
                     "Management review " + mr.getReviewNo() + " is overdue",
                     "Management review " + mr.getReviewNo() + " was scheduled for " + mr.getReviewDate()
-                            + " and has not been started.",
+                            + " and has not been started. Please action this review.",
                     "ManagementReview", String.valueOf(mr.getId()));
             sent++;
         }

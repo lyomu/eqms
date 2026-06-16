@@ -55,6 +55,12 @@
             <artifactId>liquibase-core</artifactId>
         </dependency>
 
+        <!-- Email notifications via Spring JavaMail -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
         <!-- Apache POI: .xlsx report export (Milestone 10). Not managed by the Spring Boot BOM,
              so the version is pinned explicitly. -->
         <dependency>

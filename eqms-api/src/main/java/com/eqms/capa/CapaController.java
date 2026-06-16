@@ -29,6 +29,8 @@ import com.eqms.capa.dto.UpdateCapaDetailsRequest;
 import com.eqms.capa.dto.UpdateRootCauseRequest;
 import com.eqms.common.dto.AuditEntryResponse;
 import com.eqms.common.dto.PageResponse;
+import com.eqms.notifications.NotificationDispatcher;
+import com.eqms.notifications.NotificationType;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -42,9 +44,11 @@ public class CapaController {
     private static final String SIGNED_IN_SESSION = "EQMS_SIGNED_IN_SESSION";
 
     private final CapaService service;
+    private final NotificationDispatcher notifications;
 
-    public CapaController(CapaService service) {
+    public CapaController(CapaService service, NotificationDispatcher notifications) {
         this.service = service;
+        this.notifications = notifications;
     }
 
     @GetMapping
@@ -96,8 +100,14 @@ public class CapaController {
     @PreAuthorize("hasAuthority('CAPA_CREATE')")
     public CapaResponse submitForApproval(@PathVariable Long id, @Valid @RequestBody CapaTransitionRequest r,
                                           @AuthenticationPrincipal UserPrincipal p, HttpServletRequest http) {
-        return CapaResponse.from(service.submitForApproval(id, r.expectedVersion(), r.reason(),
-                p.getId(), p.getFullName(), ip(http), ua(http)));
+        Capa capa = service.submitForApproval(id, r.expectedVersion(), r.reason(),
+                p.getId(), p.getFullName(), ip(http), ua(http));
+        notifications.dispatchToAuthority("CAPA_APPROVE", p.getId(),
+                NotificationType.CAPA_SUBMITTED_FOR_APPROVAL,
+                "CAPA " + capa.getCapaNumber() + " pending approval",
+                "A CAPA is awaiting your approval.",
+                "Capa", String.valueOf(capa.getId()));
+        return CapaResponse.from(capa);
     }
 
     @PostMapping("/{id}/approve")

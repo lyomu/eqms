@@ -32,7 +32,26 @@ management:
     health:
       show-details: when_authorized
 
+spring:
+  mail:
+    host: ${EQMS_MAIL_HOST:smtp.gmail.com}
+    port: ${EQMS_MAIL_PORT:587}
+    username: ${EQMS_MAIL_USERNAME:}
+    password: ${EQMS_MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+
 eqms:
+  # Email notification settings.
+  mail:
+    from: ${EQMS_MAIL_FROM:noreply@eqms.local}
+    from-name: ${EQMS_MAIL_FROM_NAME:eQMS Quality System}
+    base-url: ${EQMS_BASE_URL:http://localhost:3000}
   # Authentication / lockout policy.
   auth:
     max-failed-attempts: 5

@@ -22,6 +22,8 @@ import com.eqms.capa.dto.CapaResponse;
 import com.eqms.common.dto.AuditEntryResponse;
 import com.eqms.common.dto.PageResponse;
 import com.eqms.complaints.dto.ComplaintResponse;
+import com.eqms.notifications.NotificationDispatcher;
+import com.eqms.notifications.NotificationType;
 import com.eqms.complaints.dto.ComplaintTransitionRequest;
 import com.eqms.complaints.dto.CreateCapaFromComplaintRequest;
 import com.eqms.complaints.dto.CreateComplaintRequest;
@@ -48,9 +50,11 @@ public class ComplaintController {
     private static final String SIGNED_IN_SESSION = "EQMS_SIGNED_IN_SESSION";
 
     private final ComplaintService service;
+    private final NotificationDispatcher notifications;
 
-    public ComplaintController(ComplaintService service) {
+    public ComplaintController(ComplaintService service, NotificationDispatcher notifications) {
         this.service = service;
+        this.notifications = notifications;
     }
 
     @GetMapping
@@ -68,6 +72,11 @@ public class ComplaintController {
     public ResponseEntity<ComplaintResponse> create(@Valid @RequestBody CreateComplaintRequest request,
                                                     @AuthenticationPrincipal UserPrincipal p, HttpServletRequest http) {
         Complaint c = service.create(request, p.getId(), p.getFullName(), ip(http), ua(http));
+        notifications.dispatchToAuthority("COMPLAINT_MANAGE", p.getId(),
+                NotificationType.COMPLAINT_LOGGED,
+                "New complaint logged: " + c.getComplaintNo(),
+                "A new complaint has been logged and requires acknowledgement.",
+                "Complaint", String.valueOf(c.getId()));
         return ResponseEntity.status(HttpStatus.CREATED).body(detail(c));
     }
 

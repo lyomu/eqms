@@ -19,6 +19,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.eqms.auth.UserPrincipal;
 import com.eqms.common.dto.AuditEntryResponse;
 import com.eqms.common.dto.PageResponse;
+import com.eqms.notifications.NotificationDispatcher;
+import com.eqms.notifications.NotificationType;
 import com.eqms.training.dto.AssignUserRequest;
 import com.eqms.training.dto.AssignUsersRequest;
 import com.eqms.training.dto.AssignmentResponse;
@@ -39,9 +41,11 @@ import jakarta.validation.Valid;
 public class TrainingController {
 
     private final TrainingService service;
+    private final NotificationDispatcher notifications;
 
-    public TrainingController(TrainingService service) {
+    public TrainingController(TrainingService service, NotificationDispatcher notifications) {
         this.service = service;
+        this.notifications = notifications;
     }
 
     @GetMapping
@@ -97,6 +101,10 @@ public class TrainingController {
                                                          @AuthenticationPrincipal UserPrincipal p,
                                                          HttpServletRequest http) {
         TrainingAssignment a = service.assignUser(id, request, p.getId(), p.getFullName(), ip(http), ua(http));
+        notifications.dispatchToUser(a.getUserId(), NotificationType.TRAINING_ASSIGNED,
+                "Training assignment",
+                "You have been assigned a training program. Please complete it by the due date.",
+                "TrainingProgram", String.valueOf(id));
         return ResponseEntity.status(HttpStatus.CREATED).body(AssignmentResponse.from(a));
     }
 
@@ -109,6 +117,10 @@ public class TrainingController {
         List<AssignmentResponse> assignments = request.userIds().stream()
                 .map(userId -> service.assignUser(id, new AssignUserRequest(userId, request.dueDate()),
                         p.getId(), p.getFullName(), ip(http), ua(http)))
+                .peek(a -> notifications.dispatchToUser(a.getUserId(), NotificationType.TRAINING_ASSIGNED,
+                        "Training assignment",
+                        "You have been assigned a training program. Please complete it by the due date.",
+                        "TrainingProgram", String.valueOf(id)))
                 .map(AssignmentResponse::from)
                 .toList();
         return ResponseEntity.status(HttpStatus.CREATED).body(assignments);

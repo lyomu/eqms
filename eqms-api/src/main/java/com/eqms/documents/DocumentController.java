@@ -199,6 +199,10 @@ public class DocumentController {
         ReadAssignmentResponse response = ReadAssignmentResponse.from(documentService.assignRead(id,
                 request.assignedTo(), principal.getId(), principal.getFullName(),
                 clientIp(http), userAgent(http)));
+        notifications.dispatchToUser(request.assignedTo(), NotificationType.DOCUMENT_READ_ASSIGNED,
+                "Document assigned for reading",
+                "A document has been assigned to you for reading and acknowledgement.",
+                "Document", String.valueOf(id));
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
