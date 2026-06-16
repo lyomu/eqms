@@ -295,7 +295,9 @@ public class ComplaintService {
                 : "CAPA for complaint " + complaint.getComplaintNo();
         Capa capa = capaService.create(
                 new CreateCapaRequest(title, CapaSource.COMPLAINT, request.description(),
-                        request.effectivenessCheckRequired(), request.dueDate()),
+                        request.effectivenessCheckRequired(), request.dueDate(),
+                        null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+                        null, null, null, null, null, null, null),
                 actorId, actorName, ip, ua);
         link(complaint.getId(), capa.getId(), actorId, actorName, ip, ua,
                 request.reason() != null ? request.reason() : "CAPA created from complaint");

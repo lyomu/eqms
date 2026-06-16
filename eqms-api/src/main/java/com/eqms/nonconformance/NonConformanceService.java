@@ -276,7 +276,9 @@ public class NonConformanceService {
                 : "CAPA for non-conformance " + nc.getNcNo();
         Capa capa = capaService.create(
                 new CreateCapaRequest(title, CapaSource.INTERNAL, request.description(),
-                        request.effectivenessCheckRequired(), request.dueDate()),
+                        request.effectivenessCheckRequired(), request.dueDate(),
+                        null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+                        null, null, null, null, null, null, null),
                 actorId, actorName, ip, ua);
 
         if (!capaLinkRepository.existsByNcIdAndCapaId(id, capa.getId())) {

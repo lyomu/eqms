@@ -2,43 +2,71 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  .toolbar-button {
+    @apply inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition hover:bg-background hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40;
+  }
+
+  .rich-text-content ul {
+    @apply list-disc pl-6;
+  }
+
+  .rich-text-content ol {
+    @apply list-decimal pl-6;
+  }
+
+  .rich-text-content blockquote {
+    @apply border-l-4 border-brand-primary/30 pl-4 italic text-muted-foreground;
+  }
+
+  .rich-text-content table {
+    @apply my-2 w-full border-collapse;
+  }
+
+  .rich-text-content td,
+  .rich-text-content th {
+    @apply border border-border px-2 py-1;
+  }
+
+  .rich-text-content a {
+    @apply font-semibold text-brand-primary underline;
+  }
+}
+
 /**
- * Design tokens (SimplerQMS). shadcn semantic CSS vars in HSL so components stay
- * themeable; `--primary` maps to brand primary blue #1F4E79, `--secondary` to #2E75B6.
+ * Design tokens. shadcn semantic CSS vars in HSL so components stay themeable.
+ * The palette keeps the product serious, with warmer neutral surfaces and a
+ * secondary teal note so the UI no longer reads as one flat blue layer.
  */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 210 29% 16%;
+    --background: 210 33% 98%;
+    --foreground: 214 35% 14%;
 
     --card: 0 0% 100%;
-    --card-foreground: 210 29% 16%;
+    --card-foreground: 214 35% 14%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 210 29% 16%;
+    --popover-foreground: 214 35% 14%;
 
-    /* #1F4E79 */
-    --primary: 209 59% 30%;
+    --primary: 210 64% 29%;
     --primary-foreground: 0 0% 100%;
 
-    /* #2E75B6 */
-    --secondary: 209 60% 45%;
+    --secondary: 177 51% 34%;
     --secondary-foreground: 0 0% 100%;
 
-    /* #D6E4F0 light blue */
-    --muted: 209 56% 89%;
-    --muted-foreground: 210 16% 40%;
+    --muted: 210 26% 94%;
+    --muted-foreground: 214 15% 43%;
 
-    --accent: 209 56% 89%;
-    --accent-foreground: 209 59% 30%;
+    --accent: 188 42% 92%;
+    --accent-foreground: 184 55% 24%;
 
-    /* #DC3545 */
     --destructive: 354 70% 54%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 20% 88%;
-    --input: 214 20% 85%;
-    --ring: 209 59% 30%;
+    --border: 214 24% 88%;
+    --input: 214 20% 84%;
+    --ring: 177 51% 34%;
 
     --radius: 0.5rem;
   }
@@ -52,6 +80,11 @@
     @apply bg-background text-foreground;
     font-size: 14px; /* body default */
     line-height: 22px;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+  ::selection {
+    background: hsl(var(--accent));
+    color: hsl(var(--accent-foreground));
   }
 }
 
@@ -68,5 +101,66 @@
   }
   .form-label {
     @apply text-label text-foreground;
+  }
+  .app-surface {
+    background:
+      radial-gradient(circle at 10% 0%, rgba(46, 117, 182, 0.08), transparent 28rem),
+      radial-gradient(circle at 95% 12%, rgba(47, 133, 126, 0.08), transparent 24rem),
+      hsl(var(--background));
+  }
+  .table-shell {
+    @apply overflow-hidden rounded-lg border border-border bg-card shadow-sm;
+  }
+  .table-shell table {
+    @apply w-full;
+  }
+  .table-shell thead {
+    @apply bg-muted/70 text-label uppercase text-muted-foreground;
+  }
+  .table-shell th {
+    @apply px-4 py-3 text-left font-semibold;
+  }
+  .table-shell td {
+    @apply border-t border-border px-4 py-3 align-middle text-body;
+  }
+}
+
+@media screen {
+  .capa-print-report {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    max-height: 100vh;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  .capa-print-report,
+  .capa-print-report * {
+    visibility: visible !important;
+  }
+
+  .capa-print-report {
+    position: absolute !important;
+    inset: 0 auto auto 0 !important;
+    z-index: 9999 !important;
+    width: 100% !important;
+    min-height: 100% !important;
+    padding: 18mm !important;
+    opacity: 1 !important;
+    background: white !important;
+    color: #0f172a !important;
+  }
+
+  .capa-print-report button,
+  .capa-print-report [role="button"] {
+    display: none !important;
   }
 }

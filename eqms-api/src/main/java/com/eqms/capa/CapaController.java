@@ -25,6 +25,7 @@ import com.eqms.capa.dto.CapaTransitionRequest;
 import com.eqms.capa.dto.CloseCapaRequest;
 import com.eqms.capa.dto.CreateCapaActionRequest;
 import com.eqms.capa.dto.CreateCapaRequest;
+import com.eqms.capa.dto.UpdateCapaDetailsRequest;
 import com.eqms.capa.dto.UpdateRootCauseRequest;
 import com.eqms.common.dto.AuditEntryResponse;
 import com.eqms.common.dto.PageResponse;
@@ -73,6 +74,14 @@ public class CapaController {
                                         @AuthenticationPrincipal UserPrincipal principal, HttpServletRequest http) {
         return CapaResponse.from(service.updateRootCause(id, request.expectedVersion(), request.rootCause(),
                 request.reason(), principal.getId(), principal.getFullName(), ip(http), ua(http)));
+    }
+
+    @PutMapping("/{id}/details")
+    @PreAuthorize("hasAuthority('CAPA_CREATE')")
+    public CapaResponse updateDetails(@PathVariable Long id, @Valid @RequestBody UpdateCapaDetailsRequest request,
+                                      @AuthenticationPrincipal UserPrincipal principal, HttpServletRequest http) {
+        return CapaResponse.from(service.updateDetails(id, request, principal.getId(), principal.getFullName(),
+                ip(http), ua(http)));
     }
 
     @PostMapping("/{id}/submit-for-investigation")

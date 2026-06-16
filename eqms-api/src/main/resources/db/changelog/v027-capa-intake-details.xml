@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <changeSet id="v027-001-capa-intake-details" author="eqms">
+        <addColumn tableName="capas">
+            <column name="event_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="priority" type="VARCHAR(20)"/>
+            <column name="about_type" type="VARCHAR(80)"/>
+            <column name="about_reference" type="VARCHAR(255)"/>
+            <column name="about_details" type="TEXT"/>
+            <column name="party_type" type="VARCHAR(80)"/>
+            <column name="party_first_name" type="VARCHAR(120)"/>
+            <column name="party_last_name" type="VARCHAR(120)"/>
+            <column name="party_job_title" type="VARCHAR(160)"/>
+            <column name="party_company" type="VARCHAR(255)"/>
+            <column name="party_email" type="VARCHAR(255)"/>
+            <column name="party_phone" type="VARCHAR(80)"/>
+            <column name="containment_details" type="TEXT"/>
+            <column name="document_references" type="TEXT"/>
+            <column name="keywords" type="TEXT"/>
+            <column name="corrective_action_plan" type="TEXT"/>
+            <column name="preventive_action_plan" type="TEXT"/>
+            <column name="assigned_to" type="BIGINT"/>
+            <column name="assignment_status" type="VARCHAR(80)"/>
+            <column name="assignment_comment" type="TEXT"/>
+        </addColumn>
+        <createIndex tableName="capas" indexName="ix_capas_assigned_to">
+            <column name="assigned_to"/>
+        </createIndex>
+        <createIndex tableName="capas" indexName="ix_capas_priority">
+            <column name="priority"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

@@ -303,7 +303,9 @@ public class OosCaseService {
                 : request.dueDate().atStartOfDay(ZoneOffset.UTC).toInstant();
         Capa capa = capaService.create(
                 new CreateCapaRequest(title, CapaSource.OOS, request.description(),
-                        request.effectivenessCheckRequired(), dueDateInstant),
+                        request.effectivenessCheckRequired(), dueDateInstant,
+                        null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+                        null, null, null, null, null, null, null),
                 actorId, actorName, ip, ua);
 
         if (!capaLinkRepository.existsByOosIdAndCapaId(id, capa.getId())) {

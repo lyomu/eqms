@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <changeSet id="v028-001-capa-full-demo" author="eqms">
+        <sql dbms="postgresql" splitStatements="false"><![CDATA[
+DO $$
+DECLARE
+    org_id bigint;
+    admin_id bigint;
+    qa_user_id bigint;
+    author_user_id bigint;
+    operator_user_id bigint;
+    full_capa_id bigint;
+    current_year int := EXTRACT(YEAR FROM now() AT TIME ZONE 'UTC')::int;
+BEGIN
+    SELECT id INTO org_id FROM organizations WHERE code = 'DEFAULT';
+    SELECT id INTO admin_id FROM users WHERE email = 'admin@eqms.local';
+    SELECT id INTO qa_user_id FROM users WHERE email = 'demo.qa@eqms.local';
+    SELECT id INTO author_user_id FROM users WHERE email = 'demo.author@eqms.local';
+    SELECT id INTO operator_user_id FROM users WHERE email = 'demo.operator@eqms.local';
+
+    IF org_id IS NULL THEN
+        RETURN;
+    END IF;
+    admin_id := COALESCE(admin_id, qa_user_id, author_user_id, operator_user_id);
+    qa_user_id := COALESCE(qa_user_id, admin_id);
+    author_user_id := COALESCE(author_user_id, admin_id);
+    operator_user_id := COALESCE(operator_user_id, qa_user_id, admin_id);
+
+    INSERT INTO capas (
+        capa_number,
+        title,
+        description,
+        source,
+        root_cause,
+        status,
+        effectiveness_check_required,
+        effectiveness_check_result,
+        due_date,
+        closed_date,
+        submitted_by,
+        event_date,
+        priority,
+        about_type,
+        about_reference,
+        about_details,
+        party_type,
+        party_first_name,
+        party_last_name,
+        party_job_title,
+        party_company,
+        party_email,
+        party_phone,
+        containment_details,
+        document_references,
+        keywords,
+        corrective_action_plan,
+        preventive_action_plan,
+        assigned_to,
+        assignment_status,
+        assignment_comment,
+        organization_id,
+        version,
+        created_at,
+        created_by,
+        updated_at,
+        updated_by
+    )
+    VALUES (
+        'CAPA-' || current_year || '-004',
+        'Full demo CAPA: packaging reconciliation and line clearance controls',
+        $html$<p>During QA review of batch BATCH-2026-002, packaging reconciliation records showed a 24-unit variance and delayed second-person line clearance confirmation.</p><ul><li>Affected product: Paracetamol 500 mg Tablets.</li><li>Potential impact: label mix-up or undocumented reject destruction.</li><li>Immediate QA decision: hold finished packs pending reconciliation and documented investigation.</li></ul>$html$,
+        'DEVIATION',
+        $html$<p>Analysis Method: 5 Whys</p><p>Root Cause Statement: The approved line clearance checklist did not force barcode verification before label roll staging, and operators relied on manual visual checks for similar label rolls.</p><p>Evidence Reviewed: Batch record packet, reject log, line clearance checklist, QA interview notes, and warehouse staging photos.</p><p>Related NCs: NC-2026-002</p>$html$,
+        'IN_PROGRESS',
+        true,
+        'Effectiveness check planned after three consecutive packaging runs with zero reconciliation discrepancies.',
+        now() + interval '28 days',
+        null,
+        qa_user_id,
+        now() - interval '6 days',
+        'MAJOR',
+        'PRODUCT',
+        'Paracetamol 500 mg Tablets / BATCH-' || current_year || '-002',
+        $html$<p>Item / record: Paracetamol 500 mg Tablets</p><p>Category / format: Finished product packaging batch</p><p>Supplier / owner: Manufacturing and Packaging Operations</p><p>Identifier: BATCH-2026-002</p><p>Additional notes: Demo record intentionally includes all CAPA fields for screen, filter, and report review.</p>$html$,
+        'INTERNAL',
+        'Demo',
+        'Operator',
+        'Packaging Line Operator',
+        'Nairobi GMP Site',
+        'demo.operator@eqms.local',
+        '+254700100300',
+        $html$<p><strong>Immediate containment completed:</strong></p><ol><li>Finished packs from the affected packaging order were placed under QA hold.</li><li>Line clearance checklist, reject log, and label reconciliation sheets were collected.</li><li>Warehouse staging area was photographed and label rolls were segregated by SKU and batch.</li><li>QA performed a 100% recount before disposition.</li></ol>$html$,
+        $html$<ul><li>SOP-2026-001 Batch Manufacturing Record Review SOP v2.0</li><li>FORM-2026-001 Line Clearance Checklist</li><li>WI-2026-001 HPLC Assay Sample Preparation</li><li>External: packaging-line-photos.zip</li><li>External: signed-reconciliation-review.pdf</li></ul>$html$,
+        'packaging, reconciliation, line clearance, label control, barcode verification, operator training, full demo',
+        $html$<p>Implementation Target Date: 26-Jun-2026 14:52</p><p>Effectiveness Target Date: 14-Jul-2026 14:52</p><p>Responsibility: QA and Packaging Operations</p><p>Action Required: Revise the line clearance checklist to include barcode verification, require second-person confirmation before label staging, and update the batch record reconciliation review step.</p><p>Action Taken: Draft checklist update prepared and reviewed with QA. Barcode scanner verification step configured in the packaging room checklist.</p><p>Completed By: Demo QA Manager</p><p>Completion Date: Pending final approval</p><p>Effectiveness: QA will review three consecutive batches for zero undocumented reconciliation variance and complete a targeted operator knowledge check.</p><p>Reviewed By: Demo QA Manager</p><p>Review Date: Planned</p>$html$,
+        $html$<p>Implementation Target Date: 30-Jun-2026 09:00</p><p>Effectiveness Target Date: 21-Jul-2026 09:00</p><p>Responsibility: Manufacturing Training Coordinator</p><p>Action Required: Train packaging operators on revised line clearance controls, label roll segregation, and escalation requirements when reconciliation variance is observed.</p><p>Action Taken: Training assignment prepared for all packaging operators and supervisors.</p><p>Completed By: Pending</p><p>Completion Date: Pending</p><p>Effectiveness: Training completion and supervisor floor observation will be checked before CAPA closure.</p><p>Reviewed By: Pending</p><p>Review Date: Planned</p>$html$,
+        qa_user_id,
+        'ASSIGNED',
+        $html$<p>Assigned to QA for coordination with Manufacturing, Warehouse, and Document Control.</p><p>Next review: confirm checklist approval, training completion, and first post-change packaging run evidence.</p>$html$,
+        org_id,
+        4,
+        now() - interval '6 days',
+        author_user_id,
+        now() - interval '1 hour',
+        qa_user_id
+    )
+    ON CONFLICT (capa_number) DO UPDATE SET
+        title = EXCLUDED.title,
+        description = EXCLUDED.description,
+        source = EXCLUDED.source,
+        root_cause = EXCLUDED.root_cause,
+        status = EXCLUDED.status,
+        effectiveness_check_required = EXCLUDED.effectiveness_check_required,
+        effectiveness_check_result = EXCLUDED.effectiveness_check_result,
+        due_date = EXCLUDED.due_date,
+        closed_date = EXCLUDED.closed_date,
+        submitted_by = EXCLUDED.submitted_by,
+        event_date = EXCLUDED.event_date,
+        priority = EXCLUDED.priority,
+        about_type = EXCLUDED.about_type,
+        about_reference = EXCLUDED.about_reference,
+        about_details = EXCLUDED.about_details,
+        party_type = EXCLUDED.party_type,
+        party_first_name = EXCLUDED.party_first_name,
+        party_last_name = EXCLUDED.party_last_name,
+        party_job_title = EXCLUDED.party_job_title,
+        party_company = EXCLUDED.party_company,
+        party_email = EXCLUDED.party_email,
+        party_phone = EXCLUDED.party_phone,
+        containment_details = EXCLUDED.containment_details,
+        document_references = EXCLUDED.document_references,
+        keywords = EXCLUDED.keywords,
+        corrective_action_plan = EXCLUDED.corrective_action_plan,
+        preventive_action_plan = EXCLUDED.preventive_action_plan,
+        assigned_to = EXCLUDED.assigned_to,
+        assignment_status = EXCLUDED.assignment_status,
+        assignment_comment = EXCLUDED.assignment_comment,
+        organization_id = EXCLUDED.organization_id,
+        updated_at = EXCLUDED.updated_at,
+        updated_by = EXCLUDED.updated_by
+    RETURNING id INTO full_capa_id;
+
+    INSERT INTO capa_actions (capa_id, action_type, description, assigned_to, due_date, completed_date, organization_id, version, created_at, created_by, updated_at, updated_by)
+    SELECT full_capa_id, 'CORRECTIVE', 'Approve revised line clearance checklist with barcode verification and second-person label roll confirmation.', qa_user_id, now() + interval '7 days', null, org_id, 0, now() - interval '5 days', qa_user_id, now() - interval '1 hour', qa_user_id
+    WHERE NOT EXISTS (SELECT 1 FROM capa_actions WHERE capa_id = full_capa_id AND description = 'Approve revised line clearance checklist with barcode verification and second-person label roll confirmation.');
+
+    INSERT INTO capa_actions (capa_id, action_type, description, assigned_to, due_date, completed_date, organization_id, version, created_at, created_by, updated_at, updated_by)
+    SELECT full_capa_id, 'CORRECTIVE', 'Perform documented reconciliation review on the first packaging run after checklist update.', author_user_id, now() + interval '14 days', null, org_id, 0, now() - interval '5 days', qa_user_id, now() - interval '1 hour', qa_user_id
+    WHERE NOT EXISTS (SELECT 1 FROM capa_actions WHERE capa_id = full_capa_id AND description = 'Perform documented reconciliation review on the first packaging run after checklist update.');
+
+    INSERT INTO capa_actions (capa_id, action_type, description, assigned_to, due_date, completed_date, organization_id, version, created_at, created_by, updated_at, updated_by)
+    SELECT full_capa_id, 'PREVENTIVE', 'Complete targeted retraining for packaging operators and supervisors on label roll staging and variance escalation.', operator_user_id, now() + interval '21 days', null, org_id, 0, now() - interval '5 days', qa_user_id, now() - interval '1 hour', qa_user_id
+    WHERE NOT EXISTS (SELECT 1 FROM capa_actions WHERE capa_id = full_capa_id AND description = 'Complete targeted retraining for packaging operators and supervisors on label roll staging and variance escalation.');
+
+    INSERT INTO audit_logs (record_type, record_id, action, field_name, old_value, new_value, reason_for_change, user_id, user_full_name, utc_timestamp, ip_address, user_agent, organization_id)
+    SELECT 'Capa', full_capa_id::text, 'CREATE', null, null, 'CAPA-' || current_year || '-004', 'Full-detail CAPA demo seeded', author_user_id, 'Demo Document Author', now() - interval '6 days', '127.0.0.1', 'Liquibase demo seed', org_id
+    WHERE NOT EXISTS (SELECT 1 FROM audit_logs WHERE record_type = 'Capa' AND record_id = full_capa_id::text AND reason_for_change = 'Full-detail CAPA demo seeded');
+
+    INSERT INTO audit_logs (record_type, record_id, action, field_name, old_value, new_value, reason_for_change, user_id, user_full_name, utc_timestamp, ip_address, user_agent, organization_id)
+    SELECT 'Capa', full_capa_id::text, 'UPDATE', 'details', null, 'Root cause, containment, action plans, documents, keywords, and assignment populated', 'Expanded CAPA demo details', qa_user_id, 'Demo QA Manager', now() - interval '1 hour', '127.0.0.1', 'Liquibase demo seed', org_id
+    WHERE NOT EXISTS (SELECT 1 FROM audit_logs WHERE record_type = 'Capa' AND record_id = full_capa_id::text AND reason_for_change = 'Expanded CAPA demo details');
+
+    INSERT INTO record_sequences (module_code, year, prefix, current_value, padding, format, created_at, updated_at, version, organization_id)
+    VALUES ('CAPA', current_year, 'CAPA', 20, 3, '{prefix}-{year}-{seq}', now(), now(), 0, org_id)
+    ON CONFLICT (module_code, year) DO UPDATE SET current_value = GREATEST(record_sequences.current_value, 20), updated_at = now();
+END $$;
+        ]]></sql>
+    </changeSet>
+
+</databaseChangeLog>

@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <changeSet id="v029-001-training-full-demo" author="eqms">
+        <sql dbms="postgresql" splitStatements="false"><![CDATA[
+DO $$
+DECLARE
+    org_id bigint;
+    admin_id bigint;
+    qa_user_id bigint;
+    author_user_id bigint;
+    operator_user_id bigint;
+    training_id bigint;
+    completed_assignment_id bigint;
+    current_year int := EXTRACT(YEAR FROM now() AT TIME ZONE 'UTC')::int;
+BEGIN
+    SELECT id INTO org_id FROM organizations WHERE code = 'DEFAULT';
+    SELECT id INTO admin_id FROM users WHERE email = 'admin@eqms.local';
+    SELECT id INTO qa_user_id FROM users WHERE email = 'demo.qa@eqms.local';
+    SELECT id INTO author_user_id FROM users WHERE email = 'demo.author@eqms.local';
+    SELECT id INTO operator_user_id FROM users WHERE email = 'demo.operator@eqms.local';
+
+    IF org_id IS NULL THEN
+        INSERT INTO organizations (code, name, legal_name, primary_contact_email, status, version, created_at, updated_at)
+        VALUES ('DEFAULT', 'Default Organization', 'Default Organization', 'admin@eqms.local', 'active', 0, now(), now())
+        RETURNING id INTO org_id;
+    END IF;
+
+    IF admin_id IS NULL THEN
+        admin_id := qa_user_id;
+    END IF;
+
+    INSERT INTO training_programs (
+        training_code, title, content, intended_audience, required_frequency, active,
+        organization_id, version, created_at, created_by, updated_at, updated_by
+    )
+    VALUES (
+        'TRN-' || current_year || '-003',
+        'Packaging Line Clearance and Label Reconciliation',
+        'Numbering: Training
+Type: Document Training
+Audience: Manufacturing
+Occurrence: Recurring
+Recurrence: Annual
+Start: 2026-06-20T09:00
+End: 2026-06-20T12:00
+Completion Date: 2026-06-27T17:00
+Release Date: Scheduled
+Main Trainer: Demo QA Manager
+Additional Trainers: Demo Document Author, Demo Manufacturing Operator
+Features: Recurring, 4 document(s), 2 additional trainer(s)
+Start 1: 2026-06-20T09:00
+End 1: 2026-06-20T12:00
+Start 2: 2026-06-21T09:00
+End 2: 2026-06-21T11:30
+Documents: Batch Manufacturing Record Review SOP; Line Clearance Checklist; Packaging Line Clearance SOP v3.0 2026-04-12 [3.00]; ISO System Structure and Access Security v2.1 2023-10-09 [2.01]
+
+Description:
+This training covers packaging line clearance, label roll verification, reconciliation of printed components, and escalation of discrepancies before batch start.
+It is required before operators can independently perform or verify packaging setup activities.
+
+Learning Objectives:
+Confirm correct product, batch, label roll, and packaging component setup before line start.
+Perform two-person verification and barcode checks without bypassing documented controls.
+Document reconciliation results clearly and escalate any mismatch to QA immediately.
+
+Assessment / Completion Criteria:
+Trainees must complete the practical line clearance walkthrough and achieve at least 85% on the knowledge check.
+Trainer sign-off and completion evidence must be recorded against each assigned trainee.',
+        'MANUFACTURING',
+        'ANNUAL',
+        true,
+        org_id,
+        0,
+        now() - interval '2 days',
+        COALESCE(qa_user_id, admin_id),
+        now() - interval '1 hour',
+        COALESCE(qa_user_id, admin_id)
+    )
+    ON CONFLICT (training_code) DO UPDATE SET
+        title = EXCLUDED.title,
+        content = EXCLUDED.content,
+        intended_audience = EXCLUDED.intended_audience,
+        required_frequency = EXCLUDED.required_frequency,
+        active = EXCLUDED.active,
+        updated_at = now(),
+        updated_by = COALESCE(qa_user_id, admin_id)
+    RETURNING id INTO training_id;
+
+    INSERT INTO training_assignments (
+        training_program_id, user_id, assigned_date, due_date, completion_date, status, completion_evidence,
+        organization_id, version, created_at, created_by, updated_at, updated_by
+    )
+    SELECT training_id, operator_user_id, now() - interval '1 day', now() + interval '10 days', null, 'ASSIGNED', null,
+           org_id, 0, now() - interval '1 day', COALESCE(qa_user_id, admin_id), now() - interval '1 day', COALESCE(qa_user_id, admin_id)
+    WHERE operator_user_id IS NOT NULL
+    ON CONFLICT (training_program_id, user_id) DO UPDATE SET
+        due_date = EXCLUDED.due_date,
+        status = EXCLUDED.status,
+        updated_at = now();
+
+    INSERT INTO training_assignments (
+        training_program_id, user_id, assigned_date, due_date, completion_date, status, completion_evidence,
+        organization_id, version, created_at, created_by, updated_at, updated_by
+    )
+    SELECT training_id, author_user_id, now() - interval '1 day', now() + interval '10 days', null, 'IN_PROGRESS', 'Knowledge check opened',
+           org_id, 0, now() - interval '1 day', COALESCE(qa_user_id, admin_id), now() - interval '6 hours', author_user_id
+    WHERE author_user_id IS NOT NULL
+    ON CONFLICT (training_program_id, user_id) DO UPDATE SET
+        due_date = EXCLUDED.due_date,
+        status = EXCLUDED.status,
+        completion_evidence = EXCLUDED.completion_evidence,
+        updated_at = now();
+
+    INSERT INTO training_assignments (
+        training_program_id, user_id, assigned_date, due_date, completion_date, status, completion_evidence,
+        organization_id, version, created_at, created_by, updated_at, updated_by
+    )
+    SELECT training_id, qa_user_id, now() - interval '2 days', now() + interval '10 days', now() - interval '3 hours', 'COMPLETED', 'Knowledge check: 96%; trainer sign-off recorded',
+           org_id, 1, now() - interval '2 days', COALESCE(admin_id, qa_user_id), now() - interval '3 hours', qa_user_id
+    WHERE qa_user_id IS NOT NULL
+    ON CONFLICT (training_program_id, user_id) DO UPDATE SET
+        due_date = EXCLUDED.due_date,
+        completion_date = EXCLUDED.completion_date,
+        status = EXCLUDED.status,
+        completion_evidence = EXCLUDED.completion_evidence,
+        updated_at = now()
+    RETURNING id INTO completed_assignment_id;
+
+    IF completed_assignment_id IS NOT NULL THEN
+        INSERT INTO training_completion_audit (
+            training_assignment_id, user_id, completion_date, completed_by, evidence_file, created_at, created_by
+        )
+        SELECT completed_assignment_id, qa_user_id, now() - interval '3 hours', 'TRAINER', 'demo/training/packaging-line-clearance-score-96.pdf', now() - interval '3 hours', qa_user_id
+        WHERE NOT EXISTS (
+            SELECT 1 FROM training_completion_audit
+            WHERE training_assignment_id = completed_assignment_id
+              AND evidence_file = 'demo/training/packaging-line-clearance-score-96.pdf'
+        );
+    END IF;
+
+    INSERT INTO training_auto_rules (training_program_id, trigger_event, target_audience, due_within_days, created_at, created_by)
+    SELECT training_id, 'Packaging SOP revision approved', 'MANUFACTURING', 14, now() - interval '1 day', COALESCE(qa_user_id, admin_id)
+    WHERE NOT EXISTS (
+        SELECT 1 FROM training_auto_rules
+        WHERE training_program_id = training_id
+          AND trigger_event = 'Packaging SOP revision approved'
+    );
+END $$;
+        ]]></sql>
+    </changeSet>
+
+</databaseChangeLog>

@@ -15,6 +15,7 @@ import com.eqms.audit.AuditLog;
 import com.eqms.audit.AuditService;
 import com.eqms.capa.dto.CreateCapaActionRequest;
 import com.eqms.capa.dto.CreateCapaRequest;
+import com.eqms.capa.dto.UpdateCapaDetailsRequest;
 import com.eqms.common.ResourceNotFoundException;
 import com.eqms.sequences.SequenceService;
 import com.eqms.shared.constants.AuditAction;
@@ -65,6 +66,27 @@ public class CapaService {
         capa.setTitle(request.title());
         capa.setSource(request.source());
         capa.setDescription(request.description());
+        capa.setRootCause(request.rootCause());
+        capa.setEventDate(request.eventDate());
+        capa.setPriority(request.priority());
+        capa.setAboutType(request.aboutType());
+        capa.setAboutReference(request.aboutReference());
+        capa.setAboutDetails(request.aboutDetails());
+        capa.setPartyType(request.partyType());
+        capa.setPartyFirstName(request.partyFirstName());
+        capa.setPartyLastName(request.partyLastName());
+        capa.setPartyJobTitle(request.partyJobTitle());
+        capa.setPartyCompany(request.partyCompany());
+        capa.setPartyEmail(request.partyEmail());
+        capa.setPartyPhone(request.partyPhone());
+        capa.setContainmentDetails(request.containmentDetails());
+        capa.setDocumentReferences(request.documentReferences());
+        capa.setKeywords(request.keywords());
+        capa.setCorrectiveActionPlan(request.correctiveActionPlan());
+        capa.setPreventiveActionPlan(request.preventiveActionPlan());
+        capa.setAssignedTo(request.assignedTo());
+        capa.setAssignmentStatus(request.assignmentStatus());
+        capa.setAssignmentComment(request.assignmentComment());
         capa.setEffectivenessCheckRequired(request.effectivenessCheckRequired());
         capa.setDueDate(request.dueDate());
         capa.setCapaStatus(CapaStatus.DRAFT);
@@ -95,6 +117,55 @@ public class CapaService {
         capa.setRootCause(rootCause);
         audit(capa.getId(), AuditAction.UPDATE, "root_cause", previous, rootCause,
                 reason != null ? reason : "Root cause updated", actorId, actorName, ip, userAgent);
+        return capa;
+    }
+
+    /** Edit CAPA intake/detail fields (version-checked, audited) without changing workflow status. */
+    @Transactional
+    public Capa updateDetails(Long id, UpdateCapaDetailsRequest request,
+                              Long actorId, String actorName, String ip, String userAgent) {
+        Capa capa = requireCapa(id);
+        checkVersion(capa.getVersion(), request.expectedVersion());
+
+        String previous = summarizeDetails(capa);
+        if (request.title() != null && !request.title().isBlank()) {
+            capa.setTitle(request.title());
+        }
+        if (request.source() != null) {
+            capa.setSource(request.source());
+        }
+        if (request.description() != null) {
+            capa.setDescription(request.description());
+        }
+        if (request.effectivenessCheckRequired() != null) {
+            capa.setEffectivenessCheckRequired(request.effectivenessCheckRequired());
+        }
+        capa.setDueDate(request.dueDate());
+        capa.setEventDate(request.eventDate());
+        capa.setPriority(blankToNull(request.priority()));
+        capa.setAboutType(blankToNull(request.aboutType()));
+        capa.setAboutReference(blankToNull(request.aboutReference()));
+        capa.setAboutDetails(blankToNull(request.aboutDetails()));
+        capa.setPartyType(blankToNull(request.partyType()));
+        capa.setPartyFirstName(blankToNull(request.partyFirstName()));
+        capa.setPartyLastName(blankToNull(request.partyLastName()));
+        capa.setPartyJobTitle(blankToNull(request.partyJobTitle()));
+        capa.setPartyCompany(blankToNull(request.partyCompany()));
+        capa.setPartyEmail(blankToNull(request.partyEmail()));
+        capa.setPartyPhone(blankToNull(request.partyPhone()));
+        capa.setContainmentDetails(blankToNull(request.containmentDetails()));
+        capa.setDocumentReferences(blankToNull(request.documentReferences()));
+        capa.setKeywords(blankToNull(request.keywords()));
+        capa.setRootCause(blankToNull(request.rootCause()));
+        capa.setCorrectiveActionPlan(blankToNull(request.correctiveActionPlan()));
+        capa.setPreventiveActionPlan(blankToNull(request.preventiveActionPlan()));
+        capa.setAssignedTo(request.assignedTo());
+        capa.setAssignmentStatus(blankToNull(request.assignmentStatus()));
+        capa.setAssignmentComment(blankToNull(request.assignmentComment()));
+
+        audit(capa.getId(), AuditAction.UPDATE, "details", previous, summarizeDetails(capa),
+                request.reason() != null ? request.reason() : "CAPA details updated",
+                actorId, actorName, ip, userAgent);
         return capa;
     }
 
@@ -253,6 +324,31 @@ public class CapaService {
                 .reasonForChange(reason)
                 .userId(actorId).userFullName(actorName).ipAddress(ip).userAgent(userAgent)
                 .build());
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value;
+    }
+
+    private static String summarizeDetails(Capa capa) {
+        return "title=" + value(capa.getTitle())
+                + "; priority=" + value(capa.getPriority())
+                + "; about=" + value(capa.getAboutReference())
+                + "; party=" + value(capa.getPartyCompany())
+                + "; containment=" + value(capa.getContainmentDetails())
+                + "; documents=" + value(capa.getDocumentReferences())
+                + "; keywords=" + value(capa.getKeywords())
+                + "; rootCause=" + value(capa.getRootCause())
+                + "; corrective=" + value(capa.getCorrectiveActionPlan())
+                + "; preventive=" + value(capa.getPreventiveActionPlan());
+    }
+
+    private static String value(String value) {
+        if (value == null || value.isBlank()) {
+            return "-";
+        }
+        String normalized = value.replaceAll("\\s+", " ").trim();
+        return normalized.length() > 80 ? normalized.substring(0, 77) + "..." : normalized;
     }
 
     private void checkVersion(int current, int expected) {

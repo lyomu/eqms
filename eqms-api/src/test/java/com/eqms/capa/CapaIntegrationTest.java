@@ -61,7 +61,7 @@ class CapaIntegrationTest extends AbstractIntegrationTest {
     void createAssignsCapaNumberAndStartsInDraft() throws Exception {
         Ctx author = newUser("ADMIN");
         mockMvc.perform(post("/api/capas").session(author.session).contentType(MediaType.APPLICATION_JSON)
-                        .content(json(new CreateCapaRequest("Mix-up investigation", CapaSource.DEVIATION,
+                        .content(json(createRequest("Mix-up investigation", CapaSource.DEVIATION,
                                 "Wrong label applied", true, null))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value("DRAFT"))
@@ -134,7 +134,7 @@ class CapaIntegrationTest extends AbstractIntegrationTest {
     void creatingWithoutPermissionIsForbidden() throws Exception {
         Ctx operator = newUser("OPERATOR");
         mockMvc.perform(post("/api/capas").session(operator.session).contentType(MediaType.APPLICATION_JSON)
-                        .content(json(new CreateCapaRequest("Nope", CapaSource.OTHER, "x", false, null))))
+                        .content(json(createRequest("Nope", CapaSource.OTHER, "x", false, null))))
                 .andExpect(status().isForbidden());
     }
 
@@ -142,10 +142,18 @@ class CapaIntegrationTest extends AbstractIntegrationTest {
 
     private JsonNode create(Ctx ctx) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/capas").session(ctx.session).contentType(MediaType.APPLICATION_JSON)
-                        .content(json(new CreateCapaRequest("Investigation", CapaSource.DEVIATION,
+                        .content(json(createRequest("Investigation", CapaSource.DEVIATION,
                                 "Problem description", true, null))))
                 .andExpect(status().isCreated()).andReturn();
         return objectMapper.readTree(result.getResponse().getContentAsString());
+    }
+
+    private CreateCapaRequest createRequest(String title, CapaSource source, String description,
+                                            boolean effectivenessCheckRequired, Instant dueDate) {
+        return new CreateCapaRequest(
+                title, source, description, effectivenessCheckRequired, dueDate,
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null);
     }
 
     private int transition(Ctx ctx, long id, String action, int version, String expectedStatus) throws Exception {

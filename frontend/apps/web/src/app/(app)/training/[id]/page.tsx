@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
+import { CalendarDays, ClipboardList, FileText, GraduationCap, UsersRound } from "lucide-react";
 import { ActionFormModal } from "@/components/common/ActionFormModal";
 import { AuditTrailTable } from "@/components/common/AuditTrailTable";
 import { ComplianceChart } from "@/components/training/ComplianceChart";
@@ -50,6 +51,8 @@ export default function TrainingDetailPage() {
   const rows = assignments.data ?? [];
   const completed = rows.filter((a) => a.status === "COMPLETED").length;
   const completionPct = rows.length ? Math.round((completed / rows.length) * 100) : 0;
+  const parsed = parseTrainingContent(t.content);
+  const sessions = sessionRows(parsed.fields);
 
   return (
     <div className="space-y-4">
@@ -70,8 +73,13 @@ export default function TrainingDetailPage() {
       <Card>
         <CardContent className="grid grid-cols-1 gap-4 pt-4 md:grid-cols-4">
           <Field label="Program" value={t.trainingCode} />
+          <Field label="Type" value={parsed.fields.Type ?? "Training"} />
           <Field label="Audience" value={AUDIENCE_LABELS[t.intendedAudience]} />
-          <Field label="Frequency" value={FREQUENCY_LABELS[t.requiredFrequency]} />
+          <Field label="Occurrence" value={parsed.fields.Occurrence ?? FREQUENCY_LABELS[t.requiredFrequency]} />
+          <Field label="Release Date" value={parsed.fields["Release Date"] ?? "-"} />
+          <Field label="Main Trainer" value={parsed.fields["Main Trainer"] ?? "-"} />
+          <Field label="Start" value={parsed.fields.Start ?? parsed.fields["Start 1"] ?? "-"} />
+          <Field label="End" value={parsed.fields.End ?? parsed.fields["End 1"] ?? "-"} />
           <Field label="Version" value={`v${t.version}`} />
         </CardContent>
       </Card>
@@ -81,8 +89,56 @@ export default function TrainingDetailPage() {
         <CardContent>
           {tab === "curriculum" && (
             <div className="space-y-4 text-body">
-              <div><p className="text-label uppercase text-muted-foreground">Content</p><p className="mt-1 whitespace-pre-wrap">{t.content}</p></div>
-              <div><p className="text-label uppercase text-muted-foreground">Learning Objectives</p><ul className="mt-1 list-disc pl-5"><li>Understand current procedure and quality responsibilities.</li><li>Apply training content during regulated work.</li><li>Escalate gaps, changes, and overdue retraining.</li></ul></div>
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+                <DetailPanel icon={<GraduationCap className="h-5 w-5" />} title="Training Setup">
+                  <DetailField label="Numbering" value={parsed.fields.Numbering ?? "Training"} />
+                  <DetailField label="Type" value={parsed.fields.Type ?? "-"} />
+                  <DetailField label="Audience" value={parsed.fields.Audience ?? AUDIENCE_LABELS[t.intendedAudience]} />
+                  <DetailField label="Features" value={parsed.fields.Features ?? "-"} />
+                </DetailPanel>
+                <DetailPanel icon={<CalendarDays className="h-5 w-5" />} title="Schedule">
+                  <DetailField label="Occurrence" value={parsed.fields.Occurrence ?? "-"} />
+                  <DetailField label="Recurrence" value={parsed.fields.Recurrence ?? FREQUENCY_LABELS[t.requiredFrequency]} />
+                  <DetailField label="Completion Date" value={parsed.fields["Completion Date"] ?? "-"} />
+                  <DetailField label="Release Date" value={parsed.fields["Release Date"] ?? "-"} />
+                </DetailPanel>
+                <DetailPanel icon={<UsersRound className="h-5 w-5" />} title="Trainers">
+                  <DetailField label="Main Trainer" value={parsed.fields["Main Trainer"] ?? "-"} />
+                  <DetailField label="Additional Trainers" value={parsed.fields["Additional Trainers"] ?? "-"} />
+                  <DetailField label="Assigned Trainees" value={String(rows.length)} />
+                  <DetailField label="Completion" value={`${completionPct}%`} />
+                </DetailPanel>
+              </div>
+
+              {sessions.length > 0 ? (
+                <DetailPanel icon={<CalendarDays className="h-5 w-5" />} title="Sessions">
+                  <Table headers={["Session", "Start", "End"]} rows={sessions.map((session) => [session.label, session.start, session.end])} empty="No sessions recorded." />
+                </DetailPanel>
+              ) : (
+                <DetailPanel icon={<CalendarDays className="h-5 w-5" />} title="Session">
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <DetailField label="Start" value={parsed.fields.Start ?? "-"} />
+                    <DetailField label="End" value={parsed.fields.End ?? "-"} />
+                  </div>
+                </DetailPanel>
+              )}
+
+              <DetailPanel icon={<FileText className="h-5 w-5" />} title="Documents">
+                <p className="whitespace-pre-wrap">{parsed.fields.Documents ?? "No internal documents selected."}</p>
+              </DetailPanel>
+
+              <DetailPanel icon={<ClipboardList className="h-5 w-5" />} title="Description">
+                <TextBlock value={parsed.sections.Description || t.content} />
+              </DetailPanel>
+
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                <DetailPanel icon={<ClipboardList className="h-5 w-5" />} title="Learning Objectives">
+                  <TextBlock value={parsed.sections["Learning Objectives"] || "Understand current procedure and quality responsibilities.\nApply training content during regulated work.\nEscalate gaps, changes, and overdue retraining."} />
+                </DetailPanel>
+                <DetailPanel icon={<ClipboardList className="h-5 w-5" />} title="Assessment / Completion Criteria">
+                  <TextBlock value={parsed.sections["Assessment / Completion Criteria"] || "Completion evidence, trainer sign-off, or assessment score will be recorded against each assignment."} />
+                </DetailPanel>
+              </div>
             </div>
           )}
           {tab === "assignments" && <Assignments rows={rows} users={users.data ?? []} />}
@@ -120,6 +176,32 @@ export default function TrainingDetailPage() {
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return <div><p className="text-label text-muted-foreground">{label}</p><p className="mt-0.5 text-body font-medium">{value}</p></div>;
 }
+function DetailPanel({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded-md border border-border bg-muted/30">
+      <div className="flex items-center gap-2 border-b border-border bg-success/10 px-4 py-3">
+        <span className="text-success">{icon}</span>
+        <h2 className="text-body font-semibold">{title}</h2>
+      </div>
+      <div className="space-y-3 p-4">{children}</div>
+    </section>
+  );
+}
+function DetailField({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="rounded-md border border-border bg-background px-3 py-2">
+      <p className="text-label font-semibold text-muted-foreground">{label}</p>
+      <div className="mt-1 whitespace-pre-wrap text-body">{value || "-"}</div>
+    </div>
+  );
+}
+function TextBlock({ value }: { value: string }) {
+  const lines = value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (lines.length > 1) {
+    return <ul className="list-disc space-y-1 pl-5">{lines.map((line) => <li key={line}>{line}</li>)}</ul>;
+  }
+  return <p className="whitespace-pre-wrap">{value || "-"}</p>;
+}
 function Assignments({ rows, users, history = false }: { rows: TrainingAssignment[]; users: { id: number; fullName: string; status: string; email: string }[]; history?: boolean }) {
   return <Table headers={["User Name", "Role", "Assigned Date", "Due Date", "Status", "Completion Date"]} rows={rows.map((a) => [users.find((u) => u.id === a.userId)?.fullName ?? `User #${a.userId}`, "QA", formatDate(a.assignedDate), formatDate(a.dueDate), <AssignmentStatusBadge key={a.id} status={a.status} dueDate={a.dueDate} />, formatDate(a.completionDate)])} empty={history ? "No completions recorded." : "No assignments yet."} />;
 }
@@ -138,4 +220,48 @@ function defaultDueDate(frequency: string) {
   const d = new Date();
   d.setDate(d.getDate() + days);
   return d.toISOString().slice(0, 10);
+}
+
+function parseTrainingContent(content: string) {
+  const fields: Record<string, string> = {};
+  const sections: Record<string, string> = {};
+  const sectionLabels = new Set(["Description", "Learning Objectives", "Assessment / Completion Criteria"]);
+  let currentSection: string | null = null;
+
+  content.split(/\r?\n/).forEach((rawLine) => {
+    const line = rawLine.trim();
+    if (!line) return;
+
+    const sectionName = line.endsWith(":") ? line.slice(0, -1) : "";
+    if (sectionLabels.has(sectionName)) {
+      currentSection = sectionName;
+      sections[currentSection] = "";
+      return;
+    }
+
+    if (currentSection) {
+      sections[currentSection] = [sections[currentSection], line].filter(Boolean).join("\n");
+      return;
+    }
+
+    const index = line.indexOf(":");
+    if (index > -1) {
+      const key = line.slice(0, index).trim();
+      const value = line.slice(index + 1).trim();
+      fields[key] = value;
+    }
+  });
+
+  return { fields, sections };
+}
+
+function sessionRows(fields: Record<string, string>) {
+  const rows: { label: string; start: string; end: string }[] = [];
+  for (let index = 1; index <= 12; index += 1) {
+    const start = fields[`Start ${index}`];
+    const end = fields[`End ${index}`];
+    if (!start && !end) continue;
+    rows.push({ label: `Session ${index}`, start: start || "-", end: end || "-" });
+  }
+  return rows;
 }

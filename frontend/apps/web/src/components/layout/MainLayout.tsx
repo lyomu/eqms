@@ -11,7 +11,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   const setMobileOpen = useUiStore((s) => s.setMobileSidebarOpen);
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden app-surface">
       {/* Desktop sidebar */}
       <aside className="hidden lg:block">
         <Sidebar />
@@ -45,7 +45,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       {/* Content column */}
       <div className="flex min-w-0 flex-1 flex-col">
         <Header />
-        <main className="flex-1 overflow-y-auto bg-muted/30 p-4">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6">{children}</main>
       </div>
     </div>
   );

@@ -209,7 +209,9 @@ public class AuditManagementService {
                 : finding.getDescription();
         Capa capa = capaService.create(
                 new CreateCapaRequest(title, CapaSource.AUDIT_FINDING, description,
-                        request.effectivenessCheckRequired(), request.dueDate()),
+                        request.effectivenessCheckRequired(), request.dueDate(),
+                        null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+                        null, null, null, null, null, null, null),
                 actorId, actorName, ip, ua);
 
         AuditCapaLink link = new AuditCapaLink();

@@ -21,6 +21,7 @@ export type CapaSource =
   | "OTHER";
 
 export type CapaActionTypeKey = "CORRECTIVE" | "PREVENTIVE";
+export type CapaPriority = "CRITICAL" | "MAJOR" | "MINOR" | "NA";
 
 export const CAPA_STATUS_LABELS: Record<CapaStatus, string> = {
   DRAFT: "Draft",
@@ -56,6 +57,13 @@ export const CAPA_SOURCE_LABELS: Record<CapaSource, string> = {
   OTHER: "Other",
 };
 
+export const CAPA_PRIORITY_LABELS: Record<CapaPriority, string> = {
+  CRITICAL: "Critical",
+  MAJOR: "Major",
+  MINOR: "Minor",
+  NA: "N/A",
+};
+
 export interface CapaResponse {
   id: number;
   capaNumber: string;
@@ -65,6 +73,26 @@ export interface CapaResponse {
   version: number;
   description: string;
   rootCause: string | null;
+  eventDate: string | null;
+  priority: CapaPriority | null;
+  aboutType: string | null;
+  aboutReference: string | null;
+  aboutDetails: string | null;
+  partyType: string | null;
+  partyFirstName: string | null;
+  partyLastName: string | null;
+  partyJobTitle: string | null;
+  partyCompany: string | null;
+  partyEmail: string | null;
+  partyPhone: string | null;
+  containmentDetails: string | null;
+  documentReferences: string | null;
+  keywords: string | null;
+  correctiveActionPlan: string | null;
+  preventiveActionPlan: string | null;
+  assignedTo: number | null;
+  assignmentStatus: string | null;
+  assignmentComment: string | null;
   effectivenessCheckRequired: boolean;
   effectivenessCheckResult: string | null;
   dueDate: string | null;

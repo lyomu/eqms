@@ -1,6 +1,10 @@
+"use client";
+
+import { useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { ErrorAlert } from "@/components/ui/error-alert";
 import { MODULE_LABELS, type TaskItem } from "@/types/dashboard";
@@ -15,6 +19,8 @@ interface TaskListCardProps {
   /** Treat due dates as overdue (renders them in the error color). */
   overdue?: boolean;
 }
+
+const DEFAULT_VISIBLE_ITEMS = 5;
 
 /** Prettify a status enum name, e.g. PENDING_APPROVAL -> "Pending Approval". */
 function prettyStatus(status: string): string {
@@ -52,10 +58,18 @@ export function TaskListCard({
   emptyText,
   overdue,
 }: TaskListCardProps) {
+  const [expanded, setExpanded] = useState(false);
+  const visibleItems = expanded ? items : items?.slice(0, DEFAULT_VISIBLE_ITEMS);
+  const hiddenCount = Math.max((items?.length ?? 0) - DEFAULT_VISIBLE_ITEMS, 0);
+
   return (
-    <Card className="flex h-full flex-col">
+    <Card className="flex h-full flex-col overflow-hidden">
       <CardHeader className="flex-row items-center gap-2 space-y-0">
-        {Icon && <Icon className="h-5 w-5 text-brand-primary" aria-hidden="true" />}
+        {Icon && (
+          <span className="flex h-8 w-8 items-center justify-center rounded-md bg-accent text-accent-foreground">
+            <Icon className="h-4 w-4" aria-hidden="true" />
+          </span>
+        )}
         <CardTitle className="text-h3">{title}</CardTitle>
         {items && items.length > 0 && (
           <Badge variant="neutral" className="ml-auto">
@@ -74,14 +88,15 @@ export function TaskListCard({
           <p className="py-2 text-body text-muted-foreground">{emptyText}</p>
         )}
 
-        {!isLoading && !isError && items && items.length > 0 && (
-          <ul className="divide-y divide-border">
-            {items.map((item) => {
+        {!isLoading && !isError && visibleItems && visibleItems.length > 0 && (
+          <div className="space-y-3">
+            <ul className="divide-y divide-border">
+              {visibleItems.map((item) => {
               const due = formatDate(item.dueDate);
               return (
                 <li
                   key={`${item.module}-${item.recordId ?? item.recordNumber}`}
-                  className="flex items-center gap-3 py-2"
+                  className="flex items-center gap-3 py-3"
                 >
                   <div className="min-w-0">
                     <p className="truncate text-body font-medium">{item.recordNumber}</p>
@@ -100,8 +115,20 @@ export function TaskListCard({
                   </div>
                 </li>
               );
-            })}
-          </ul>
+              })}
+            </ul>
+            {hiddenCount > 0 && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => setExpanded((value) => !value)}
+              >
+                {expanded ? "Show less" : `View ${hiddenCount} more`}
+              </Button>
+            )}
+          </div>
         )}
       </CardContent>
     </Card>

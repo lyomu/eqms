@@ -50,7 +50,7 @@ export function Sidebar() {
     <nav
       aria-label="Main navigation"
       className={cn(
-        "flex h-full flex-col border-r border-border bg-background transition-[width] duration-200",
+        "flex h-full flex-col border-r border-border/80 bg-background/95 shadow-sm backdrop-blur transition-[width] duration-200",
         collapsed ? "w-16" : "w-64"
       )}
     >
@@ -63,7 +63,7 @@ export function Sidebar() {
           type="button"
           onClick={toggleSidebar}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          className="ml-auto hidden rounded-sm p-1.5 text-muted-foreground hover:bg-accent lg:inline-flex"
+          className="ml-auto hidden rounded-sm p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground lg:inline-flex"
         >
           {collapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
         </button>
@@ -91,7 +91,7 @@ export function Sidebar() {
               aria-current={pathname === "/notifications" ? "page" : undefined}
               className={cn(
                 "flex items-center gap-3 rounded-md px-3 py-2 text-body transition-colors",
-                pathname === "/notifications" ? "bg-brand-light font-medium text-brand-primary" : "text-foreground/80 hover:bg-accent"
+                pathname === "/notifications" ? "bg-accent font-semibold text-accent-foreground shadow-sm" : "text-foreground/75 hover:bg-accent/80 hover:text-accent-foreground"
               )}
             >
               <Bell className="h-5 w-5 shrink-0" aria-hidden="true" />
@@ -132,10 +132,10 @@ export function Sidebar() {
                 );
 
                 const baseClasses = cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-body transition-colors",
-                  active
-                    ? "bg-brand-light font-medium text-brand-primary"
-                    : "text-foreground/80 hover:bg-accent",
+                "flex items-center gap-3 rounded-md px-3 py-2 text-body transition-colors",
+                active
+                    ? "bg-accent font-semibold text-accent-foreground shadow-sm"
+                    : "text-foreground/75 hover:bg-accent/80 hover:text-accent-foreground",
                   item.comingSoon && "cursor-not-allowed opacity-50 hover:bg-transparent"
                 );
 
@@ -171,7 +171,7 @@ export function Sidebar() {
           </span>
           {!collapsed && (
             <div className="min-w-0">
-              <p className="truncate text-body font-medium">{currentUser?.fullName ?? "Account"}</p>
+              <p className="truncate text-body font-semibold">{currentUser?.fullName ?? "Account"}</p>
               <p className="truncate text-label text-muted-foreground">{currentUser?.email}</p>
             </div>
           )}
@@ -186,8 +186,8 @@ export function Sidebar() {
                 className={cn(
                   "flex items-center gap-3 rounded-md px-3 py-2 text-body transition-colors",
                   pathname.startsWith("/admin/settings")
-                    ? "bg-brand-light font-medium text-brand-primary"
-                    : "text-foreground/80 hover:bg-accent"
+                    ? "bg-accent font-semibold text-accent-foreground shadow-sm"
+                    : "text-foreground/75 hover:bg-accent/80 hover:text-accent-foreground"
                 )}
               >
                 <ShieldCheck className="h-5 w-5 shrink-0" aria-hidden="true" />
@@ -203,8 +203,8 @@ export function Sidebar() {
               className={cn(
                 "flex items-center gap-3 rounded-md px-3 py-2 text-body transition-colors",
                 pathname === "/settings"
-                  ? "bg-brand-light font-medium text-brand-primary"
-                  : "text-foreground/80 hover:bg-accent"
+                  ? "bg-accent font-semibold text-accent-foreground shadow-sm"
+                  : "text-foreground/75 hover:bg-accent/80 hover:text-accent-foreground"
               )}
             >
               <Settings className="h-5 w-5 shrink-0" aria-hidden="true" />
@@ -216,7 +216,7 @@ export function Sidebar() {
               type="button"
               onClick={() => logout.mutate()}
               disabled={logout.isPending}
-              className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-body text-foreground/80 transition-colors hover:bg-accent disabled:opacity-50"
+              className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-body text-foreground/75 transition-colors hover:bg-accent/80 hover:text-accent-foreground disabled:opacity-50"
             >
               <LogOut className="h-5 w-5 shrink-0" aria-hidden="true" />
               {!collapsed && <span>{logout.isPending ? "Signing out…" : "Logout"}</span>}

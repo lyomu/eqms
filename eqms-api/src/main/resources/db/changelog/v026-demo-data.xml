@@ -1,0 +1,371 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <!--
+      Local demo dataset for the eQMS workspace. This is intentionally representative rather than
+      exhaustive: each quality module gets visible records, and key modules get child rows so list,
+      detail, dashboard, and report screens have something meaningful to render.
+    -->
+    <changeSet id="v026-001-demo-data" author="eqms">
+        <sql dbms="postgresql" splitStatements="false"><![CDATA[
+DO $$
+DECLARE
+    org_id bigint;
+    demo_site_id bigint;
+    qa_dept_id bigint;
+    mfg_dept_id bigint;
+    admin_id bigint;
+    qa_user_id bigint;
+    author_user_id bigint;
+    operator_user_id bigint;
+    qa_role_id bigint;
+    author_role_id bigint;
+    operator_role_id bigint;
+    current_year int := EXTRACT(YEAR FROM now() AT TIME ZONE 'UTC')::int;
+    product_tablet_id bigint;
+    product_syrup_id bigint;
+    material_api_id bigint;
+    material_pack_id bigint;
+    doc_sop_id bigint;
+    doc_batch_form_id bigint;
+    capa_label_id bigint;
+    capa_training_id bigint;
+    batch_tablet_id bigint;
+    audit_gmp_id bigint;
+    supplier_api_id bigint;
+    equipment_balance_id bigint;
+    risk_mixup_id bigint;
+    oos_assay_id bigint;
+    nc_pack_id bigint;
+    mr_q2_id bigint;
+BEGIN
+    SELECT id INTO org_id FROM organizations WHERE code = 'DEFAULT';
+    IF org_id IS NULL THEN
+        INSERT INTO organizations (code, name, legal_name, primary_contact_email, status, version, created_at, updated_at)
+        VALUES ('DEFAULT', 'Default Organization', 'Default Organization', 'admin@eqms.local', 'active', 0, now(), now())
+        RETURNING id INTO org_id;
+    END IF;
+
+    INSERT INTO sites (code, name, timezone, organization_id, version, created_at, updated_at)
+    VALUES ('NAIROBI-GMP', 'Nairobi GMP Site', 'Africa/Nairobi', org_id, 0, now(), now())
+    ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name, timezone = EXCLUDED.timezone, updated_at = now()
+    RETURNING id INTO demo_site_id;
+
+    INSERT INTO departments (site_id, code, name, organization_id, version, created_at, updated_at)
+    VALUES (demo_site_id, 'QA', 'Quality Assurance', org_id, 0, now(), now())
+    ON CONFLICT (site_id, code) DO UPDATE SET name = EXCLUDED.name, updated_at = now()
+    RETURNING id INTO qa_dept_id;
+
+    INSERT INTO departments (site_id, code, name, organization_id, version, created_at, updated_at)
+    VALUES (demo_site_id, 'MFG', 'Manufacturing', org_id, 0, now(), now())
+    ON CONFLICT (site_id, code) DO UPDATE SET name = EXCLUDED.name, updated_at = now()
+    RETURNING id INTO mfg_dept_id;
+
+    SELECT id INTO admin_id FROM users WHERE email = 'admin@eqms.local';
+    SELECT id INTO qa_role_id FROM roles WHERE name = 'QA_MANAGER';
+    SELECT id INTO author_role_id FROM roles WHERE name = 'AUTHOR';
+    SELECT id INTO operator_role_id FROM roles WHERE name = 'OPERATOR';
+
+    INSERT INTO users (email, username, full_name, password_hash, mfa_enabled, status, site_id, department_id, organization_id, version, created_at, updated_at)
+    VALUES ('demo.qa@eqms.local', 'demo.qa', 'Demo QA Manager', '$argon2id$v=19$m=16384,t=2,p=1$/VVmikRrEgFe6SyOgqjPEw$vviJ/Wa0RGJYH6olPVu9REIALotPJxiVAVE9Y/c2evo', false, 'ACTIVE', demo_site_id, qa_dept_id, org_id, 0, now(), now())
+    ON CONFLICT (email) DO UPDATE SET full_name = EXCLUDED.full_name, site_id = EXCLUDED.site_id, department_id = EXCLUDED.department_id, organization_id = EXCLUDED.organization_id, updated_at = now()
+    RETURNING id INTO qa_user_id;
+
+    INSERT INTO users (email, username, full_name, password_hash, mfa_enabled, status, site_id, department_id, organization_id, version, created_at, updated_at)
+    VALUES ('demo.author@eqms.local', 'demo.author', 'Demo Document Author', '$argon2id$v=19$m=16384,t=2,p=1$/VVmikRrEgFe6SyOgqjPEw$vviJ/Wa0RGJYH6olPVu9REIALotPJxiVAVE9Y/c2evo', false, 'ACTIVE', demo_site_id, qa_dept_id, org_id, 0, now(), now())
+    ON CONFLICT (email) DO UPDATE SET full_name = EXCLUDED.full_name, site_id = EXCLUDED.site_id, department_id = EXCLUDED.department_id, organization_id = EXCLUDED.organization_id, updated_at = now()
+    RETURNING id INTO author_user_id;
+
+    INSERT INTO users (email, username, full_name, password_hash, mfa_enabled, status, site_id, department_id, organization_id, version, created_at, updated_at)
+    VALUES ('demo.operator@eqms.local', 'demo.operator', 'Demo Manufacturing Operator', '$argon2id$v=19$m=16384,t=2,p=1$/VVmikRrEgFe6SyOgqjPEw$vviJ/Wa0RGJYH6olPVu9REIALotPJxiVAVE9Y/c2evo', false, 'ACTIVE', demo_site_id, mfg_dept_id, org_id, 0, now(), now())
+    ON CONFLICT (email) DO UPDATE SET full_name = EXCLUDED.full_name, site_id = EXCLUDED.site_id, department_id = EXCLUDED.department_id, organization_id = EXCLUDED.organization_id, updated_at = now()
+    RETURNING id INTO operator_user_id;
+
+    INSERT INTO user_roles (user_id, role_id, granted_at, organization_id, version, created_at, updated_at)
+    SELECT qa_user_id, qa_role_id, now(), org_id, 0, now(), now()
+    WHERE qa_role_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM user_roles WHERE user_id = qa_user_id AND role_id = qa_role_id);
+
+    INSERT INTO user_roles (user_id, role_id, granted_at, organization_id, version, created_at, updated_at)
+    SELECT author_user_id, author_role_id, now(), org_id, 0, now(), now()
+    WHERE author_role_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM user_roles WHERE user_id = author_user_id AND role_id = author_role_id);
+
+    INSERT INTO user_roles (user_id, role_id, granted_at, organization_id, version, created_at, updated_at)
+    SELECT operator_user_id, operator_role_id, now(), org_id, 0, now(), now()
+    WHERE operator_role_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM user_roles WHERE user_id = operator_user_id AND role_id = operator_role_id);
+
+    IF admin_id IS NULL THEN
+        admin_id := qa_user_id;
+    ELSE
+        UPDATE users u SET site_id = COALESCE(u.site_id, (SELECT s.id FROM sites s WHERE s.code = 'NAIROBI-GMP')),
+            department_id = COALESCE(u.department_id, qa_dept_id),
+            organization_id = COALESCE(u.organization_id, org_id),
+            updated_at = now()
+        WHERE id = admin_id;
+    END IF;
+
+    -- Product and material master data used by downstream manufacturing, complaint, OOS, and NC rows.
+    INSERT INTO products (product_code, name, description, dosage_form, strength, registration_number, status, submitted_by, organization_id, version, created_at, created_by, updated_at, updated_by)
+    VALUES
+      ('PROD-' || current_year || '-001', 'Paracetamol 500 mg Tablets', 'Immediate-release analgesic tablet for demo workflows.', 'TABLET', '500 mg', 'KE-DEMO-PARA-500', 'ACTIVE', qa_user_id, org_id, 0, now() - interval '35 days', author_user_id, now() - interval '3 days', qa_user_id),
+      ('PROD-' || current_year || '-002', 'Cetirizine 5 mg/5 mL Syrup', 'Antihistamine syrup awaiting quality approval.', 'SYRUP', '5 mg/5 mL', 'KE-DEMO-CET-005', 'PENDING_APPROVAL', author_user_id, org_id, 1, now() - interval '9 days', author_user_id, now() - interval '1 day', author_user_id)
+    ON CONFLICT (product_code) DO UPDATE SET name = EXCLUDED.name, status = EXCLUDED.status, updated_at = now();
+    SELECT id INTO product_tablet_id FROM products WHERE product_code = 'PROD-' || current_year || '-001';
+    SELECT id INTO product_syrup_id FROM products WHERE product_code = 'PROD-' || current_year || '-002';
+
+    INSERT INTO materials (material_code, name, description, material_type, unit_of_measure, specification, status, submitted_by, organization_id, version, created_at, created_by, updated_at, updated_by)
+    VALUES
+      ('MAT-' || current_year || '-001', 'Paracetamol API', 'Qualified active ingredient for tablet manufacture.', 'ACTIVE_INGREDIENT', 'KG', 'Assay 98.0-102.0%; water NMT 0.5%.', 'APPROVED', qa_user_id, org_id, 1, now() - interval '40 days', author_user_id, now() - interval '8 days', qa_user_id),
+      ('MAT-' || current_year || '-002', 'PVC/Alu Blister Foil', 'Primary packaging material under supplier verification.', 'PACKAGING', 'UNIT', 'Print registration and seal integrity per approved spec.', 'PENDING_APPROVAL', author_user_id, org_id, 0, now() - interval '6 days', author_user_id, now() - interval '1 day', author_user_id),
+      ('MAT-' || current_year || '-003', 'Purified Water', 'Utility material temporarily on hold pending conductivity review.', 'RAW_MATERIAL', 'L', 'Meets pharmacopeial purified water specification.', 'ON_HOLD', qa_user_id, org_id, 2, now() - interval '22 days', qa_user_id, now() - interval '2 days', qa_user_id)
+    ON CONFLICT (material_code) DO UPDATE SET name = EXCLUDED.name, status = EXCLUDED.status, updated_at = now();
+    SELECT id INTO material_api_id FROM materials WHERE material_code = 'MAT-' || current_year || '-001';
+    SELECT id INTO material_pack_id FROM materials WHERE material_code = 'MAT-' || current_year || '-002';
+
+    -- Document Control.
+    INSERT INTO documents (document_number, title, document_type, status, content, major_version, effective_date, next_review_date, review_period_months, submitted_by, organization_id, version, created_at, created_by, updated_at, updated_by)
+    VALUES
+      ('SOP-' || current_year || '-001', 'Batch Manufacturing Record Review SOP', 'SOP', 'EFFECTIVE', 'Defines QA review, reconciliation, and batch release checks.', 2, now() - interval '25 days', now() + interval '11 months', 12, qa_user_id, org_id, 2, now() - interval '70 days', author_user_id, now() - interval '25 days', qa_user_id),
+      ('FORM-' || current_year || '-001', 'Line Clearance Checklist', 'FORM', 'PENDING_APPROVAL', 'Checklist for pre-production line clearance and label verification.', 1, null, now() + interval '12 months', 12, author_user_id, org_id, 1, now() - interval '8 days', author_user_id, now() - interval '1 day', author_user_id),
+      ('WI-' || current_year || '-001', 'HPLC Assay Sample Preparation', 'WORK_INSTRUCTION', 'UNDER_REVIEW', 'Draft sample preparation steps for assay testing.', 1, null, now() + interval '12 months', 12, author_user_id, org_id, 0, now() - interval '5 days', author_user_id, now() - interval '1 day', author_user_id)
+    ON CONFLICT (document_number) DO UPDATE SET title = EXCLUDED.title, status = EXCLUDED.status, updated_at = now();
+    SELECT id INTO doc_sop_id FROM documents WHERE document_number = 'SOP-' || current_year || '-001';
+    SELECT id INTO doc_batch_form_id FROM documents WHERE document_number = 'FORM-' || current_year || '-001';
+
+    INSERT INTO document_versions (document_id, major_version, version_label, status, title, content, change_notes, created_by, created_by_name, created_at, organization_id)
+    SELECT doc_sop_id, 2, 'v2.0', 'EFFECTIVE', 'Batch Manufacturing Record Review SOP', 'Defines QA review, reconciliation, and batch release checks.', 'Demo effective version.', qa_user_id, 'Demo QA Manager', now() - interval '25 days', org_id
+    WHERE NOT EXISTS (SELECT 1 FROM document_versions WHERE document_id = doc_sop_id AND version_label = 'v2.0');
+
+    INSERT INTO document_read_assignments (document_id, assigned_to, assigned_at, assigned_by, acknowledged_at, organization_id, version, created_at, created_by, updated_at, updated_by)
+    SELECT doc_sop_id, operator_user_id, now() - interval '12 days', qa_user_id, now() - interval '10 days', org_id, 0, now() - interval '12 days', qa_user_id, now() - interval '10 days', operator_user_id
+    WHERE NOT EXISTS (SELECT 1 FROM document_read_assignments WHERE document_id = doc_sop_id AND assigned_to = operator_user_id);
+
+    -- Change Control.
+    INSERT INTO change_controls (change_number, title, description, change_type, status, justification, effectiveness_check_required, target_implementation_date, implemented_date, closed_date, submitted_by, organization_id, version, created_at, created_by, updated_at, updated_by)
+    VALUES
+      ('CC-' || current_year || '-001', 'Revise packaging line clearance flow', 'Add barcode verification before first print approval.', 'MAJOR', 'PENDING_APPROVAL', 'Reduces packaging mix-up risk.', true, now() + interval '21 days', null, null, author_user_id, org_id, 1, now() - interval '14 days', author_user_id, now() - interval '1 day', author_user_id),
+      ('CC-' || current_year || '-002', 'Update HPLC column supplier', 'Introduce qualified alternate column supplier.', 'MINOR', 'IN_IMPLEMENTATION', 'Approved alternate source improves continuity.', false, now() + interval '15 days', null, null, qa_user_id, org_id, 2, now() - interval '24 days', qa_user_id, now() - interval '2 days', qa_user_id),
+      ('CC-' || current_year || '-003', 'Warehouse label printer replacement', 'Replace obsolete label printer and verify templates.', 'MINOR', 'CLOSED', 'Printer reached end of service life.', true, now() - interval '20 days', now() - interval '12 days', now() - interval '5 days', qa_user_id, org_id, 4, now() - interval '50 days', qa_user_id, now() - interval '5 days', qa_user_id)
+    ON CONFLICT (change_number) DO UPDATE SET title = EXCLUDED.title, status = EXCLUDED.status, updated_at = now();
+
+    -- CAPA.
+    INSERT INTO capas (capa_number, title, description, source, root_cause, status, effectiveness_check_required, effectiveness_check_result, due_date, closed_date, submitted_by, organization_id, version, created_at, created_by, updated_at, updated_by)
+    VALUES
+      ('CAPA-' || current_year || '-001', 'Prevent label roll mix-up during packaging', 'Wrong label roll staged during line clearance.', 'DEVIATION', 'Similar label roll storage bins and incomplete second-person verification.', 'IN_PROGRESS', true, null, now() + interval '18 days', null, author_user_id, org_id, 3, now() - interval '28 days', author_user_id, now() - interval '2 days', qa_user_id),
+      ('CAPA-' || current_year || '-002', 'Improve OOS sample reconciliation', 'Retain sample reconciliation gaps found during lab review.', 'OOS', 'Manual reconciliation step was not consistently documented.', 'PENDING_APPROVAL', true, null, now() + interval '30 days', null, author_user_id, org_id, 1, now() - interval '12 days', author_user_id, now() - interval '1 day', author_user_id),
+      ('CAPA-' || current_year || '-003', 'Supplier COA verification checklist', 'Supplier audit finding on incomplete COA review evidence.', 'SUPPLIER', 'Incoming QC checklist did not require independent COA trace check.', 'CLOSED', true, 'Three incoming lots reviewed with complete COA trace evidence.', now() - interval '2 days', now() - interval '1 day', qa_user_id, org_id, 5, now() - interval '65 days', qa_user_id, now() - interval '1 day', qa_user_id)
+    ON CONFLICT (capa_number) DO UPDATE SET title = EXCLUDED.title, status = EXCLUDED.status, updated_at = now();
+    SELECT id INTO capa_label_id FROM capas WHERE capa_number = 'CAPA-' || current_year || '-001';
+    SELECT id INTO capa_training_id FROM capas WHERE capa_number = 'CAPA-' || current_year || '-002';
+
+    INSERT INTO capa_actions (capa_id, action_type, description, assigned_to, due_date, completed_date, organization_id, version, created_at, created_by, updated_at, updated_by)
+    SELECT capa_label_id, 'CORRECTIVE', 'Relabel and segregate packaging material staging bins.', operator_user_id, now() + interval '7 days', null, org_id, 0, now() - interval '10 days', qa_user_id, now() - interval '2 days', qa_user_id
+    WHERE NOT EXISTS (SELECT 1 FROM capa_actions WHERE capa_id = capa_label_id AND description = 'Relabel and segregate packaging material staging bins.');
+    INSERT INTO capa_actions (capa_id, action_type, description, assigned_to, due_date, completed_date, organization_id, version, created_at, created_by, updated_at, updated_by)
+    SELECT capa_label_id, 'PREVENTIVE', 'Train operators on barcode verification before batch start.', qa_user_id, now() + interval '14 days', null, org_id, 0, now() - interval '9 days', qa_user_id, now() - interval '2 days', qa_user_id
+    WHERE NOT EXISTS (SELECT 1 FROM capa_actions WHERE capa_id = capa_label_id AND description = 'Train operators on barcode verification before batch start.');
+
+    -- Deviations.
+    INSERT INTO deviations (deviation_number, title, description, severity, status, root_cause, immediate_action, occurred_date, closed_date, submitted_by, organization_id, version, created_at, created_by, updated_at, updated_by)
+    VALUES
+      ('DEV-' || current_year || '-001', 'Temperature excursion in raw material store', 'Store reached 28 C for 45 minutes during power transfer.', 'MAJOR', 'UNDER_INVESTIGATION', null, 'Affected pallets placed on QA hold.', now() - interval '4 days', null, author_user_id, org_id, 1, now() - interval '4 days', operator_user_id, now() - interval '1 day', qa_user_id),
+      ('DEV-' || current_year || '-002', 'Packaging count mismatch', 'Finished pack reconciliation showed 24-unit variance.', 'MINOR', 'PENDING_APPROVAL', 'Rejected cartons were counted twice during reconciliation.', 'Line stopped; QA recount completed.', now() - interval '15 days', null, author_user_id, org_id, 2, now() - interval '15 days', operator_user_id, now() - interval '2 days', author_user_id),
+      ('DEV-' || current_year || '-003', 'Late line clearance documentation', 'Line clearance checklist completed after start-up.', 'MINOR', 'CLOSED', 'Supervisor was unavailable at planned start time.', 'Retrospective verification completed.', now() - interval '45 days', now() - interval '35 days', qa_user_id, org_id, 4, now() - interval '45 days', operator_user_id, now() - interval '35 days', qa_user_id)
+    ON CONFLICT (deviation_number) DO UPDATE SET title = EXCLUDED.title, status = EXCLUDED.status, updated_at = now();
+
+    -- Batch Records.
+    INSERT INTO batch_records (batch_no, product_id, product_code, batch_size, unit, manufacturing_start_date, manufacturing_end_date, notes, status, submitted_by, released_by, released_at, organization_id, version, created_at, created_by, updated_at, updated_by)
+    VALUES
+      ('BATCH-' || current_year || '-001', product_tablet_id, 'PROD-' || current_year || '-001', 100000, 'UNIT', now() - interval '3 days', null, 'Compression in progress; blend yield within expected range.', 'IN_PROGRESS', operator_user_id, null, null, org_id, 1, now() - interval '3 days', operator_user_id, now() - interval '1 day', operator_user_id),
+      ('BATCH-' || current_year || '-002', product_tablet_id, 'PROD-' || current_year || '-001', 80000, 'UNIT', now() - interval '12 days', now() - interval '9 days', 'QA review pending for reconciliation packet.', 'QA_REVIEW', qa_user_id, null, null, org_id, 2, now() - interval '12 days', operator_user_id, now() - interval '2 days', qa_user_id),
+      ('BATCH-' || current_year || '-003', product_tablet_id, 'PROD-' || current_year || '-001', 95000, 'UNIT', now() - interval '45 days', now() - interval '42 days', 'Released demo batch.', 'RELEASED', qa_user_id, qa_user_id, now() - interval '38 days', org_id, 4, now() - interval '45 days', operator_user_id, now() - interval '38 days', qa_user_id),
+      ('BATCH-' || current_year || '-004', product_syrup_id, 'PROD-' || current_year || '-002', 1200, 'L', now() - interval '7 days', now() - interval '6 days', 'Quarantined pending OOS investigation.', 'QUARANTINE', qa_user_id, null, null, org_id, 3, now() - interval '7 days', operator_user_id, now() - interval '1 day', qa_user_id)
+    ON CONFLICT (batch_no) DO UPDATE SET notes = EXCLUDED.notes, status = EXCLUDED.status, updated_at = now();
+    SELECT id INTO batch_tablet_id FROM batch_records WHERE batch_no = 'BATCH-' || current_year || '-001';
+
+    INSERT INTO batch_materials_used (batch_record_id, material_id, material_code, lot_number, supplier, quantity_used, unit, created_at, created_by, organization_id)
+    SELECT batch_tablet_id, material_api_id, 'MAT-' || current_year || '-001', 'API-DEMO-2406', 'Acme API Supplies', 125.5, 'KG', now() - interval '2 days', operator_user_id, org_id
+    WHERE NOT EXISTS (SELECT 1 FROM batch_materials_used WHERE batch_record_id = batch_tablet_id AND lot_number = 'API-DEMO-2406');
+    INSERT INTO batch_production_steps (batch_record_id, step_number, step_description, equipment_used, operator_id, start_time, end_time, parameters_recorded, anomalies_noted, created_at, created_by, organization_id)
+    SELECT batch_tablet_id, 10, 'Blend API and excipients', 'Blender BL-02', operator_user_id, now() - interval '2 days', now() - interval '2 days' + interval '3 hours', 'Blend speed 18 rpm; endpoint met.', 'None', now() - interval '2 days', operator_user_id, org_id
+    WHERE NOT EXISTS (SELECT 1 FROM batch_production_steps WHERE batch_record_id = batch_tablet_id AND step_number = 10);
+    INSERT INTO batch_qc_results (batch_record_id, test_method, specification_limit, actual_result, test_date, test_status, test_lab, approved_by, created_at, created_by, organization_id)
+    SELECT batch_tablet_id, 'Blend uniformity', 'RSD NMT 5.0%', 'RSD 2.4%', now() - interval '1 day', 'PASS', 'QC Lab', qa_user_id, now() - interval '1 day', qa_user_id, org_id
+    WHERE NOT EXISTS (SELECT 1 FROM batch_qc_results WHERE batch_record_id = batch_tablet_id AND test_method = 'Blend uniformity');
+    INSERT INTO batch_products_produced (batch_record_id, product_id, product_code, lot_number_assigned, quantity, unit, created_at, created_by, organization_id)
+    SELECT batch_tablet_id, product_tablet_id, 'PROD-' || current_year || '-001', 'PT-DEMO-001', 98200, 'UNIT', now() - interval '1 day', operator_user_id, org_id
+    WHERE NOT EXISTS (SELECT 1 FROM batch_products_produced WHERE batch_record_id = batch_tablet_id AND lot_number_assigned = 'PT-DEMO-001');
+
+    -- Complaints.
+    INSERT INTO complaints (complaint_no, product_id, complaint_description, source, severity, reported_date, reported_by, owner_id, status, submitted_by, closed_date, organization_id, version, created_at, created_by, updated_at, updated_by)
+    VALUES
+      ('COMPL-' || current_year || '-001', product_tablet_id, 'Customer reported chipped tablet in blister pocket.', 'CUSTOMER', 'MAJOR', now() - interval '6 days', 'Distributor QA', qa_user_id, 'UNDER_INVESTIGATION', qa_user_id, null, org_id, 2, now() - interval '6 days', qa_user_id, now() - interval '1 day', qa_user_id),
+      ('COMPL-' || current_year || '-002', product_tablet_id, 'Internal complaint: carton print smudge observed during retention review.', 'INTERNAL', 'MINOR', now() - interval '21 days', 'Retention sample review', author_user_id, 'RESOLVED', author_user_id, null, org_id, 3, now() - interval '21 days', author_user_id, now() - interval '3 days', qa_user_id),
+      ('COMPL-' || current_year || '-003', product_syrup_id, 'Customer reported leaking bottle cap.', 'CUSTOMER', 'CRITICAL', now() - interval '38 days', 'Pharmacy hotline', qa_user_id, 'CLOSED', qa_user_id, now() - interval '20 days', org_id, 5, now() - interval '38 days', qa_user_id, now() - interval '20 days', qa_user_id)
+    ON CONFLICT (complaint_no) DO UPDATE SET complaint_description = EXCLUDED.complaint_description, status = EXCLUDED.status, updated_at = now();
+
+    -- Audits.
+    INSERT INTO audits (audit_no, audit_title, audit_type, audit_date, auditor_id, auditee_id, scope, status, submitted_by, completed_date, organization_id, version, created_at, created_by, updated_at, updated_by)
+    VALUES
+      ('AUD-' || current_year || '-001', 'Quarterly GMP self-inspection', 'INTERNAL', now() + interval '7 days', qa_user_id, operator_user_id, 'Manufacturing and warehouse GMP controls.', 'PLANNED', qa_user_id, null, org_id, 0, now() - interval '3 days', qa_user_id, now() - interval '3 days', qa_user_id),
+      ('AUD-' || current_year || '-002', 'Packaging supplier surveillance audit', 'SUPPLIER', now() - interval '10 days', qa_user_id, null, 'Supplier print controls and COA review.', 'COMPLETED', qa_user_id, now() - interval '8 days', org_id, 3, now() - interval '25 days', qa_user_id, now() - interval '8 days', qa_user_id)
+    ON CONFLICT (audit_no) DO UPDATE SET audit_title = EXCLUDED.audit_title, status = EXCLUDED.status, updated_at = now();
+    SELECT id INTO audit_gmp_id FROM audits WHERE audit_no = 'AUD-' || current_year || '-002';
+
+    INSERT INTO audit_findings (audit_id, finding_number, description, area, severity, evidence, root_cause, corrective_action_required, created_at, created_by, organization_id)
+    SELECT audit_gmp_id, 1, 'Supplier COA traceability evidence was incomplete for one reviewed lot.', 'Supplier Quality', 'MAJOR', 'Audit worksheet item SQ-04.', 'Checklist did not require COA reviewer initials.', true, now() - interval '8 days', qa_user_id, org_id
+    WHERE NOT EXISTS (SELECT 1 FROM audit_findings WHERE audit_id = audit_gmp_id AND finding_number = 1);
+
+    -- Risk Management.
+    INSERT INTO risks (risk_no, title, description, category, potential_impact, likelihood, risk_score, status, owner_id, submitted_by, accepted_by, accepted_date, closed_date, organization_id, version, created_at, created_by, updated_at, updated_by)
+    VALUES
+      ('RISK-' || current_year || '-001', 'Packaging component mix-up', 'Similar packaging components can be staged on the same line.', 'PROCESS', 'Incorrect label or leaflet may reach patient.', 4, 16, 'MITIGATED', qa_user_id, qa_user_id, null, null, null, org_id, 2, now() - interval '30 days', qa_user_id, now() - interval '4 days', qa_user_id),
+      ('RISK-' || current_year || '-002', 'Cold chain monitor failure', 'Warehouse logger battery failure may mask excursions.', 'EQUIPMENT', 'Delayed detection of temperature excursions.', 3, 9, 'IDENTIFIED', qa_user_id, author_user_id, null, null, null, org_id, 0, now() - interval '2 days', author_user_id, now() - interval '2 days', author_user_id),
+      ('RISK-' || current_year || '-003', 'Alternate API supplier onboarding', 'New supplier requires continued performance monitoring.', 'PRODUCT', 'Quality variation if controls are ineffective.', 2, 6, 'ACCEPTED', qa_user_id, qa_user_id, qa_user_id, now() - interval '5 days', null, org_id, 3, now() - interval '42 days', qa_user_id, now() - interval '5 days', qa_user_id)
+    ON CONFLICT (risk_no) DO UPDATE SET title = EXCLUDED.title, status = EXCLUDED.status, updated_at = now();
+    SELECT id INTO risk_mixup_id FROM risks WHERE risk_no = 'RISK-' || current_year || '-001';
+
+    INSERT INTO risk_analysis (risk_id, analysis_method, findings, consequence, severity, probability, residual_risk_score, created_at, created_by, updated_at, organization_id)
+    SELECT risk_mixup_id, 'FMEA', 'Barcode scan at staging substantially reduces mix-up probability.', 'Potential product recall and patient confusion.', 4, 2, 8, now() - interval '20 days', qa_user_id, now() - interval '4 days', org_id
+    WHERE NOT EXISTS (SELECT 1 FROM risk_analysis WHERE risk_id = risk_mixup_id);
+    INSERT INTO risk_mitigation (risk_id, control_description, control_type, owner_id, implementation_date, verification_method, created_at, created_by, organization_id)
+    SELECT risk_mixup_id, 'Barcode verification before line clearance approval.', 'PROCESS', qa_user_id, now() - interval '8 days', 'Review three completed batch records.', now() - interval '18 days', qa_user_id, org_id
+    WHERE NOT EXISTS (SELECT 1 FROM risk_mitigation WHERE risk_id = risk_mixup_id AND control_description = 'Barcode verification before line clearance approval.');
+    INSERT INTO risk_control_effectiveness (risk_id, verification_date, verified_by, residual_risk_acceptable, evidence, created_at, created_by, organization_id)
+    SELECT risk_mixup_id, now() - interval '4 days', qa_user_id, true, 'No staging discrepancies in three consecutive batches.', now() - interval '4 days', qa_user_id, org_id
+    WHERE NOT EXISTS (SELECT 1 FROM risk_control_effectiveness WHERE risk_id = risk_mixup_id);
+
+    -- Supplier Quality.
+    INSERT INTO suppliers (supplier_code, supplier_name, supplier_type, contact_person, email, phone, location, status, qualification_date, owner_id, organization_id, version, created_at, created_by, updated_at, updated_by)
+    VALUES
+      ('SUP-' || current_year || '-001', 'Acme API Supplies', 'RAW_MATERIAL', 'Grace Mwangi', 'qa@acme-api.example', '+254700100200', 'Nairobi, Kenya', 'QUALIFIED', now() - interval '90 days', qa_user_id, org_id, 2, now() - interval '100 days', qa_user_id, now() - interval '12 days', qa_user_id),
+      ('SUP-' || current_year || '-002', 'PrintPack Ltd', 'PACKAGING', 'James Otieno', 'quality@printpack.example', '+254700100201', 'Athi River, Kenya', 'CONDITIONAL', now() - interval '20 days', qa_user_id, org_id, 1, now() - interval '45 days', qa_user_id, now() - interval '3 days', qa_user_id),
+      ('SUP-' || current_year || '-003', 'Metro Calibration Services', 'SERVICE', 'Amina Said', 'service@metrocal.example', '+254700100202', 'Mombasa, Kenya', 'UNAPPROVED', null, qa_user_id, org_id, 0, now() - interval '5 days', qa_user_id, now() - interval '5 days', qa_user_id)
+    ON CONFLICT (supplier_code) DO UPDATE SET supplier_name = EXCLUDED.supplier_name, status = EXCLUDED.status, updated_at = now();
+    SELECT id INTO supplier_api_id FROM suppliers WHERE supplier_code = 'SUP-' || current_year || '-001';
+
+    INSERT INTO supplier_qualifications (supplier_id, assessment_method, assessment_date, assessor, approval_status, notes, created_at, created_by, organization_id)
+    SELECT supplier_api_id, 'Desktop review and certificate verification', now() - interval '90 days', 'Demo QA Manager', 'QUALIFIED', 'Approved for demo API supply.', now() - interval '90 days', qa_user_id, org_id
+    WHERE NOT EXISTS (SELECT 1 FROM supplier_qualifications WHERE supplier_id = supplier_api_id AND assessment_method = 'Desktop review and certificate verification');
+    INSERT INTO supplier_certifications (supplier_id, cert_type, issue_date, expiry_date, file_path, created_at, created_by, organization_id)
+    SELECT supplier_api_id, 'GMP Certificate', now() - interval '180 days', now() + interval '185 days', 'demo/suppliers/acme-gmp.pdf', now() - interval '90 days', qa_user_id, org_id
+    WHERE NOT EXISTS (SELECT 1 FROM supplier_certifications WHERE supplier_id = supplier_api_id AND cert_type = 'GMP Certificate');
+    INSERT INTO supplier_performance (supplier_id, assessment_period_start, assessment_period_end, on_time_delivery_pct, quality_acceptance_pct, responsiveness_rating, created_at, created_by, organization_id)
+    SELECT supplier_api_id, now() - interval '90 days', now(), 96.5, 98.2, 5, now() - interval '1 day', qa_user_id, org_id
+    WHERE NOT EXISTS (SELECT 1 FROM supplier_performance WHERE supplier_id = supplier_api_id AND assessment_period_start > now() - interval '100 days');
+
+    -- Training.
+    INSERT INTO training_programs (training_code, title, content, intended_audience, required_frequency, active, organization_id, version, created_at, created_by, updated_at, updated_by)
+    VALUES
+      ('TRN-' || current_year || '-001', 'Annual GMP Refresher', 'Core GMP expectations, data integrity, and deviation reporting.', 'ALL', 'ANNUAL', true, org_id, 0, now() - interval '60 days', qa_user_id, now() - interval '1 day', qa_user_id),
+      ('TRN-' || current_year || '-002', 'Packaging Line Clearance', 'Line clearance checks, label reconciliation, and barcode verification.', 'MANUFACTURING', 'AFTER_CHANGE', true, org_id, 0, now() - interval '12 days', qa_user_id, now() - interval '1 day', qa_user_id)
+    ON CONFLICT (training_code) DO UPDATE SET title = EXCLUDED.title, active = EXCLUDED.active, updated_at = now();
+
+    INSERT INTO training_assignments (training_program_id, user_id, assigned_date, due_date, completion_date, status, completion_evidence, organization_id, version, created_at, created_by, updated_at, updated_by)
+    SELECT tp.id, operator_user_id, now() - interval '10 days', now() + interval '20 days', null, 'ASSIGNED', null, org_id, 0, now() - interval '10 days', qa_user_id, now() - interval '10 days', qa_user_id
+    FROM training_programs tp WHERE tp.training_code = 'TRN-' || current_year || '-002'
+    ON CONFLICT (training_program_id, user_id) DO UPDATE SET due_date = EXCLUDED.due_date, status = EXCLUDED.status, updated_at = now();
+    INSERT INTO training_assignments (training_program_id, user_id, assigned_date, due_date, completion_date, status, completion_evidence, organization_id, version, created_at, created_by, updated_at, updated_by)
+    SELECT tp.id, qa_user_id, now() - interval '70 days', now() - interval '5 days', null, 'OVERDUE', null, org_id, 0, now() - interval '70 days', qa_user_id, now() - interval '5 days', qa_user_id
+    FROM training_programs tp WHERE tp.training_code = 'TRN-' || current_year || '-001'
+    ON CONFLICT (training_program_id, user_id) DO UPDATE SET due_date = EXCLUDED.due_date, status = EXCLUDED.status, updated_at = now();
+    INSERT INTO training_assignments (training_program_id, user_id, assigned_date, due_date, completion_date, status, completion_evidence, organization_id, version, created_at, created_by, updated_at, updated_by)
+    SELECT tp.id, author_user_id, now() - interval '40 days', now() + interval '325 days', now() - interval '30 days', 'COMPLETED', 'Demo completion record', org_id, 0, now() - interval '40 days', qa_user_id, now() - interval '30 days', author_user_id
+    FROM training_programs tp WHERE tp.training_code = 'TRN-' || current_year || '-001'
+    ON CONFLICT (training_program_id, user_id) DO UPDATE SET completion_date = EXCLUDED.completion_date, status = EXCLUDED.status, updated_at = now();
+
+    -- Equipment and calibration.
+    INSERT INTO equipment (equipment_code, equipment_name, equipment_type, manufacturer, model, serial_number, location, owner_id, acquisition_date, calibration_frequency_months, next_calibration_date, last_calibration_date, status, organization_id, version, created_at, created_by, updated_at, updated_by)
+    VALUES
+      ('EQUIP-' || current_year || '-001', 'Analytical Balance AB-01', 'BALANCE', 'Mettler Toledo', 'XPR204S', 'AB-DEMO-001', 'QC Lab', qa_user_id, current_date - 800, 12, current_date + 20, current_date - 345, 'REGISTERED', org_id, 1, now() - interval '300 days', qa_user_id, now() - interval '1 day', qa_user_id),
+      ('EQUIP-' || current_year || '-002', 'HPLC System HPLC-02', 'HPLC', 'Agilent', '1260 Infinity', 'HPLC-DEMO-002', 'QC Lab', qa_user_id, current_date - 1200, 6, current_date - 3, current_date - 190, 'OUT_OF_CALIBRATION', org_id, 2, now() - interval '500 days', qa_user_id, now() - interval '3 days', qa_user_id)
+    ON CONFLICT (equipment_code) DO UPDATE SET equipment_name = EXCLUDED.equipment_name, status = EXCLUDED.status, updated_at = now();
+    SELECT id INTO equipment_balance_id FROM equipment WHERE equipment_code = 'EQUIP-' || current_year || '-001';
+
+    INSERT INTO calibrations (equipment_id, calibration_date, calibration_due_date, performed_by_id, performed_by_name, calibration_certificate_path, results, next_calibration_date, notes, created_at, created_by, updated_at, organization_id)
+    SELECT equipment_balance_id, current_date - 345, current_date + 20, qa_user_id, 'Demo QA Manager', 'demo/equipment/ab-01-calibration.pdf', 'PASS', current_date + 20, 'All weights within tolerance.', now() - interval '345 days', qa_user_id, now() - interval '345 days', org_id
+    WHERE NOT EXISTS (SELECT 1 FROM calibrations WHERE equipment_id = equipment_balance_id AND calibration_date = current_date - 345);
+    INSERT INTO equipment_specifications (equipment_id, specification_key, specification_value, unit, acceptance_range_min, acceptance_range_max, created_at, created_by, updated_at, organization_id)
+    SELECT equipment_balance_id, 'Readability', '0.1', 'mg', 0.0, 0.1, now() - interval '300 days', qa_user_id, now() - interval '300 days', org_id
+    WHERE NOT EXISTS (SELECT 1 FROM equipment_specifications WHERE equipment_id = equipment_balance_id AND specification_key = 'Readability');
+    INSERT INTO maintenance_history (equipment_id, maintenance_date, maintenance_type, work_description, performed_by_id, performed_by_name, downtime_hours, created_at, created_by, updated_at, organization_id)
+    SELECT equipment_balance_id, current_date - 30, 'PREVENTIVE', 'Cleaned balance chamber and verified leveling.', qa_user_id, 'Demo QA Manager', 1.5, now() - interval '30 days', qa_user_id, now() - interval '30 days', org_id
+    WHERE NOT EXISTS (SELECT 1 FROM maintenance_history WHERE equipment_id = equipment_balance_id AND maintenance_date = current_date - 30);
+
+    -- OOS Management.
+    INSERT INTO oos_cases (oos_no, product_id, test_method, specification_limit_min, specification_limit_max, reported_result, reported_date, reported_by_id, reported_by_name, status, submitted_by, closed_date, organization_id, version, created_at, created_by, updated_at, updated_by)
+    VALUES
+      ('OOS-' || current_year || '-001', product_syrup_id, 'Assay by HPLC', 95.0, 105.0, '91.8%', now() - interval '7 days', qa_user_id, 'Demo QA Manager', 'INVESTIGATING', qa_user_id, null, org_id, 2, now() - interval '7 days', qa_user_id, now() - interval '1 day', qa_user_id),
+      ('OOS-' || current_year || '-002', product_tablet_id, 'Dissolution', 80.0, 120.0, '78% at Q point', now() - interval '25 days', qa_user_id, 'Demo QA Manager', 'DISPOSITION_DETERMINED', qa_user_id, null, org_id, 3, now() - interval '25 days', qa_user_id, now() - interval '2 days', qa_user_id)
+    ON CONFLICT (oos_no) DO UPDATE SET reported_result = EXCLUDED.reported_result, status = EXCLUDED.status, updated_at = now();
+    SELECT id INTO oos_assay_id FROM oos_cases WHERE oos_no = 'OOS-' || current_year || '-001';
+
+    INSERT INTO oos_initial_assessment (oos_id, assessment_findings, likely_cause, assessor_id, assessment_date, created_at, created_by, updated_at, organization_id)
+    SELECT oos_assay_id, 'System suitability passed; sample preparation under review.', 'TESTING_ERROR', qa_user_id, now() - interval '6 days', now() - interval '6 days', qa_user_id, now() - interval '6 days', org_id
+    WHERE NOT EXISTS (SELECT 1 FROM oos_initial_assessment WHERE oos_id = oos_assay_id);
+    INSERT INTO oos_investigation (oos_id, investigation_findings, root_cause, root_cause_method, investigator_id, investigation_date, created_at, created_by, updated_at, organization_id)
+    SELECT oos_assay_id, 'Dilution worksheet showed transcription discrepancy.', 'Incorrect dilution factor entered on worksheet.', '5-Why', qa_user_id, now() - interval '2 days', now() - interval '2 days', qa_user_id, now() - interval '2 days', org_id
+    WHERE NOT EXISTS (SELECT 1 FROM oos_investigation WHERE oos_id = oos_assay_id);
+
+    -- Non-Conformance.
+    INSERT INTO non_conformances (nc_no, title, description, nc_type, affected_item_id, affected_item_type, discovered_date, discovered_by, owner_id, status, submitted_by, closed_date, organization_id, version, created_at, created_by, updated_at, updated_by)
+    VALUES
+      ('NC-' || current_year || '-001', 'Damaged packaging material received', 'Outer cartons crushed on receipt; inner foil inspection pending.', 'MATERIAL', material_pack_id, 'Material', now() - interval '3 days', 'Warehouse receiving', qa_user_id, 'INVESTIGATING', qa_user_id, null, org_id, 1, now() - interval '3 days', qa_user_id, now() - interval '1 day', qa_user_id),
+      ('NC-' || current_year || '-002', 'Tablet appearance defect after compression', 'Black specks observed in in-process tablet sample.', 'PRODUCT', product_tablet_id, 'Product', now() - interval '16 days', 'IPQC', qa_user_id, 'ACTION_IMPLEMENTED', qa_user_id, null, org_id, 3, now() - interval '16 days', operator_user_id, now() - interval '2 days', qa_user_id)
+    ON CONFLICT (nc_no) DO UPDATE SET title = EXCLUDED.title, status = EXCLUDED.status, updated_at = now();
+    SELECT id INTO nc_pack_id FROM non_conformances WHERE nc_no = 'NC-' || current_year || '-001';
+
+    INSERT INTO non_conformance_investigation (nc_id, investigation_findings, root_cause, investigator_id, investigation_date, created_at, created_by, updated_at, organization_id)
+    SELECT nc_pack_id, 'Damage isolated to transport handling; supplier notified.', 'Insufficient pallet edge protection during transit.', qa_user_id, now() - interval '1 day', now() - interval '1 day', qa_user_id, now() - interval '1 day', org_id
+    WHERE NOT EXISTS (SELECT 1 FROM non_conformance_investigation WHERE nc_id = nc_pack_id);
+    INSERT INTO non_conformance_disposition (nc_id, disposition, rationale, rework_specifications, rework_completed, approved_by, approved_date, created_at, created_by, updated_at, organization_id)
+    SELECT nc_pack_id, 'RETURN_TO_SUPPLIER', 'Outer cartons unsuitable for GMP storage.', null, false, qa_user_id, now(), now(), qa_user_id, now(), org_id
+    WHERE NOT EXISTS (SELECT 1 FROM non_conformance_disposition WHERE nc_id = nc_pack_id);
+
+    -- Management Review.
+    INSERT INTO management_reviews (review_no, review_date, participants, scope, status, submitted_by, approved_date, organization_id, version, created_at, created_by, updated_at, updated_by)
+    VALUES
+      ('MR-' || current_year || '-001', current_date + 14, 'QA Manager, Production Manager, Regulatory Lead', 'Quarterly review of deviations, CAPA, complaints, audit findings, supplier performance, and training.', 'SCHEDULED', qa_user_id, null, org_id, 0, now() - interval '4 days', qa_user_id, now() - interval '4 days', qa_user_id),
+      ('MR-' || current_year || '-002', current_date - 30, 'QA Manager, Site Head, Production Manager', 'Q2 quality performance review.', 'COMPLETED', qa_user_id, now() - interval '27 days', org_id, 3, now() - interval '45 days', qa_user_id, now() - interval '27 days', qa_user_id)
+    ON CONFLICT (review_no) DO UPDATE SET scope = EXCLUDED.scope, status = EXCLUDED.status, updated_at = now();
+    SELECT id INTO mr_q2_id FROM management_reviews WHERE review_no = 'MR-' || current_year || '-002';
+
+    INSERT INTO review_metrics (management_review_id, metric_name, metric_value, period, trend, created_at, created_by, updated_at, organization_id)
+    SELECT mr_q2_id, 'CAPA on-time closure', '86%', 'Q2 ' || current_year, 'UP', now() - interval '27 days', qa_user_id, now() - interval '27 days', org_id
+    WHERE NOT EXISTS (SELECT 1 FROM review_metrics WHERE management_review_id = mr_q2_id AND metric_name = 'CAPA on-time closure');
+    INSERT INTO review_action_items (management_review_id, action_description, owner_id, due_date, status, completion_date, created_at, created_by, updated_at, organization_id)
+    SELECT mr_q2_id, 'Trend packaging deviations monthly and report at next review.', qa_user_id, current_date + 30, 'OPEN', null, now() - interval '27 days', qa_user_id, now() - interval '27 days', org_id
+    WHERE NOT EXISTS (SELECT 1 FROM review_action_items WHERE management_review_id = mr_q2_id AND action_description = 'Trend packaging deviations monthly and report at next review.');
+    INSERT INTO review_decisions (management_review_id, decision_description, decision_area, impact, documented_by, documented_date, created_at, created_by, updated_at, organization_id)
+    SELECT mr_q2_id, 'Approve additional barcode verification control for packaging staging.', 'Process Control', 'Expected reduction in label and component mix-up risk.', qa_user_id, now() - interval '27 days', now() - interval '27 days', qa_user_id, now() - interval '27 days', org_id
+    WHERE NOT EXISTS (SELECT 1 FROM review_decisions WHERE management_review_id = mr_q2_id AND decision_area = 'Process Control');
+
+    -- Notifications give the dashboard and notification center immediate signal.
+    INSERT INTO notifications (recipient_user_id, type, title, message, record_type, record_id, read_at, created_at, organization_id)
+    SELECT qa_user_id, 'DOCUMENT_PENDING_APPROVAL', 'Document awaiting approval', 'Line Clearance Checklist is ready for approval.', 'Document', doc_batch_form_id::text, null, now() - interval '1 day', org_id
+    WHERE NOT EXISTS (SELECT 1 FROM notifications WHERE recipient_user_id = qa_user_id AND title = 'Document awaiting approval');
+    INSERT INTO notifications (recipient_user_id, type, title, message, record_type, record_id, read_at, created_at, organization_id)
+    SELECT operator_user_id, 'CAPA_ASSIGNED', 'CAPA action assigned', 'Complete segregation update for packaging staging bins.', 'Capa', capa_label_id::text, null, now() - interval '2 days', org_id
+    WHERE NOT EXISTS (SELECT 1 FROM notifications WHERE recipient_user_id = operator_user_id AND title = 'CAPA action assigned');
+    INSERT INTO notifications (recipient_user_id, type, title, message, record_type, record_id, read_at, created_at, organization_id)
+    SELECT qa_user_id, 'TRAINING_OVERDUE', 'Training overdue', 'Annual GMP Refresher is overdue.', 'Training', null, null, now() - interval '5 days', org_id
+    WHERE NOT EXISTS (SELECT 1 FROM notifications WHERE recipient_user_id = qa_user_id AND title = 'Training overdue');
+
+    -- Demo audit trail entries for seeded records.
+    INSERT INTO audit_logs (record_type, record_id, action, field_name, old_value, new_value, reason_for_change, user_id, user_full_name, utc_timestamp, ip_address, user_agent, organization_id)
+    SELECT 'DemoSeed', org_id::text, 'CREATE', null, null, 'Seeded representative demo dataset for all modules', 'Local demo setup', admin_id, 'Demo System', now(), '127.0.0.1', 'Liquibase demo seed', org_id
+    WHERE NOT EXISTS (SELECT 1 FROM audit_logs WHERE record_type = 'DemoSeed' AND record_id = org_id::text);
+
+    -- Keep sequence generators ahead of seeded record numbers.
+    INSERT INTO record_sequences (module_code, year, prefix, current_value, padding, format, created_at, updated_at, version, organization_id)
+    SELECT code, current_year, code, 10, 3, '{prefix}-{year}-{seq}', now(), now(), 0, org_id
+    FROM unnest(ARRAY['SOP','FORM','WI','CC','CAPA','DEV','PROD','MAT','BATCH','COMPL','AUD','RISK','SUP','TRN','EQUIP','OOS','NC','MR']) AS code
+    ON CONFLICT (module_code, year) DO UPDATE SET current_value = GREATEST(record_sequences.current_value, 10), updated_at = now();
+END $$;
+        ]]></sql>
+    </changeSet>
+
+</databaseChangeLog>

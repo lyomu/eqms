@@ -8,15 +8,15 @@ import { cn } from "@/lib/utils";
  * Used across every module list/detail to render record status.
  */
 const badgeVariants = cva(
-  "inline-flex items-center rounded-sm px-2 py-0.5 text-label font-medium whitespace-nowrap",
+  "inline-flex items-center rounded-sm px-2 py-0.5 text-label font-semibold whitespace-nowrap ring-1 ring-inset",
   {
     variants: {
       variant: {
-        neutral: "bg-muted text-muted-foreground",
-        info: "bg-brand-light text-brand-primary",
-        success: "bg-success/15 text-success",
-        warning: "bg-warning/20 text-[#8A6D00]",
-        error: "bg-error/15 text-error",
+        neutral: "bg-muted text-muted-foreground ring-border",
+        info: "bg-accent text-accent-foreground ring-accent-foreground/10",
+        success: "bg-success/15 text-success ring-success/20",
+        warning: "bg-warning/20 text-[#7A5A00] ring-warning/30",
+        error: "bg-error/15 text-error ring-error/20",
       },
     },
     defaultVariants: {

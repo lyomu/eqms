@@ -47,6 +47,66 @@ public class Capa extends RegulatedEntity implements WorkflowAware {
     @Column(name = "root_cause", columnDefinition = "text")
     private String rootCause;
 
+    @Column(name = "event_date")
+    private Instant eventDate;
+
+    @Column(name = "priority", length = 20)
+    private String priority;
+
+    @Column(name = "about_type", length = 80)
+    private String aboutType;
+
+    @Column(name = "about_reference", length = 255)
+    private String aboutReference;
+
+    @Column(name = "about_details", columnDefinition = "text")
+    private String aboutDetails;
+
+    @Column(name = "party_type", length = 80)
+    private String partyType;
+
+    @Column(name = "party_first_name", length = 120)
+    private String partyFirstName;
+
+    @Column(name = "party_last_name", length = 120)
+    private String partyLastName;
+
+    @Column(name = "party_job_title", length = 160)
+    private String partyJobTitle;
+
+    @Column(name = "party_company", length = 255)
+    private String partyCompany;
+
+    @Column(name = "party_email", length = 255)
+    private String partyEmail;
+
+    @Column(name = "party_phone", length = 80)
+    private String partyPhone;
+
+    @Column(name = "containment_details", columnDefinition = "text")
+    private String containmentDetails;
+
+    @Column(name = "document_references", columnDefinition = "text")
+    private String documentReferences;
+
+    @Column(name = "keywords", columnDefinition = "text")
+    private String keywords;
+
+    @Column(name = "corrective_action_plan", columnDefinition = "text")
+    private String correctiveActionPlan;
+
+    @Column(name = "preventive_action_plan", columnDefinition = "text")
+    private String preventiveActionPlan;
+
+    @Column(name = "assigned_to")
+    private Long assignedTo;
+
+    @Column(name = "assignment_status", length = 80)
+    private String assignmentStatus;
+
+    @Column(name = "assignment_comment", columnDefinition = "text")
+    private String assignmentComment;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 40)
     private CapaStatus capaStatus = CapaStatus.DRAFT;
@@ -91,6 +151,11 @@ public class Capa extends RegulatedEntity implements WorkflowAware {
         return SignatureService.sha256Hex(
                 (title == null ? "" : title) + "|"
                         + (description == null ? "" : description) + "|"
-                        + (rootCause == null ? "" : rootCause));
+                        + (rootCause == null ? "" : rootCause) + "|"
+                        + (containmentDetails == null ? "" : containmentDetails) + "|"
+                        + (correctiveActionPlan == null ? "" : correctiveActionPlan) + "|"
+                        + (preventiveActionPlan == null ? "" : preventiveActionPlan) + "|"
+                        + (documentReferences == null ? "" : documentReferences) + "|"
+                        + (keywords == null ? "" : keywords));
     }
 }

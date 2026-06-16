@@ -286,7 +286,9 @@ public class SupplierService {
                 : finding.getFindingDescription();
         Capa capa = capaService.create(
                 new CreateCapaRequest(title, CapaSource.SUPPLIER, description,
-                        request.effectivenessCheckRequired(), request.dueDate()),
+                        request.effectivenessCheckRequired(), request.dueDate(),
+                        null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+                        null, null, null, null, null, null, null),
                 actorId, actorName, ip, ua);
 
         SupplierCapaLink link = new SupplierCapaLink();

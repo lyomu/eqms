@@ -6,6 +6,7 @@ import type { AuditEntry, PageResponse } from "@/types/common";
 import type {
   CapaActionResponse,
   CapaActionTypeKey,
+  CapaPriority,
   CapaResponse,
   CapaSource,
   CapaStatus,
@@ -73,6 +74,27 @@ export interface CreateCapaInput {
   title: string;
   source: CapaSource;
   description: string;
+  eventDate?: string | null;
+  priority?: CapaPriority | null;
+  aboutType?: string | null;
+  aboutReference?: string | null;
+  aboutDetails?: string | null;
+  partyType?: string | null;
+  partyFirstName?: string | null;
+  partyLastName?: string | null;
+  partyJobTitle?: string | null;
+  partyCompany?: string | null;
+  partyEmail?: string | null;
+  partyPhone?: string | null;
+  containmentDetails?: string | null;
+  documentReferences?: string | null;
+  keywords?: string | null;
+  rootCause?: string | null;
+  correctiveActionPlan?: string | null;
+  preventiveActionPlan?: string | null;
+  assignedTo?: number | null;
+  assignmentStatus?: string | null;
+  assignmentComment?: string | null;
   effectivenessCheckRequired: boolean;
   dueDate?: string | null;
 }
@@ -114,6 +136,25 @@ export function useUpdateCapaRootCause() {
   return useMutation({
     mutationFn: async (vars: { id: number; expectedVersion: number; rootCause: string; reason?: string }): Promise<CapaResponse> =>
       (await api.put(`/api/capas/${vars.id}/root-cause`, { expectedVersion: vars.expectedVersion, rootCause: vars.rootCause, reason: vars.reason })).data,
+    onSuccess: (c) => invalidate(qc, c.id),
+  });
+}
+
+export interface UpdateCapaDetailsInput extends Omit<CreateCapaInput, "title" | "source" | "description" | "effectivenessCheckRequired"> {
+  id: number;
+  expectedVersion: number;
+  reason?: string;
+  title?: string;
+  source?: CapaSource;
+  description?: string;
+  effectivenessCheckRequired?: boolean;
+}
+
+export function useUpdateCapaDetails() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...body }: UpdateCapaDetailsInput): Promise<CapaResponse> =>
+      (await api.put(`/api/capas/${id}/details`, body)).data,
     onSuccess: (c) => invalidate(qc, c.id),
   });
 }
