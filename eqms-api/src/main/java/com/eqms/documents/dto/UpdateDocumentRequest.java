@@ -16,6 +16,7 @@ public record UpdateDocumentRequest(
         @NotNull DocumentType type,
         @NotBlank String content,
         @Positive Integer reviewPeriodMonths,
+        Long folderId,
         String reason
 ) {
 }

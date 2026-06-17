@@ -1,5 +1,9 @@
 package com.eqms.notifications;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,11 +42,14 @@ public class EmailService {
     @Value("${eqms.mail.base-url:http://localhost:3000}")
     private String baseUrl;
 
+    @Value("${spring.mail.username:}")
+    private String mailUsername;
+
     @Async
     public void sendNotificationEmail(String toAddress, String toName,
                                       String subject, String title, String body,
                                       String recordType, String recordId) {
-        if (mailSender == null || toAddress == null || toAddress.isBlank()) {
+        if (!isMailConfigured() || toAddress == null || toAddress.isBlank()) {
             return;
         }
         String recordUrl = (recordType != null && recordId != null)
@@ -60,6 +67,41 @@ public class EmailService {
         } catch (Exception ex) {
             log.warn("Failed to send email to {} ({}): {}", toAddress, subject, ex.getMessage());
         }
+    }
+
+    @Async
+    public void sendPasswordResetEmail(String toAddress, String toName, String token, Duration validFor) {
+        if (!isMailConfigured() || toAddress == null || toAddress.isBlank()) {
+            log.info("Password reset requested for {}. Reset link: {}", toAddress, passwordResetUrl(token));
+            return;
+        }
+        String title = "Reset your eQMS password";
+        String body = """
+                We received a request to reset your eQMS password.
+                Use the button below to set a new password. This link expires in %d minutes.
+                If you did not request this change, you can ignore this email.
+                """.formatted(validFor.toMinutes());
+        String html = EmailTemplateBuilder.build(toName, title, body, passwordResetUrl(token));
+        try {
+            MimeMessage msg = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(msg, false, "UTF-8");
+            helper.setFrom(fromAddress, fromName);
+            helper.setTo(toAddress);
+            helper.setSubject("[eQMS] Reset your password");
+            helper.setText(html, true);
+            mailSender.send(msg);
+            log.debug("Password reset email sent to {}", toAddress);
+        } catch (Exception ex) {
+            log.warn("Failed to send password reset email to {}: {}", toAddress, ex.getMessage());
+        }
+    }
+
+    private String passwordResetUrl(String token) {
+        return baseUrl + "/reset-password?token=" + URLEncoder.encode(token, StandardCharsets.UTF_8);
+    }
+
+    private boolean isMailConfigured() {
+        return mailSender != null && mailUsername != null && !mailUsername.isBlank();
     }
 
     private String buildRecordUrl(String recordType, String recordId) {

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <changeSet id="v032-001-training-program-metadata" author="eqms">
+        <addColumn tableName="training_programs">
+            <column name="numbering" type="varchar(80)"/>
+            <column name="training_type" type="varchar(80)"/>
+            <column name="occurrence" type="varchar(30)"/>
+            <column name="start_at" type="timestamptz"/>
+            <column name="end_at" type="timestamptz"/>
+            <column name="completion_target_at" type="timestamptz"/>
+            <column name="release_mode" type="varchar(40)"/>
+            <column name="release_at" type="timestamptz"/>
+            <column name="main_trainer_name" type="varchar(200)"/>
+            <column name="additional_trainers" type="text"/>
+            <column name="internal_documents" type="text"/>
+            <column name="learning_objectives" type="text"/>
+            <column name="assessment_criteria" type="text"/>
+        </addColumn>
+        <createIndex tableName="training_programs" indexName="ix_tp_type">
+            <column name="training_type"/>
+        </createIndex>
+        <createIndex tableName="training_programs" indexName="ix_tp_start">
+            <column name="start_at"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v032-002-training-sessions" author="eqms">
+        <createTable tableName="training_sessions">
+            <column name="id" type="bigserial">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="training_program_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="session_index" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="start_at" type="timestamptz"/>
+            <column name="end_at" type="timestamptz"/>
+        </createTable>
+        <addForeignKeyConstraint
+            baseTableName="training_sessions"
+            baseColumnNames="training_program_id"
+            referencedTableName="training_programs"
+            referencedColumnNames="id"
+            constraintName="fk_training_session_program"/>
+        <createIndex tableName="training_sessions" indexName="ix_training_sessions_program">
+            <column name="training_program_id"/>
+            <column name="session_index"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

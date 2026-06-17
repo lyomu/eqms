@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- Folder tree for document control -->
+    <changeSet id="030-1" author="eqms">
+        <createTable tableName="document_folders">
+            <column name="id" type="bigserial"><constraints primaryKey="true" nullable="false"/></column>
+            <column name="name" type="varchar(255)"><constraints nullable="false"/></column>
+            <column name="parent_id" type="bigint"/>
+            <column name="created_by" type="bigint"/>
+            <column name="created_at" type="timestamptz" defaultValueComputed="now()"><constraints nullable="false"/></column>
+            <column name="updated_at" type="timestamptz" defaultValueComputed="now()"><constraints nullable="false"/></column>
+            <column name="deleted_at" type="timestamptz"/>
+            <column name="version" type="integer" defaultValueNumeric="0"><constraints nullable="false"/></column>
+        </createTable>
+    </changeSet>
+
+    <!-- Self-referencing FK for sub-folders -->
+    <changeSet id="030-2" author="eqms">
+        <addForeignKeyConstraint
+            baseTableName="document_folders"
+            baseColumnNames="parent_id"
+            referencedTableName="document_folders"
+            referencedColumnNames="id"
+            constraintName="fk_doc_folder_parent"/>
+    </changeSet>
+
+    <!-- Seed default "Root" folder -->
+    <changeSet id="030-3" author="eqms">
+        <insert tableName="document_folders">
+            <column name="id" valueNumeric="1"/>
+            <column name="name" value="Root"/>
+            <column name="parent_id" valueNumeric="NULL"/>
+            <column name="created_by" valueNumeric="NULL"/>
+        </insert>
+    </changeSet>
+
+    <!-- Add folder_id to existing documents table -->
+    <changeSet id="030-4" author="eqms">
+        <addColumn tableName="documents">
+            <column name="folder_id" type="bigint"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="030-5" author="eqms">
+        <addForeignKeyConstraint
+            baseTableName="documents"
+            baseColumnNames="folder_id"
+            referencedTableName="document_folders"
+            referencedColumnNames="id"
+            constraintName="fk_document_folder"/>
+    </changeSet>
+
+    <!-- Check-out / check-in support on documents -->
+    <changeSet id="030-6" author="eqms">
+        <addColumn tableName="documents">
+            <column name="checked_out_by" type="bigint"/>
+            <column name="checked_out_at" type="timestamptz"/>
+        </addColumn>
+    </changeSet>
+
+    <!-- Notes and Change Requests associated with a document -->
+    <changeSet id="030-7" author="eqms">
+        <createTable tableName="document_notes">
+            <column name="id" type="bigserial"><constraints primaryKey="true" nullable="false"/></column>
+            <column name="document_id" type="bigint"><constraints nullable="false"/></column>
+            <!-- NOTE | CHANGE_REQUEST -->
+            <column name="note_type" type="varchar(30)" defaultValue="NOTE"><constraints nullable="false"/></column>
+            <column name="content" type="text"><constraints nullable="false"/></column>
+            <column name="created_by" type="bigint"/>
+            <column name="created_by_name" type="varchar(200)"/>
+            <column name="created_at" type="timestamptz" defaultValueComputed="now()"><constraints nullable="false"/></column>
+            <column name="deleted_at" type="timestamptz"/>
+            <column name="version" type="integer" defaultValueNumeric="0"><constraints nullable="false"/></column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="030-8" author="eqms">
+        <addForeignKeyConstraint
+            baseTableName="document_notes"
+            baseColumnNames="document_id"
+            referencedTableName="documents"
+            referencedColumnNames="id"
+            constraintName="fk_document_note_document"/>
+    </changeSet>
+
+</databaseChangeLog>

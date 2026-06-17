@@ -3,6 +3,7 @@ package com.eqms.support;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 
 /**
  * Base class for integration tests.
@@ -22,6 +23,7 @@ import org.springframework.test.context.ActiveProfiles;
  */
 @SpringBootTest
 @ActiveProfiles("test")
+@TestPropertySource(properties = "eqms.security.csrf.enabled=false")
 @Import(TestStorageConfig.class)
 public abstract class AbstractIntegrationTest {
 

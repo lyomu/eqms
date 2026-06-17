@@ -8,6 +8,12 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <p className="text-body text-muted-foreground">Pharmaceutical Quality Management</p>
         </div>
         {children}
+        <footer className="mt-8 border-t border-border pt-3 text-center text-body text-foreground">
+          <p>
+            © 2026 <span className="text-brand-secondary">eQMS Quality Management Software</span>
+          </p>
+          <p>- All Rights Reserved</p>
+        </footer>
       </div>
     </div>
   );

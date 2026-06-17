@@ -27,6 +27,7 @@ import {
   Unlink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { sanitizeHtml } from "@/lib/html";
 
 type CommandButton = {
   label: string;
@@ -60,13 +61,14 @@ export function RichTextEditor({
 
   React.useEffect(() => {
     const node = editorRef.current;
-    if (node && node.innerHTML !== value) {
-      node.innerHTML = value || "";
+    const safeValue = sanitizeHtml(value);
+    if (node && node.innerHTML !== safeValue) {
+      node.innerHTML = safeValue;
     }
   }, [value]);
 
   function emitChange() {
-    onChange(editorRef.current?.innerHTML ?? "");
+    onChange(sanitizeHtml(editorRef.current?.innerHTML ?? ""));
   }
 
   function run(command: string, commandValue?: string) {
@@ -78,12 +80,11 @@ export function RichTextEditor({
 
   function promptLink() {
     const url = window.prompt("Link URL");
-    if (url) run("createLink", url);
+    if (url && /^(https?:|mailto:)/i.test(url)) run("createLink", url);
   }
 
   function promptImage() {
-    const url = window.prompt("Image URL");
-    if (url) run("insertImage", url);
+    window.alert("Images should be uploaded as controlled documents or attachments.");
   }
 
   const commands: CommandButton[] = [
@@ -169,6 +170,13 @@ export function RichTextEditor({
         style={{ minHeight: fullscreen ? "calc(100vh - 8rem)" : minHeight }}
         onInput={emitChange}
         onBlur={emitChange}
+        onPaste={(event) => {
+          event.preventDefault();
+          const html = event.clipboardData.getData("text/html");
+          const text = event.clipboardData.getData("text/plain");
+          document.execCommand("insertHTML", false, sanitizeHtml(html || text));
+          emitChange();
+        }}
       />
     </div>
   );
@@ -226,4 +234,3 @@ function ToolbarSelect({
 function ToolbarSeparator() {
   return <span className="mx-1 h-6 w-px bg-border" aria-hidden="true" />;
 }
-

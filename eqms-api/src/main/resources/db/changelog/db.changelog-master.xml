@@ -44,6 +44,9 @@
     <include file="db/changelog/v027-capa-intake-details.xml"/>
     <include file="db/changelog/v028-capa-full-demo.xml"/>
     <include file="db/changelog/v029-training-full-demo.xml"/>
+    <include file="db/changelog/v030-document-folders-notes.xml"/>
+    <include file="db/changelog/v031-password-reset.xml"/>
+    <include file="db/changelog/v032-training-metadata.xml"/>
     <include file="db/changelog/v999-privileges.xml"/>
 
 </databaseChangeLog>

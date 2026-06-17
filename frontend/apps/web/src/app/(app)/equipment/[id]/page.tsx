@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { toast } from "sonner";
 import { Plus } from "lucide-react";
 import { useEquipment, useEquipmentTrail, useEquipmentAction } from "@/hooks/useEquipment";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +12,7 @@ import { Tabs } from "@/components/ui/tabs";
 import { LoadingScreen } from "@/components/ui/loading-spinner";
 import { ErrorAlert } from "@/components/ui/error-alert";
 import { EquipmentStatusBadge } from "@/components/equipment/EquipmentStatusBadge";
+import { ReasonModal } from "@/components/common/ReasonModal";
 import { ActionFormModal } from "@/components/common/ActionFormModal";
 import { AuditTrailTable } from "@/components/common/AuditTrailTable";
 import { formatDate } from "@/lib/format";
@@ -29,17 +29,12 @@ export default function EquipmentDetailPage() {
   const action = useEquipmentAction(id);
   const [tab, setTab] = useState<TabKey>("calibration");
   const [modal, setModal] = useState<FormModal>(null);
+  const [retireOpen, setRetireOpen] = useState(false);
 
   if (eq.isLoading) return <LoadingScreen label="Loading equipment…" />;
   if (eq.isError || !eq.data) return <ErrorAlert title="Error" message="Failed to load this equipment." />;
   const e = eq.data;
   const active = e.status !== "RETIRED";
-
-  function retire() {
-    const reason = window.prompt("Reason for retiring this equipment:");
-    if (reason === null) return;
-    action.mutate({ path: "retire", body: { expectedVersion: e.version, reason: reason || "Retired" } }, { onSuccess: () => toast.success("Done") });
-  }
 
   return (
     <div className="space-y-4">
@@ -60,7 +55,7 @@ export default function EquipmentDetailPage() {
               <Button onClick={() => setModal("perform")} disabled={action.isPending}>Perform Calibration</Button>
               <Button variant="outline" onClick={() => setModal("schedule")} disabled={action.isPending}>Schedule</Button>
               <Button variant="outline" onClick={() => setModal("maintenance")} disabled={action.isPending}>Maintenance</Button>
-              <Button variant="ghost" onClick={retire} disabled={action.isPending}>Retire</Button>
+              <Button variant="ghost" onClick={() => setRetireOpen(true)} disabled={action.isPending}>Retire</Button>
             </>
           )}
         </div>
@@ -182,6 +177,17 @@ export default function EquipmentDetailPage() {
           { name: "acceptanceRangeMax", label: "Acceptance max", type: "number" },
         ]}
         onSubmit={async (v) => { await action.mutateAsync({ path: "specifications", body: { specificationKey: v.specificationKey, specificationValue: v.specificationValue || undefined, unit: v.unit || undefined, acceptanceRangeMin: v.acceptanceRangeMin ? Number(v.acceptanceRangeMin) : undefined, acceptanceRangeMax: v.acceptanceRangeMax ? Number(v.acceptanceRangeMax) : undefined } }); }} />
+      <ReasonModal
+        open={retireOpen}
+        onOpenChange={setRetireOpen}
+        title="Retire Equipment"
+        defaultReason="Retired"
+        submitLabel="Confirm"
+        isPending={action.isPending}
+        onSubmit={async (reason) => {
+          await action.mutateAsync({ path: "retire", body: { expectedVersion: e.version, reason } });
+        }}
+      />
     </div>
   );
 }

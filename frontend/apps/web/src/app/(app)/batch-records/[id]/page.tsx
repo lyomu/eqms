@@ -31,6 +31,7 @@ import { Tabs } from "@/components/ui/tabs";
 import { LoadingScreen } from "@/components/ui/loading-spinner";
 import { ErrorAlert } from "@/components/ui/error-alert";
 import { BatchStatusBadge } from "@/components/batch/BatchStatusBadge";
+import { ReasonModal } from "@/components/common/ReasonModal";
 import { SignatureModal } from "@/components/common/SignatureModal";
 import { AuditTrailTable } from "@/components/common/AuditTrailTable";
 import { formatDate, formatDateTime } from "@/lib/format";
@@ -51,6 +52,7 @@ export default function BatchDetailPage() {
 
   const [tab, setTab] = useState<TabKey>("steps");
   const [releaseOpen, setReleaseOpen] = useState(false);
+  const [reasonAction, setReasonAction] = useState<null | { action: BatchAction; title: string; defaultReason: string }>(null);
   const [modal, setModal] = useState<null | "step" | "material" | "qc" | "product" | "deviation">(null);
 
   if (batch.isLoading) return <LoadingScreen label="Loading batch record…" />;
@@ -64,10 +66,8 @@ export default function BatchDetailPage() {
       toast.success("Done");
     } catch { /* interceptor */ }
   }
-  function promptAction(action: BatchAction, message: string, fallback: string) {
-    const reason = window.prompt(message);
-    if (reason === null) return;
-    runAction(action, reason || fallback);
+  function requestReasonAction(action: BatchAction, title: string, defaultReason: string) {
+    setReasonAction({ action, title, defaultReason });
   }
 
   return (
@@ -91,15 +91,15 @@ export default function BatchDetailPage() {
           )}
           {b.status === "QA_REVIEW" && (
             <>
-              <Button variant="outline" onClick={() => promptAction("reject", "Reason for rejection:", "Rejected")} disabled={transition.isPending}>Reject</Button>
-              <Button variant="outline" onClick={() => promptAction("quarantine", "Reason for quarantine:", "Quarantined")} disabled={transition.isPending}>Quarantine</Button>
+              <Button variant="outline" onClick={() => requestReasonAction("reject", "Reject Batch", "Rejected")} disabled={transition.isPending}>Reject</Button>
+              <Button variant="outline" onClick={() => requestReasonAction("quarantine", "Quarantine Batch", "Quarantined")} disabled={transition.isPending}>Quarantine</Button>
               <Button onClick={() => setReleaseOpen(true)}>Release</Button>
             </>
           )}
           {b.status === "RELEASED" && (
             <>
-              <Button variant="outline" onClick={() => promptAction("quarantine", "Reason for quarantine:", "Quarantined")} disabled={transition.isPending}>Quarantine</Button>
-              <Button variant="outline" onClick={() => promptAction("recall", "Reason for recall:", "Recalled")} disabled={transition.isPending}>Recall</Button>
+              <Button variant="outline" onClick={() => requestReasonAction("quarantine", "Quarantine Batch", "Quarantined")} disabled={transition.isPending}>Quarantine</Button>
+              <Button variant="outline" onClick={() => requestReasonAction("recall", "Recall Batch", "Recalled")} disabled={transition.isPending}>Recall</Button>
             </>
           )}
         </div>
@@ -165,6 +165,18 @@ export default function BatchDetailPage() {
         successMessage="Batch released"
         onSign={async (creds) => {
           await release.mutateAsync({ id, expectedVersion: b.version, password: creds.password, totpCode: creds.totpCode, reason: creds.reason, meaningStatement: creds.meaningStatement });
+        }}
+      />
+      <ReasonModal
+        open={!!reasonAction}
+        onOpenChange={(open) => !open && setReasonAction(null)}
+        title={reasonAction?.title ?? "Workflow Action"}
+        defaultReason={reasonAction?.defaultReason ?? ""}
+        submitLabel="Confirm"
+        isPending={transition.isPending}
+        onSubmit={async (reason) => {
+          if (!reasonAction) return;
+          await transition.mutateAsync({ id, action: reasonAction.action, expectedVersion: b.version, reason });
         }}
       />
 

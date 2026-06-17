@@ -70,6 +70,15 @@ public class Document extends RegulatedEntity implements WorkflowAware {
     @Column(name = "submitted_by")
     private Long submittedBy;
 
+    @Column(name = "folder_id")
+    private Long folderId;
+
+    @Column(name = "checked_out_by")
+    private Long checkedOutBy;
+
+    @Column(name = "checked_out_at")
+    private Instant checkedOutAt;
+
     // --- WorkflowAware ---------------------------------------------------------------------
 
     @Override

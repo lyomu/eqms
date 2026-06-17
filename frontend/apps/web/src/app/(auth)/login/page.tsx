@@ -1,11 +1,13 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { AxiosError } from "axios";
+import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import type { LoginResponse } from "@/types/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,6 +31,7 @@ function LoginForm() {
   const [formError, setFormError] = useState<string | null>(
     searchParams.get("session") === "expired" ? "Your session expired. Please sign in again." : null
   );
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
@@ -91,14 +94,31 @@ function LoginForm() {
 
           <div className="space-y-1.5">
             <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              aria-invalid={!!errors.password}
-              {...register("password")}
-            />
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                aria-invalid={!!errors.password}
+                className="pr-11"
+                {...register("password")}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((current) => !current)}
+                className="absolute inset-y-0 right-0 inline-flex w-11 items-center justify-center rounded-r-md text-muted-foreground transition hover:text-foreground"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
             {errors.password && <p className="text-label text-error">{errors.password.message}</p>}
+          </div>
+
+          <div className="flex justify-end">
+            <Link href="/forgot-password" className="text-label font-semibold text-brand-secondary hover:underline">
+              Forgot password?
+            </Link>
           </div>
 
           <Button type="submit" className="w-full" disabled={login.isPending}>

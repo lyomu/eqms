@@ -14,6 +14,10 @@ export interface LoginResponse {
   status: LoginStatus;
 }
 
+export interface PasswordResetRequestResponse {
+  message: string;
+}
+
 /** Response body of POST /api/auth/mfa/enroll — material for the authenticator QR. */
 export interface MfaEnrollResponse {
   secret: string;

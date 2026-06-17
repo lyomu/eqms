@@ -20,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { LoadingScreen } from "@/components/ui/loading-spinner";
 import { ErrorAlert } from "@/components/ui/error-alert";
 import { DeviationStatusBadge } from "@/components/deviations/DeviationStatusBadge";
+import { ReasonModal } from "@/components/common/ReasonModal";
 import { SignatureModal } from "@/components/common/SignatureModal";
 import { AuditTrailTable } from "@/components/common/AuditTrailTable";
 import { formatDate } from "@/lib/format";
@@ -35,6 +36,7 @@ export default function DeviationDetailPage() {
   const approve = useApproveDeviation();
   const users = useUsers();
   const [approveOpen, setApproveOpen] = useState(false);
+  const [reasonAction, setReasonAction] = useState<null | { action: DeviationAction; title: string; defaultReason: string }>(null);
 
   const ownerName = useMemo(() => {
     const by = dev.data?.createdBy;
@@ -56,10 +58,8 @@ export default function DeviationDetailPage() {
     }
   }
 
-  function promptAction(act: DeviationAction, message: string, fallback: string) {
-    const reason = window.prompt(message);
-    if (reason === null) return;
-    runAction(act, reason || fallback);
+  function requestReasonAction(act: DeviationAction, title: string, defaultReason: string) {
+    setReasonAction({ action: act, title, defaultReason });
   }
 
   return (
@@ -82,7 +82,7 @@ export default function DeviationDetailPage() {
           {d.status === "DRAFT" && (
             <>
               <Button onClick={() => runAction("submit-for-investigation", "Submitted for investigation")} disabled={transition.isPending}>Submit for Investigation</Button>
-              <Button variant="outline" onClick={() => promptAction("cancel", "Reason for cancelling:", "Cancelled")} disabled={transition.isPending}>Cancel</Button>
+              <Button variant="outline" onClick={() => requestReasonAction("cancel", "Cancel Deviation", "Cancelled")} disabled={transition.isPending}>Cancel</Button>
             </>
           )}
           {d.status === "UNDER_INVESTIGATION" && (
@@ -90,12 +90,12 @@ export default function DeviationDetailPage() {
           )}
           {d.status === "PENDING_APPROVAL" && (
             <>
-              <Button variant="outline" onClick={() => promptAction("reject", "Reason for rejection:", "Rejected")} disabled={transition.isPending}>Reject</Button>
+              <Button variant="outline" onClick={() => requestReasonAction("reject", "Reject Deviation", "Rejected")} disabled={transition.isPending}>Reject</Button>
               <Button onClick={() => setApproveOpen(true)}>Approve</Button>
             </>
           )}
           {d.status === "APPROVED" && (
-            <Button onClick={() => promptAction("close", "Closure summary:", "Closed")} disabled={transition.isPending}>Close</Button>
+            <Button onClick={() => requestReasonAction("close", "Close Deviation", "Closed")} disabled={transition.isPending}>Close</Button>
           )}
         </div>
       </div>
@@ -155,6 +155,18 @@ export default function DeviationDetailPage() {
         successMessage="Approved successfully"
         onSign={async (creds) => {
           await approve.mutateAsync({ id, expectedVersion: d.version, password: creds.password, totpCode: creds.totpCode, reason: creds.reason, meaningStatement: creds.meaningStatement });
+        }}
+      />
+      <ReasonModal
+        open={!!reasonAction}
+        onOpenChange={(open) => !open && setReasonAction(null)}
+        title={reasonAction?.title ?? "Workflow Action"}
+        defaultReason={reasonAction?.defaultReason ?? ""}
+        submitLabel="Confirm"
+        isPending={transition.isPending}
+        onSubmit={async (reason) => {
+          if (!reasonAction) return;
+          await transition.mutateAsync({ id, action: reasonAction.action, expectedVersion: d.version, reason });
         }}
       />
     </div>

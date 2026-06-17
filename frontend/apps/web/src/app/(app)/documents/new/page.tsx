@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import {
   useCreateDocument,
   useDocumentAction,
+  useDocumentFolders,
   useUploadAttachment,
 } from "@/hooks/useDocuments";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,9 +23,21 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ErrorAlert } from "@/components/ui/error-alert";
-import { DOCUMENT_TYPE_LABELS, type DocumentTypeKey } from "@/types/documents";
+import { DOCUMENT_TYPE_LABELS, type DocumentFolder, type DocumentTypeKey } from "@/types/documents";
 
 const TYPES = Object.keys(DOCUMENT_TYPE_LABELS) as DocumentTypeKey[];
+
+function flattenFolders(
+  folders: DocumentFolder[],
+  depth = 0,
+): { id: number; name: string; indent: string }[] {
+  const result: { id: number; name: string; indent: string }[] = [];
+  for (const f of folders) {
+    result.push({ id: f.id, name: f.name, indent: "  ".repeat(depth) });
+    result.push(...flattenFolders(f.children, depth + 1));
+  }
+  return result;
+}
 
 const schema = z.object({
   title: z.string().trim().min(1, "Title is required"),
@@ -43,7 +56,9 @@ export default function CreateDocumentPage() {
   const create = useCreateDocument();
   const submitForReview = useDocumentAction();
   const uploadAttachment = useUploadAttachment();
+  const foldersQuery = useDocumentFolders();
   const [file, setFile] = useState<File | null>(null);
+  const [folderId, setFolderId] = useState<string>("");
   const [serverError, setServerError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -71,6 +86,7 @@ export default function CreateDocumentPage() {
         type: values.type,
         content: values.content,
         reviewPeriodMonths: values.reviewPeriodMonths ? Number(values.reviewPeriodMonths) : null,
+        folderId: folderId ? Number(folderId) : null,
       });
       if (file) {
         await uploadAttachment.mutateAsync({ documentId: doc.id, file });
@@ -137,6 +153,16 @@ export default function CreateDocumentPage() {
                   <p className="text-label text-error">{errors.reviewPeriodMonths.message}</p>
                 )}
               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="folder">Folder</Label>
+              <Select id="folder" value={folderId} onChange={(e) => setFolderId(e.target.value)}>
+                <option value="">— No folder —</option>
+                {flattenFolders(foldersQuery.data ?? []).map((f) => (
+                  <option key={f.id} value={String(f.id)}>{f.indent}{f.name}</option>
+                ))}
+              </Select>
             </div>
 
             <div className="space-y-1.5">

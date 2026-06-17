@@ -14,6 +14,7 @@ import { LoadingScreen } from "@/components/ui/loading-spinner";
 import { ErrorAlert } from "@/components/ui/error-alert";
 import { RiskStatusBadge } from "@/components/risks/RiskStatusBadge";
 import { SignatureModal } from "@/components/common/SignatureModal";
+import { ReasonModal } from "@/components/common/ReasonModal";
 import { ActionFormModal, type FieldDef } from "@/components/common/ActionFormModal";
 import { AuditTrailTable } from "@/components/common/AuditTrailTable";
 import { formatDate } from "@/lib/format";
@@ -32,6 +33,7 @@ export default function RiskDetailPage() {
   const users = useUsers();
   const [acceptOpen, setAcceptOpen] = useState(false);
   const [modal, setModal] = useState<FormModal>(null);
+  const [reasonAction, setReasonAction] = useState<null | { path: string; title: string; defaultReason: string }>(null);
 
   const userOptions = useMemo(
     () => [{ value: "", label: "—" }, ...(users.data?.map((u) => ({ value: String(u.id), label: u.fullName })) ?? [])],
@@ -45,10 +47,8 @@ export default function RiskDetailPage() {
   function simpleAction(path: string, reason: string) {
     action.mutate({ path, body: { expectedVersion: r.version, reason } }, { onSuccess: () => toast.success("Done") });
   }
-  function prompt(path: string, message: string, fallback: string) {
-    const reason = window.prompt(message);
-    if (reason === null) return;
-    simpleAction(path, reason || fallback);
+  function requestReasonAction(path: string, title: string, defaultReason: string) {
+    setReasonAction({ path, title, defaultReason });
   }
 
   const mitigationFields: FieldDef[] = [
@@ -88,9 +88,9 @@ export default function RiskDetailPage() {
               <Button onClick={() => setAcceptOpen(true)}>Accept Risk</Button>
             </>
           )}
-          {r.status === "ACCEPTED" && <Button onClick={() => prompt("close", "Closure note:", "Closed")} disabled={action.isPending}>Close</Button>}
+          {r.status === "ACCEPTED" && <Button onClick={() => requestReasonAction("close", "Close Risk", "Closed")} disabled={action.isPending}>Close</Button>}
           {!["CLOSED", "CANCELLED"].includes(r.status) && (
-            <Button variant="ghost" onClick={() => prompt("cancel", "Reason for cancelling:", "Cancelled")} disabled={action.isPending}>Cancel</Button>
+            <Button variant="ghost" onClick={() => requestReasonAction("cancel", "Cancel Risk", "Cancelled")} disabled={action.isPending}>Cancel</Button>
           )}
         </div>
       </div>
@@ -186,6 +186,18 @@ export default function RiskDetailPage() {
 
       <SignatureModal open={acceptOpen} onOpenChange={setAcceptOpen} title="Accept Risk" recordNumber={r.riskNo} recordTitle={r.title} recordNoun="risk" statusNode={<RiskStatusBadge status={r.status} />} isPending={action.isPending} successMessage="Risk accepted"
         onSign={async (creds) => { await action.mutateAsync({ path: "accept", body: { expectedVersion: r.version, reason: creds.reason || "Residual risk accepted by management", password: creds.password, totpCode: creds.totpCode, meaningStatement: creds.meaningStatement } }); }} />
+      <ReasonModal
+        open={!!reasonAction}
+        onOpenChange={(open) => !open && setReasonAction(null)}
+        title={reasonAction?.title ?? "Workflow Action"}
+        defaultReason={reasonAction?.defaultReason ?? ""}
+        submitLabel="Confirm"
+        isPending={action.isPending}
+        onSubmit={async (reason) => {
+          if (!reasonAction) return;
+          await action.mutateAsync({ path: reasonAction.path, body: { expectedVersion: r.version, reason } });
+        }}
+      />
 
       <ActionFormModal open={modal === "analysis"} onOpenChange={(o) => !o && setModal(null)} title="Hazard Analysis" isPending={action.isPending} successMessage="Analysis recorded"
         fields={[

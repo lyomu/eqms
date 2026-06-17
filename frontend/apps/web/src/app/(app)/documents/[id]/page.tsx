@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Download, Eye, Paperclip } from "lucide-react";
+import { Download, Eye, Paperclip, LogIn, LogOut, MessageSquare, FileEdit } from "lucide-react";
 import {
   useDocument,
   useDocumentVersions,
@@ -12,21 +12,36 @@ import {
   useDocumentApprovals,
   useDocumentAttachments,
   useDocumentAction,
+  useDocumentNotes,
+  useDocumentChangeRequests,
+  useAddNote,
+  useAddChangeRequest,
+  useDeleteNote,
+  useCheckOut,
+  useCheckIn,
   useUsers,
+  useUploadAttachment,
   type DocumentAction,
 } from "@/hooks/useDocuments";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { LoadingScreen, LoadingSpinner } from "@/components/ui/loading-spinner";
 import { ErrorAlert } from "@/components/ui/error-alert";
 import { StatusBadge } from "@/components/documents/StatusBadge";
 import { ApprovalModal } from "@/components/documents/ApprovalModal";
 import { FilePreview, type PreviewTarget } from "@/components/common/FilePreview";
+import { ReasonModal } from "@/components/common/ReasonModal";
 import { formatDate, formatDateTime } from "@/lib/format";
-import { DOCUMENT_TYPE_LABELS, type AttachmentResponse, type DocumentStatus } from "@/types/documents";
+import {
+  DOCUMENT_TYPE_LABELS,
+  type AttachmentResponse,
+  type DocumentNote,
+  type DocumentStatus,
+} from "@/types/documents";
 
-type TabKey = "versions" | "audit" | "approvals";
+type TabKey = "versions" | "notes" | "change-requests" | "audit" | "approvals";
 
 export default function DocumentDetailPage() {
   const params = useParams();
@@ -36,8 +51,11 @@ export default function DocumentDetailPage() {
   const doc = useDocument(id);
   const users = useUsers();
   const action = useDocumentAction();
+  const checkOut = useCheckOut(id);
+  const checkIn = useCheckIn(id);
   const [tab, setTab] = useState<TabKey>("versions");
   const [approveOpen, setApproveOpen] = useState(false);
+  const [reasonAction, setReasonAction] = useState<null | { action: DocumentAction; title: string; defaultReason: string }>(null);
 
   const ownerName = useMemo(() => {
     const cb = doc.data?.createdBy;
@@ -60,11 +78,29 @@ export default function DocumentDetailPage() {
     }
   }
 
-  function onReject() {
-    const reason = window.prompt("Reason for rejection / changes requested:");
-    if (reason === null) return;
-    runAction("reject", reason || "Returned for changes");
+  function requestReasonAction(act: DocumentAction, title: string, defaultReason: string) {
+    setReasonAction({ action: act, title, defaultReason });
   }
+
+  async function handleCheckOut() {
+    try {
+      await checkOut.mutateAsync();
+      toast.success("Document checked out");
+    } catch {
+      toast.error("Could not check out document");
+    }
+  }
+
+  async function handleCheckIn() {
+    try {
+      await checkIn.mutateAsync();
+      toast.success("Document checked in");
+    } catch {
+      toast.error("Could not check in document");
+    }
+  }
+
+  const isCheckedOut = !!d.checkedOutBy;
 
   return (
     <div className="space-y-4">
@@ -72,9 +108,7 @@ export default function DocumentDetailPage() {
       <div className="flex flex-wrap items-start gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2 text-label text-muted-foreground">
-            <Link href="/documents" className="hover:underline">
-              Document Control
-            </Link>
+            <Link href="/documents" className="hover:underline">Document Control</Link>
             <span>/</span>
             <span>{d.documentNumber}</span>
           </div>
@@ -82,17 +116,48 @@ export default function DocumentDetailPage() {
           <div className="mt-1 flex items-center gap-2">
             <StatusBadge status={d.status} />
             <span className="text-label text-muted-foreground">v{d.majorVersion}</span>
+            {isCheckedOut && (
+              <span className="rounded-sm bg-warning/15 px-2 py-0.5 text-label font-medium text-warning">
+                Checked out
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Status-driven actions */}
         <div className="ml-auto flex flex-wrap items-center gap-2">
+          {/* Check out / check in */}
+          {!isCheckedOut ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCheckOut}
+              disabled={checkOut.isPending}
+              title="Lock document for editing"
+            >
+              <LogOut className="mr-1.5 h-4 w-4" /> Check Out
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCheckIn}
+              disabled={checkIn.isPending}
+              title="Release document lock"
+            >
+              <LogIn className="mr-1.5 h-4 w-4" /> Check In
+            </Button>
+          )}
+
+          {/* Status-driven workflow actions */}
           {d.status === "DRAFT" && (
             <>
               <Button asChild variant="outline">
                 <Link href={`/documents/${id}/edit`}>Edit</Link>
               </Button>
-              <Button onClick={() => runAction("submit-for-review", "Submitted for review")} disabled={action.isPending}>
+              <Button
+                onClick={() => runAction("submit-for-review", "Submitted for review")}
+                disabled={action.isPending}
+              >
                 Submit for Review
               </Button>
             </>
@@ -102,37 +167,42 @@ export default function DocumentDetailPage() {
               <Button asChild variant="outline">
                 <Link href={`/documents/${id}/edit`}>Edit</Link>
               </Button>
-              <Button onClick={() => runAction("submit-for-review", "Resubmitted for review")} disabled={action.isPending}>
+              <Button
+                onClick={() => runAction("submit-for-review", "Resubmitted for review")}
+                disabled={action.isPending}
+              >
                 Resubmit for Review
               </Button>
             </>
           )}
           {d.status === "UNDER_REVIEW" && (
-            <Button onClick={() => runAction("submit-for-approval", "Submitted for approval")} disabled={action.isPending}>
+            <Button
+              onClick={() => runAction("submit-for-approval", "Submitted for approval")}
+              disabled={action.isPending}
+            >
               Submit for Approval
             </Button>
           )}
           {d.status === "PENDING_APPROVAL" && (
             <>
-              <Button variant="outline" onClick={onReject} disabled={action.isPending}>
+              <Button variant="outline" onClick={() => requestReasonAction("reject", "Reject Document", "Returned for changes")} disabled={action.isPending}>
                 Reject
               </Button>
               <Button onClick={() => setApproveOpen(true)}>Approve</Button>
             </>
           )}
           {d.status === "APPROVED" && (
-            <Button onClick={() => runAction("make-effective", "Made effective")} disabled={action.isPending}>
+            <Button
+              onClick={() => runAction("make-effective", "Made effective")}
+              disabled={action.isPending}
+            >
               Make Effective
             </Button>
           )}
           {d.status === "EFFECTIVE" && (
             <Button
               variant="outline"
-              onClick={() => {
-                const reason = window.prompt("Reason for obsoleting this document:");
-                if (reason === null) return;
-                runAction("obsolete", reason || "Obsoleted");
-              }}
+              onClick={() => requestReasonAction("obsolete", "Obsolete Document", "Obsoleted")}
               disabled={action.isPending}
             >
               Obsolete
@@ -158,11 +228,21 @@ export default function DocumentDetailPage() {
               <Field label="Next Review" value={formatDate(d.nextReviewDate)} />
               <Field label="Created" value={formatDate(d.createdAt)} />
               <Field label="Last Modified" value={formatDate(d.updatedAt)} />
+              {isCheckedOut && (
+                <Field
+                  label="Checked Out"
+                  value={
+                    <span className="text-warning">
+                      {users.data?.find((u) => u.id === d.checkedOutBy)?.fullName ?? `User #${d.checkedOutBy}`}
+                    </span>
+                  }
+                />
+              )}
             </dl>
           </CardContent>
         </Card>
 
-        {/* Content preview + attachments */}
+        {/* Content + attachments */}
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Content</CardTitle>
@@ -184,6 +264,8 @@ export default function DocumentDetailPage() {
             onChange={(k) => setTab(k as TabKey)}
             tabs={[
               { key: "versions", label: "Versions" },
+              { key: "notes", label: "Notes" },
+              { key: "change-requests", label: "Change Requests" },
               { key: "audit", label: "Audit Trail" },
               { key: "approvals", label: "Approvals" },
             ]}
@@ -191,6 +273,8 @@ export default function DocumentDetailPage() {
         </div>
         <CardContent className="pt-4">
           {tab === "versions" && <VersionsTab id={id} />}
+          {tab === "notes" && <NotesTab id={id} />}
+          {tab === "change-requests" && <ChangeRequestsTab id={id} />}
           {tab === "audit" && <AuditTab id={id} />}
           {tab === "approvals" && <ApprovalsTab id={id} />}
         </CardContent>
@@ -201,6 +285,18 @@ export default function DocumentDetailPage() {
         onOpenChange={setApproveOpen}
         document={d}
         onApproved={() => doc.refetch()}
+      />
+      <ReasonModal
+        open={!!reasonAction}
+        onOpenChange={(open) => !open && setReasonAction(null)}
+        title={reasonAction?.title ?? "Workflow Action"}
+        defaultReason={reasonAction?.defaultReason ?? ""}
+        submitLabel="Confirm"
+        isPending={action.isPending}
+        onSubmit={async (reason) => {
+          if (!reasonAction) return;
+          await action.mutateAsync({ id, action: reasonAction.action, expectedVersion: d.version, reason });
+        }}
       />
     </div>
   );
@@ -217,45 +313,204 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
 
 function Attachments({ documentId }: { documentId: number }) {
   const q = useDocumentAttachments(documentId);
+  const uploadMut = useUploadAttachment();
   const items = (q.data as AttachmentResponse[] | undefined) ?? [];
   const [preview, setPreview] = useState<PreviewTarget | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   if (q.isLoading) return <LoadingSpinner label="Loading attachments…" />;
-  if (items.length === 0) return <p className="text-label text-muted-foreground">No attachments.</p>;
   return (
     <>
-      <ul className="space-y-1">
-        {items.map((a) => (
-          <li key={a.id} className="flex items-center gap-2 text-body">
-            <Paperclip className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-            <button
-              type="button"
-              onClick={() => setPreview({ id: a.id, fileName: a.fileName, contentType: a.contentType })}
-              className="truncate text-left text-brand-secondary hover:underline"
-              title="Preview"
-            >
-              {a.fileName}
-            </button>
-            <div className="ml-auto flex shrink-0 items-center gap-3">
+      {items.length === 0 ? (
+        <p className="text-label text-muted-foreground">No attachments.</p>
+      ) : (
+        <ul className="space-y-1">
+          {items.map((a) => (
+            <li key={a.id} className="flex items-center gap-2 text-body">
+              <Paperclip className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
               <button
                 type="button"
                 onClick={() => setPreview({ id: a.id, fileName: a.fileName, contentType: a.contentType })}
-                className="inline-flex items-center gap-1 text-brand-secondary hover:underline"
+                className="truncate text-left text-brand-secondary hover:underline"
+                title="Preview"
               >
-                <Eye className="h-4 w-4" /> Preview
+                {a.fileName}
               </button>
-              <a
-                href={`/api/attachments/${a.id}/download`}
-                className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
-              >
-                <Download className="h-4 w-4" /> Download
-              </a>
-            </div>
-          </li>
-        ))}
-      </ul>
+              <div className="ml-auto flex shrink-0 items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setPreview({ id: a.id, fileName: a.fileName, contentType: a.contentType })}
+                  className="inline-flex items-center gap-1 text-brand-secondary hover:underline"
+                >
+                  <Eye className="h-4 w-4" /> Preview
+                </button>
+                <a
+                  href={`/api/attachments/${a.id}/download`}
+                  className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
+                >
+                  <Download className="h-4 w-4" /> Download
+                </a>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={uploadMut.isPending}
+          onClick={() => fileRef.current?.click()}
+        >
+          <Paperclip className="mr-1.5 h-4 w-4" />
+          {uploadMut.isPending ? "Uploading…" : "Add Attachment"}
+        </Button>
+        <input
+          ref={fileRef}
+          type="file"
+          className="hidden"
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            try {
+              await uploadMut.mutateAsync({ documentId, file });
+              toast.success("Attachment uploaded");
+            } catch {
+              toast.error("Upload failed");
+            }
+            e.target.value = "";
+          }}
+        />
+      </div>
       <FilePreview attachment={preview} onClose={() => setPreview(null)} />
     </>
+  );
+}
+
+function NotesTab({ id }: { id: number }) {
+  const q = useDocumentNotes(id);
+  const add = useAddNote(id);
+  const del = useDeleteNote(id);
+  const [text, setText] = useState("");
+
+  async function submit() {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    try {
+      await add.mutateAsync(trimmed);
+      setText("");
+      toast.success("Note added");
+    } catch {
+      toast.error("Failed to add note");
+    }
+  }
+
+  if (q.isLoading) return <LoadingSpinner label="Loading notes…" />;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2">
+        <Textarea
+          placeholder="Add a note…"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={2}
+          className="flex-1"
+        />
+        <Button size="sm" disabled={add.isPending || !text.trim()} onClick={submit}>
+          <MessageSquare className="mr-1.5 h-4 w-4" />
+          Add Note
+        </Button>
+      </div>
+
+      {q.data?.length === 0 && (
+        <p className="text-body text-muted-foreground">No notes yet.</p>
+      )}
+      <NoteList notes={q.data ?? []} onDelete={(noteId) => del.mutateAsync(noteId)} />
+    </div>
+  );
+}
+
+function ChangeRequestsTab({ id }: { id: number }) {
+  const q = useDocumentChangeRequests(id);
+  const add = useAddChangeRequest(id);
+  const del = useDeleteNote(id);
+  const [text, setText] = useState("");
+
+  async function submit() {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    try {
+      await add.mutateAsync(trimmed);
+      setText("");
+      toast.success("Change request submitted");
+    } catch {
+      toast.error("Failed to submit change request");
+    }
+  }
+
+  if (q.isLoading) return <LoadingSpinner label="Loading change requests…" />;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2">
+        <Textarea
+          placeholder="Describe the change request…"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={3}
+          className="flex-1"
+        />
+        <div className="flex flex-col gap-2">
+          <Button size="sm" disabled={add.isPending || !text.trim()} onClick={submit}>
+            <FileEdit className="mr-1.5 h-4 w-4" />
+            Submit
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setText("")}>
+            Clear
+          </Button>
+        </div>
+      </div>
+
+      {q.data?.length === 0 && (
+        <p className="text-body text-muted-foreground">No change requests yet.</p>
+      )}
+      <NoteList notes={q.data ?? []} onDelete={(noteId) => del.mutateAsync(noteId)} />
+    </div>
+  );
+}
+
+function NoteList({
+  notes,
+  onDelete,
+}: {
+  notes: DocumentNote[];
+  onDelete: (noteId: number) => void;
+}) {
+  if (notes.length === 0) return null;
+  return (
+    <ul className="divide-y divide-border">
+      {notes.map((n) => (
+        <li key={n.id} className="py-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-body whitespace-pre-wrap">{n.content}</p>
+              <p className="mt-1 text-label text-muted-foreground">
+                {n.createdByName ?? "—"} · {formatDateTime(n.createdAt)}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => onDelete(n.id)}
+              className="shrink-0 text-label text-muted-foreground hover:text-error"
+            >
+              Delete
+            </button>
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }
 

@@ -16,6 +16,7 @@ import com.eqms.audit.AuditService;
 import com.eqms.capa.dto.CreateCapaActionRequest;
 import com.eqms.capa.dto.CreateCapaRequest;
 import com.eqms.capa.dto.UpdateCapaDetailsRequest;
+import com.eqms.common.HtmlSanitizer;
 import com.eqms.common.ResourceNotFoundException;
 import com.eqms.sequences.SequenceService;
 import com.eqms.shared.constants.AuditAction;
@@ -65,13 +66,13 @@ public class CapaService {
         capa.setCapaNumber(number);
         capa.setTitle(request.title());
         capa.setSource(request.source());
-        capa.setDescription(request.description());
-        capa.setRootCause(request.rootCause());
+        capa.setDescription(HtmlSanitizer.sanitize(request.description()));
+        capa.setRootCause(HtmlSanitizer.sanitize(request.rootCause()));
         capa.setEventDate(request.eventDate());
         capa.setPriority(request.priority());
         capa.setAboutType(request.aboutType());
         capa.setAboutReference(request.aboutReference());
-        capa.setAboutDetails(request.aboutDetails());
+        capa.setAboutDetails(HtmlSanitizer.sanitize(request.aboutDetails()));
         capa.setPartyType(request.partyType());
         capa.setPartyFirstName(request.partyFirstName());
         capa.setPartyLastName(request.partyLastName());
@@ -79,14 +80,14 @@ public class CapaService {
         capa.setPartyCompany(request.partyCompany());
         capa.setPartyEmail(request.partyEmail());
         capa.setPartyPhone(request.partyPhone());
-        capa.setContainmentDetails(request.containmentDetails());
+        capa.setContainmentDetails(HtmlSanitizer.sanitize(request.containmentDetails()));
         capa.setDocumentReferences(request.documentReferences());
         capa.setKeywords(request.keywords());
-        capa.setCorrectiveActionPlan(request.correctiveActionPlan());
-        capa.setPreventiveActionPlan(request.preventiveActionPlan());
+        capa.setCorrectiveActionPlan(HtmlSanitizer.sanitize(request.correctiveActionPlan()));
+        capa.setPreventiveActionPlan(HtmlSanitizer.sanitize(request.preventiveActionPlan()));
         capa.setAssignedTo(request.assignedTo());
         capa.setAssignmentStatus(request.assignmentStatus());
-        capa.setAssignmentComment(request.assignmentComment());
+        capa.setAssignmentComment(HtmlSanitizer.sanitize(request.assignmentComment()));
         capa.setEffectivenessCheckRequired(request.effectivenessCheckRequired());
         capa.setDueDate(request.dueDate());
         capa.setCapaStatus(CapaStatus.DRAFT);
@@ -114,7 +115,7 @@ public class CapaService {
         Capa capa = requireCapa(id);
         checkVersion(capa.getVersion(), expectedVersion);
         String previous = capa.getRootCause();
-        capa.setRootCause(rootCause);
+        capa.setRootCause(HtmlSanitizer.sanitize(rootCause));
         audit(capa.getId(), AuditAction.UPDATE, "root_cause", previous, rootCause,
                 reason != null ? reason : "Root cause updated", actorId, actorName, ip, userAgent);
         return capa;
@@ -135,7 +136,7 @@ public class CapaService {
             capa.setSource(request.source());
         }
         if (request.description() != null) {
-            capa.setDescription(request.description());
+            capa.setDescription(HtmlSanitizer.sanitize(request.description()));
         }
         if (request.effectivenessCheckRequired() != null) {
             capa.setEffectivenessCheckRequired(request.effectivenessCheckRequired());
@@ -145,7 +146,7 @@ public class CapaService {
         capa.setPriority(blankToNull(request.priority()));
         capa.setAboutType(blankToNull(request.aboutType()));
         capa.setAboutReference(blankToNull(request.aboutReference()));
-        capa.setAboutDetails(blankToNull(request.aboutDetails()));
+        capa.setAboutDetails(sanitizeBlankToNull(request.aboutDetails()));
         capa.setPartyType(blankToNull(request.partyType()));
         capa.setPartyFirstName(blankToNull(request.partyFirstName()));
         capa.setPartyLastName(blankToNull(request.partyLastName()));
@@ -153,15 +154,15 @@ public class CapaService {
         capa.setPartyCompany(blankToNull(request.partyCompany()));
         capa.setPartyEmail(blankToNull(request.partyEmail()));
         capa.setPartyPhone(blankToNull(request.partyPhone()));
-        capa.setContainmentDetails(blankToNull(request.containmentDetails()));
+        capa.setContainmentDetails(sanitizeBlankToNull(request.containmentDetails()));
         capa.setDocumentReferences(blankToNull(request.documentReferences()));
         capa.setKeywords(blankToNull(request.keywords()));
-        capa.setRootCause(blankToNull(request.rootCause()));
-        capa.setCorrectiveActionPlan(blankToNull(request.correctiveActionPlan()));
-        capa.setPreventiveActionPlan(blankToNull(request.preventiveActionPlan()));
+        capa.setRootCause(sanitizeBlankToNull(request.rootCause()));
+        capa.setCorrectiveActionPlan(sanitizeBlankToNull(request.correctiveActionPlan()));
+        capa.setPreventiveActionPlan(sanitizeBlankToNull(request.preventiveActionPlan()));
         capa.setAssignedTo(request.assignedTo());
         capa.setAssignmentStatus(blankToNull(request.assignmentStatus()));
-        capa.setAssignmentComment(blankToNull(request.assignmentComment()));
+        capa.setAssignmentComment(sanitizeBlankToNull(request.assignmentComment()));
 
         audit(capa.getId(), AuditAction.UPDATE, "details", previous, summarizeDetails(capa),
                 request.reason() != null ? request.reason() : "CAPA details updated",
@@ -246,7 +247,7 @@ public class CapaService {
         CapaAction action = new CapaAction();
         action.setCapaId(capa.getId());
         action.setActionType(request.actionType());
-        action.setDescription(request.description());
+        action.setDescription(HtmlSanitizer.sanitize(request.description()));
         action.setAssignedTo(request.assignedTo());
         action.setDueDate(request.dueDate());
         action = actionRepository.save(action);
@@ -328,6 +329,10 @@ public class CapaService {
 
     private static String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value;
+    }
+
+    private static String sanitizeBlankToNull(String value) {
+        return value == null || value.isBlank() ? null : HtmlSanitizer.sanitize(value);
     }
 
     private static String summarizeDetails(Capa capa) {

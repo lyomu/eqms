@@ -64,7 +64,7 @@ public class DocumentService {
 
     @Transactional
     public Document create(String title, DocumentType type, String content, Integer reviewPeriodMonths,
-                           Long actorId, String actorName, String ip, String userAgent) {
+                           Long folderId, Long actorId, String actorName, String ip, String userAgent) {
         int year = Instant.now(clock).atZone(ZoneOffset.UTC).getYear();
         String number = sequenceService.next(type.prefix(), year);
 
@@ -74,6 +74,7 @@ public class DocumentService {
         document.setDocumentType(type);
         document.setContent(content);
         document.setReviewPeriodMonths(reviewPeriodMonths);
+        document.setFolderId(folderId);
         document.setDocumentStatus(DocumentStatus.DRAFT);
         document.setMajorVersion(1);
         document = documentRepository.save(document);
@@ -109,7 +110,7 @@ public class DocumentService {
      */
     @Transactional
     public Document update(Long id, int expectedVersion, String title, DocumentType type, String content,
-                           Integer reviewPeriodMonths, String reason,
+                           Integer reviewPeriodMonths, Long folderId, String reason,
                            Long actorId, String actorName, String ip, String userAgent) {
         Document document = require(id);
         if (document.getDocumentStatus() != DocumentStatus.DRAFT) {
@@ -130,6 +131,38 @@ public class DocumentService {
         document.setDocumentType(type);
         document.setContent(content);
         document.setReviewPeriodMonths(reviewPeriodMonths);
+        document.setFolderId(folderId);
+        return documentRepository.save(document);
+    }
+
+    @Transactional
+    public Document checkOut(Long id, Long actorId, String actorName, String ip, String userAgent) {
+        Document document = require(id);
+        if (document.getCheckedOutBy() != null) {
+            throw new WorkflowException("Document is already checked out");
+        }
+        document.setCheckedOutBy(actorId);
+        document.setCheckedOutAt(Instant.now(clock));
+        auditService.record(AuditEntryRequest.builder()
+                .recordType(DocumentWorkflow.RECORD_TYPE).recordId(String.valueOf(id))
+                .action(AuditAction.UPDATE).fieldName("checked_out_by")
+                .newValue(actorName).reasonForChange("Checked out for editing")
+                .userId(actorId).userFullName(actorName).ipAddress(ip).userAgent(userAgent)
+                .build());
+        return documentRepository.save(document);
+    }
+
+    @Transactional
+    public Document checkIn(Long id, Long actorId, String actorName, String ip, String userAgent) {
+        Document document = require(id);
+        document.setCheckedOutBy(null);
+        document.setCheckedOutAt(null);
+        auditService.record(AuditEntryRequest.builder()
+                .recordType(DocumentWorkflow.RECORD_TYPE).recordId(String.valueOf(id))
+                .action(AuditAction.UPDATE).fieldName("checked_out_by")
+                .newValue(null).reasonForChange("Checked in")
+                .userId(actorId).userFullName(actorName).ipAddress(ip).userAgent(userAgent)
+                .build());
         return documentRepository.save(document);
     }
 

@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { LoadingScreen } from "@/components/ui/loading-spinner";
 import { ErrorAlert } from "@/components/ui/error-alert";
 import { ChangeStatusBadge } from "@/components/change-control/ChangeStatusBadge";
+import { ReasonModal } from "@/components/common/ReasonModal";
 import { SignatureModal } from "@/components/common/SignatureModal";
 import { AuditTrailTable } from "@/components/common/AuditTrailTable";
 import { formatDate } from "@/lib/format";
@@ -32,6 +33,7 @@ export default function ChangeDetailPage() {
   const approve = useApproveChange();
   const users = useUsers();
   const [approveOpen, setApproveOpen] = useState(false);
+  const [reasonAction, setReasonAction] = useState<null | { action: ChangeAction; title: string; defaultReason: string }>(null);
 
   const ownerName = useMemo(() => {
     const by = cc.data?.createdBy;
@@ -52,10 +54,8 @@ export default function ChangeDetailPage() {
     }
   }
 
-  function promptAction(act: ChangeAction, message: string, fallback: string) {
-    const reason = window.prompt(message);
-    if (reason === null) return;
-    runAction(act, reason || fallback);
+  function requestReasonAction(act: ChangeAction, title: string, defaultReason: string) {
+    setReasonAction({ action: act, title, defaultReason });
   }
 
   return (
@@ -88,7 +88,7 @@ export default function ChangeDetailPage() {
               </Button>
               <Button
                 variant="outline"
-                onClick={() => promptAction("cancel", "Reason for cancelling:", "Cancelled")}
+                onClick={() => requestReasonAction("cancel", "Cancel Change Request", "Cancelled")}
                 disabled={action.isPending}
               >
                 Cancel
@@ -107,7 +107,7 @@ export default function ChangeDetailPage() {
             <>
               <Button
                 variant="outline"
-                onClick={() => promptAction("reject", "Reason for rejection:", "Rejected")}
+                onClick={() => requestReasonAction("reject", "Reject Change Request", "Rejected")}
                 disabled={action.isPending}
               >
                 Reject
@@ -131,7 +131,7 @@ export default function ChangeDetailPage() {
             </Button>
           )}
           {c.status === "PENDING_CLOSURE" && (
-            <Button onClick={() => promptAction("close", "Closure summary / effectiveness verification:", "Closed")} disabled={action.isPending}>
+            <Button onClick={() => requestReasonAction("close", "Close Change Request", "Closed")} disabled={action.isPending}>
               Close
             </Button>
           )}
@@ -207,6 +207,18 @@ export default function ChangeDetailPage() {
             reason: creds.reason,
             meaningStatement: creds.meaningStatement,
           });
+        }}
+      />
+      <ReasonModal
+        open={!!reasonAction}
+        onOpenChange={(open) => !open && setReasonAction(null)}
+        title={reasonAction?.title ?? "Workflow Action"}
+        defaultReason={reasonAction?.defaultReason ?? ""}
+        submitLabel="Confirm"
+        isPending={action.isPending}
+        onSubmit={async (reason) => {
+          if (!reasonAction) return;
+          await action.mutateAsync({ id, action: reasonAction.action, expectedVersion: c.version, reason });
         }}
       />
     </div>

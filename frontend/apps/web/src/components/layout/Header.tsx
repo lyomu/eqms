@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Bell, Menu, Search, UserRound } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnreadCount } from "@/hooks/useNotifications";
@@ -9,10 +10,12 @@ import { useUiStore } from "@/stores/ui-store";
 
 /** Shared top bar for authenticated pages: search, session context, notifications, help, and logout. */
 export function Header() {
+  const router = useRouter();
   const setMobileOpen = useUiStore((s) => s.setMobileSidebarOpen);
   const { currentUser } = useAuth();
   const unread = useUnreadCount();
   const [now, setNow] = useState<Date | null>(null);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     setNow(new Date());
@@ -42,14 +45,23 @@ export function Header() {
       </button>
       <span className="text-h3 font-bold tracking-tight text-brand-primary lg:hidden">eQMS</span>
 
-      <label className="relative hidden w-full max-w-xl md:block">
+      <form
+        className="relative hidden w-full max-w-xl md:block"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const term = search.trim();
+          if (term) router.push(`/search?q=${encodeURIComponent(term)}`);
+        }}
+      >
         <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
         <input
           type="search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
           placeholder="Search records, documents, CAPAs..."
           className="h-11 w-full rounded-full border border-border bg-muted/30 pl-12 pr-4 text-body shadow-sm outline-none transition focus:border-ring/60 focus:bg-background focus:ring-2 focus:ring-ring/20"
         />
-      </label>
+      </form>
 
       <div className="ml-auto flex min-w-0 items-center gap-2 sm:gap-3">
         <div className="hidden items-center gap-2 text-body text-foreground/80 xl:flex">

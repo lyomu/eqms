@@ -76,7 +76,26 @@ export function useTrainingTrail(id: number) {
 export function useCreateTraining() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { title: string; content: string; intendedAudience: TrainingAudience; requiredFrequency: TrainingFrequency }): Promise<TrainingResponse> =>
+    mutationFn: async (input: {
+      title: string;
+      content: string;
+      intendedAudience: TrainingAudience;
+      requiredFrequency: TrainingFrequency;
+      numbering?: string | null;
+      trainingType?: string | null;
+      occurrence?: string | null;
+      startAt?: string | null;
+      endAt?: string | null;
+      completionTargetAt?: string | null;
+      releaseMode?: string | null;
+      releaseAt?: string | null;
+      mainTrainerName?: string | null;
+      additionalTrainers?: string[];
+      internalDocuments?: string[];
+      learningObjectives?: string | null;
+      assessmentCriteria?: string | null;
+      sessions?: Array<{ sessionIndex: number; startAt?: string | null; endAt?: string | null }>;
+    }): Promise<TrainingResponse> =>
       (await api.post("/api/training", input)).data,
     onSuccess: () => qc.invalidateQueries({ queryKey: trainingKeys.all }),
   });

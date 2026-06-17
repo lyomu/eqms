@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { toast } from "sonner";
 import { Plus } from "lucide-react";
 import { useAudit, useAuditFollowUps, useAuditTrail, useAuditAction } from "@/hooks/useAudit";
 import { useUsers } from "@/hooks/useDocuments";
@@ -13,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { LoadingScreen } from "@/components/ui/loading-spinner";
 import { ErrorAlert } from "@/components/ui/error-alert";
 import { AuditStatusBadge } from "@/components/audits/AuditStatusBadge";
+import { ReasonModal } from "@/components/common/ReasonModal";
 import { SignatureModal } from "@/components/common/SignatureModal";
 import { ActionFormModal, type FieldDef } from "@/components/common/ActionFormModal";
 import { AuditTrailTable } from "@/components/common/AuditTrailTable";
@@ -30,6 +30,7 @@ export default function AuditDetailPage() {
   const action = useAuditAction(id);
   const users = useUsers();
   const [finalizeOpen, setFinalizeOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
   const [modal, setModal] = useState<FormModal>(null);
   const [capaFindingId, setCapaFindingId] = useState<number | null>(null);
 
@@ -41,12 +42,6 @@ export default function AuditDetailPage() {
   if (audit.isLoading) return <LoadingScreen label="Loading audit…" />;
   if (audit.isError || !audit.data) return <ErrorAlert title="Error" message="Failed to load this audit." />;
   const a = audit.data;
-
-  function cancel() {
-    const reason = window.prompt("Reason for cancelling:");
-    if (reason === null) return;
-    action.mutate({ path: "cancel", body: { expectedVersion: a.version, reason: reason || "Cancelled" } }, { onSuccess: () => toast.success("Done") });
-  }
 
   const planFields: FieldDef[] = [
     { name: "scope", label: "Scope", type: "textarea", required: true, defaultValue: a.scope },
@@ -79,7 +74,7 @@ export default function AuditDetailPage() {
             <Button variant="outline" onClick={() => setModal("followup")} disabled={action.isPending}>Record Follow-up</Button>
           )}
           {!["COMPLETED", "FOLLOW_UP", "CANCELLED"].includes(a.status) && (
-            <Button variant="ghost" onClick={cancel} disabled={action.isPending}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setCancelOpen(true)} disabled={action.isPending}>Cancel</Button>
           )}
         </div>
       </div>
@@ -163,6 +158,17 @@ export default function AuditDetailPage() {
 
       <SignatureModal open={finalizeOpen} onOpenChange={setFinalizeOpen} title="Finalize Audit" recordNumber={a.auditNo} recordTitle={a.auditTitle} recordNoun="audit" statusNode={<AuditStatusBadge status={a.status} />} isPending={action.isPending} successMessage="Audit finalized"
         onSign={async (creds) => { await action.mutateAsync({ path: "finalize", body: { expectedVersion: a.version, reason: creds.reason || "Audit completed", password: creds.password, totpCode: creds.totpCode, meaningStatement: creds.meaningStatement } }); }} />
+      <ReasonModal
+        open={cancelOpen}
+        onOpenChange={setCancelOpen}
+        title="Cancel Audit"
+        defaultReason="Cancelled"
+        submitLabel="Confirm"
+        isPending={action.isPending}
+        onSubmit={async (reason) => {
+          await action.mutateAsync({ path: "cancel", body: { expectedVersion: a.version, reason } });
+        }}
+      />
 
       <ActionFormModal open={modal === "plan"} onOpenChange={(o) => !o && setModal(null)} title="Plan Audit" isPending={action.isPending} successMessage="Audit planned" fields={planFields}
         onSubmit={async (v) => { await action.mutateAsync({ path: "plan", body: { expectedVersion: a.version, scope: v.scope, auditDate: v.auditDate ? new Date(v.auditDate).toISOString() : undefined, auditeeId: v.auditeeId ? Number(v.auditeeId) : undefined } }); }} />

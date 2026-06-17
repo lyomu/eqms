@@ -20,6 +20,9 @@ public record DocumentResponse(
         Long supersededById,
         Long createdBy,
         Long submittedBy,
+        Long folderId,
+        Long checkedOutBy,
+        Instant checkedOutAt,
         Instant createdAt,
         Instant updatedAt
 ) {
@@ -39,6 +42,9 @@ public record DocumentResponse(
                 d.getSupersededById(),
                 d.getCreatedBy(),
                 d.getSubmittedBy(),
+                d.getFolderId(),
+                d.getCheckedOutBy(),
+                d.getCheckedOutAt(),
                 d.getCreatedAt(),
                 d.getUpdatedAt());
     }

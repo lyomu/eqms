@@ -44,8 +44,30 @@ export interface DocumentResponse {
   supersededById: number | null;
   createdBy: number | null;
   submittedBy: number | null;
+  folderId: number | null;
+  checkedOutBy: number | null;
+  checkedOutAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+/** GET /api/document-folders */
+export interface DocumentFolder {
+  id: number;
+  name: string;
+  parentId: number | null;
+  children: DocumentFolder[];
+}
+
+/** GET /api/documents/{id}/notes and /change-requests */
+export interface DocumentNote {
+  id: number;
+  documentId: number;
+  noteType: "NOTE" | "CHANGE_REQUEST";
+  content: string;
+  createdBy: number | null;
+  createdByName: string | null;
+  createdAt: string;
 }
 
 /** Backend pagination envelope (PageResponse<T>). */

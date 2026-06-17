@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -29,6 +29,7 @@ import { ProgressBar, TrainingStatusBadge } from "@/components/training/Training
 import { useTrainingAssignments, useTrainingList } from "@/hooks/useTraining";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/lib/format";
+import { exportRows } from "@/lib/export";
 import { AUDIENCE_LABELS, FREQUENCY_LABELS, type TrainingAudience, type TrainingFrequency, type TrainingResponse } from "@/types/training";
 
 const AUDIENCES = Object.keys(AUDIENCE_LABELS) as TrainingAudience[];
@@ -38,9 +39,11 @@ const TRAINING_TYPES = ["Document Training", "Classroom", "Practical", "Assessme
 type SortDirection = "asc" | "desc";
 type SortField = "trainingCode" | "title" | "type" | "start" | "release" | "status";
 type TabKey = "open" | "overdue" | "today" | "tomorrow" | "completed" | "unassigned";
+type ViewMode = "list" | "setup" | "calendar" | "records" | "matrix";
 
 export default function TrainingPage() {
   const router = useRouter();
+  const searchRef = useRef<HTMLInputElement>(null);
   const [audience, setAudience] = useState<TrainingAudience | "">("");
   const [frequency, setFrequency] = useState<TrainingFrequency | "">("");
   const [type, setType] = useState("");
@@ -51,6 +54,7 @@ export default function TrainingPage() {
   const [size, setSize] = useState(10);
   const [sortField, setSortField] = useState<SortField>("trainingCode");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [view, setView] = useState<ViewMode>("list");
   const query = useTrainingList({ audience, frequency, page, size, sort: "createdAt,desc" });
 
   const rows = useMemo(() => {
@@ -59,12 +63,18 @@ export default function TrainingPage() {
       .filter((training) => (!frequency || training.requiredFrequency === frequency))
       .filter((training) => {
         if (!type) return true;
-        return trainingMeta(training).Type === type;
+        return training.trainingType === type;
       })
       .filter((training) => {
         if (!term) return true;
-        const meta = trainingMeta(training);
-        return [training.trainingCode, training.title, meta.Type, meta["Main Trainer"], meta.Features]
+        return [
+          training.trainingCode,
+          training.title,
+          training.trainingType,
+          training.mainTrainerName,
+          featureSummary(training),
+          training.internalDocuments.join(" "),
+        ]
           .filter(Boolean)
           .some((value) => String(value).toLowerCase().includes(term));
       })
@@ -91,19 +101,37 @@ export default function TrainingPage() {
     setPage(0);
   }
 
+  function exportTraining(format: "csv" | "xls") {
+    exportRows(
+      "training-list",
+      ["Number", "Title", "Type", "Trainers", "Features", "Start Date", "Release Date", "Status"],
+      rows.map((training) => [
+        training.trainingCode,
+        training.title,
+        training.trainingType ?? "",
+        trainerSummary(training),
+        featureSummary(training),
+        formatDate(training.startAt),
+        training.releaseMode === "Scheduled" ? formatDate(training.releaseAt) : training.releaseMode ?? "",
+        training.active ? "Active" : "Inactive",
+      ]),
+      format
+    );
+  }
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2 border-b border-border bg-muted/70 px-2 py-2">
         <ActionButton href="/" icon={<ArrowLeft className="h-4 w-4" />} label="Go Back" />
         <ActionButton href="/training/new" active icon={<GraduationCap className="h-4 w-4" />} label="New Training" />
-        <ActionButton icon={<Timer className="h-4 w-4" />} label="Action Required" />
+        <ActionButton icon={<Timer className="h-4 w-4" />} label="Action Required" active={view === "list" && tab === "overdue"} onClick={() => { setView("list"); setTab("overdue"); }} />
         <ActionButton href="/my-trainings" icon={<FolderArchive className="h-4 w-4" />} label="My Training" />
-        <ActionButton href="/training" icon={<FolderArchive className="h-4 w-4" />} label="All Training" />
-        <ActionButton icon={<Settings className="h-4 w-4" />} label="Set-Up" />
-        <ActionButton icon={<CalendarDays className="h-4 w-4" />} label="Calendar" />
-        <ActionButton icon={<ClipboardCheck className="h-4 w-4" />} label="Training Record" />
-        <ActionButton icon={<Grid2X2 className="h-4 w-4" />} label="Training Matrix" />
-        <ActionButton icon={<Search className="h-4 w-4" />} label="Search" />
+        <ActionButton icon={<FolderArchive className="h-4 w-4" />} label="All Training" active={view === "list" && tab === "open"} onClick={() => { setView("list"); setTab("open"); }} />
+        <ActionButton icon={<Settings className="h-4 w-4" />} label="Set-Up" active={view === "setup"} onClick={() => setView("setup")} />
+        <ActionButton icon={<CalendarDays className="h-4 w-4" />} label="Calendar" active={view === "calendar"} onClick={() => setView("calendar")} />
+        <ActionButton icon={<ClipboardCheck className="h-4 w-4" />} label="Training Record" active={view === "records"} onClick={() => setView("records")} />
+        <ActionButton icon={<Grid2X2 className="h-4 w-4" />} label="Training Matrix" active={view === "matrix"} onClick={() => setView("matrix")} />
+        <ActionButton icon={<Search className="h-4 w-4" />} label="Search" onClick={() => searchRef.current?.focus()} />
       </div>
 
       <section className="rounded-md bg-muted/40 p-3">
@@ -147,14 +175,19 @@ export default function TrainingPage() {
             </Select>
           </div>
           <div className="ml-auto flex flex-wrap items-center gap-2">
-            <Button type="button" className="bg-success text-white hover:bg-success/90"><Download className="h-4 w-4" />CSV</Button>
-            <Button type="button" className="bg-success text-white hover:bg-success/90"><FileSpreadsheet className="h-4 w-4" />Excel</Button>
+            <Button type="button" onClick={() => exportTraining("csv")} className="bg-success text-white hover:bg-success/90"><Download className="h-4 w-4" />CSV</Button>
+            <Button type="button" onClick={() => exportTraining("xls")} className="bg-success text-white hover:bg-success/90"><FileSpreadsheet className="h-4 w-4" />Excel</Button>
             <Label htmlFor="training-search">Search:</Label>
-            <Input id="training-search" value={search} onChange={(event) => setSearch(event.target.value)} className="w-60 border-border bg-background" />
+            <Input ref={searchRef} id="training-search" value={search} onChange={(event) => setSearch(event.target.value)} className="w-60 border-border bg-background" />
           </div>
         </div>
 
-        <div className="mt-4 overflow-hidden rounded-sm border border-border bg-background">
+        {view === "setup" ? <TrainingSetupView /> : null}
+        {view === "calendar" ? <TrainingCalendarView rows={rows} /> : null}
+        {view === "records" ? <TrainingRecordsView rows={rows} /> : null}
+        {view === "matrix" ? <TrainingMatrixView rows={rows} /> : null}
+
+        {view === "list" ? <div className="mt-4 overflow-hidden rounded-sm border border-border bg-background">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-body">
               <thead className="bg-success/60">
@@ -198,19 +231,19 @@ export default function TrainingPage() {
               <Button variant="outline" size="sm" onClick={() => setPage(Math.max((query.data?.totalPages ?? 1) - 1, 0))} disabled={page + 1 >= (query.data?.totalPages ?? 0)}>Last</Button>
             </div>
           </div>
-        </div>
+        </div> : null}
       </section>
     </div>
   );
 }
 
-function ActionButton({ href, icon, label, active = false }: { href?: string; icon: React.ReactNode; label: string; active?: boolean }) {
+function ActionButton({ href, icon, label, active = false, onClick }: { href?: string; icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void }) {
   const className = cn("h-9 bg-background px-3 text-muted-foreground shadow-sm hover:bg-accent", active && "bg-success text-white hover:bg-success/90");
   const content = <>{icon}{label}</>;
   if (href) {
     return <Button asChild size="sm" variant="outline" className={className}><Link href={href}>{content}</Link></Button>;
   }
-  return <Button size="sm" variant="outline" className={className}>{content}</Button>;
+  return <Button type="button" size="sm" variant="outline" onClick={onClick} className={className}>{content}</Button>;
 }
 
 function TrainingTab({ label, active, danger = false, onClick }: { label: string; active: boolean; danger?: boolean; onClick: () => void }) {
@@ -242,17 +275,16 @@ function HeaderCell({ label, field, sortField, sortDirection, onSort }: { label:
 }
 
 function TrainingRow({ training, onView }: { training: TrainingResponse; onView: () => void }) {
-  const meta = trainingMeta(training);
   return (
     <tr className="border-t border-border hover:bg-success/5">
       <td className="px-3 py-3 font-semibold">{training.trainingCode}</td>
       <td className="px-3 py-3">{training.title}</td>
-      <td className="px-3 py-3">{meta.Type ?? FREQUENCY_LABELS[training.requiredFrequency]}</td>
+      <td className="px-3 py-3">{training.trainingType ?? FREQUENCY_LABELS[training.requiredFrequency]}</td>
       <td className="px-3 py-3"><TrainingMetrics id={training.id} mode="count" /></td>
-      <td className="px-3 py-3">{meta["Main Trainer"] ?? "-"}</td>
-      <td className="px-3 py-3">{meta.Features ?? meta.Occurrence ?? "-"}</td>
-      <td className="px-3 py-3">{meta.Start ?? meta["Start 1"] ?? "-"}</td>
-      <td className="px-3 py-3">{meta["Release Date"] ?? "-"}</td>
+      <td className="px-3 py-3">{trainerSummary(training)}</td>
+      <td className="px-3 py-3">{featureSummary(training)}</td>
+      <td className="px-3 py-3">{formatDate(training.startAt)}</td>
+      <td className="px-3 py-3">{training.releaseMode === "Scheduled" ? formatDate(training.releaseAt) : training.releaseMode ?? "-"}</td>
       <td className="px-3 py-3"><TrainingStatusBadge training={training} /></td>
       <td className="px-3 py-3 text-right"><Button size="sm" variant="outline" onClick={onView}>View</Button></td>
     </tr>
@@ -268,36 +300,40 @@ function TrainingMetrics({ id, mode }: { id: number; mode: "count" | "completion
   return <div className="min-w-28"><div className="mb-1 text-label">{pct}%</div><ProgressBar value={pct} /></div>;
 }
 
-function trainingMeta(training: TrainingResponse) {
-  const meta: Record<string, string> = {};
-  training.content.split(/\r?\n/).forEach((line) => {
-    const index = line.indexOf(":");
-    if (index > -1) meta[line.slice(0, index).trim()] = line.slice(index + 1).trim();
-  });
-  return meta;
-}
-
 function matchesTab(training: TrainingResponse, tab: TabKey) {
   if (tab === "completed") return !training.active;
   if (tab === "unassigned") return training.active;
-  if (tab === "overdue" || tab === "today" || tab === "tomorrow") return false;
+  if (tab === "overdue") return isBeforeToday(training.startAt) && training.active;
+  if (tab === "today") return isSameDay(training.startAt, new Date());
+  if (tab === "tomorrow") {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return isSameDay(training.startAt, tomorrow);
+  }
   return training.active;
 }
 
 function compareTraining(a: TrainingResponse, b: TrainingResponse, field: SortField, direction: SortDirection) {
-  const aMeta = trainingMeta(a);
-  const bMeta = trainingMeta(b);
   const values: Record<SortField, [string, string]> = {
     trainingCode: [a.trainingCode, b.trainingCode],
     title: [a.title, b.title],
-    type: [aMeta.Type ?? "", bMeta.Type ?? ""],
-    start: [aMeta.Start ?? aMeta["Start 1"] ?? "", bMeta.Start ?? bMeta["Start 1"] ?? ""],
-    release: [aMeta["Release Date"] ?? "", bMeta["Release Date"] ?? ""],
+    type: [a.trainingType ?? "", b.trainingType ?? ""],
+    start: [a.startAt ?? "", b.startAt ?? ""],
+    release: [a.releaseAt ?? a.releaseMode ?? "", b.releaseAt ?? b.releaseMode ?? ""],
     status: [a.active ? "Active" : "Inactive", b.active ? "Active" : "Inactive"],
   };
   const [left, right] = values[field];
   const result = left.localeCompare(right, undefined, { numeric: true, sensitivity: "base" });
   return direction === "asc" ? result : -result;
+}
+
+function trainerSummary(training: TrainingResponse) {
+  return [training.mainTrainerName, ...training.additionalTrainers].filter(Boolean).join(", ") || "-";
+}
+
+function featureSummary(training: TrainingResponse) {
+  const features = [training.occurrence, training.internalDocuments.length ? `${training.internalDocuments.length} document(s)` : null, training.sessions.length ? `${training.sessions.length} session(s)` : null].filter(Boolean);
+  return features.join(", ") || "-";
 }
 
 function defaultDateRange() {
@@ -309,4 +345,124 @@ function defaultDateRange() {
 
 function formatDateInput(date: Date) {
   return formatDate(date.toISOString()).replaceAll("/", "-");
+}
+
+function TrainingSetupView() {
+  return (
+    <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <SetupPanel title="Training Types" rows={TRAINING_TYPES} />
+      <SetupPanel title="Audiences" rows={AUDIENCES.map((key) => AUDIENCE_LABELS[key])} />
+      <SetupPanel title="Recurrence Rules" rows={FREQUENCIES.map((key) => FREQUENCY_LABELS[key])} />
+    </div>
+  );
+}
+
+function SetupPanel({ title, rows }: { title: string; rows: string[] }) {
+  return (
+    <section className="rounded-md border border-border bg-background">
+      <div className="border-b border-border bg-success/10 px-4 py-3 font-semibold">{title}</div>
+      <div className="divide-y divide-border">
+        {rows.map((row) => <div key={row} className="px-4 py-2 text-body">{row}</div>)}
+      </div>
+    </section>
+  );
+}
+
+function TrainingCalendarView({ rows }: { rows: TrainingResponse[] }) {
+  const dated = rows
+    .flatMap((training) => {
+      const dates = training.sessions.length
+        ? training.sessions.map((session) => ({ date: session.startAt, label: `Session ${session.sessionIndex}` }))
+        : [{ date: training.startAt, label: training.occurrence ?? "Training" }];
+      return dates.map((item) => ({ training, ...item })).filter((item) => item.date);
+    })
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+
+  return (
+    <div className="mt-4 overflow-hidden rounded-sm border border-border bg-background">
+      <table className="w-full text-body">
+        <thead className="bg-success/30 text-left"><tr><th className="px-3 py-2">Date</th><th className="px-3 py-2">Program</th><th className="px-3 py-2">Session</th><th className="px-3 py-2">Trainer</th></tr></thead>
+        <tbody>
+          {dated.length ? dated.map((item) => (
+            <tr key={`${item.training.id}-${item.label}-${item.date}`} className="border-t border-border">
+              <td className="px-3 py-2">{formatDate(item.date)}</td>
+              <td className="px-3 py-2 font-semibold">{item.training.trainingCode} - {item.training.title}</td>
+              <td className="px-3 py-2">{item.label}</td>
+              <td className="px-3 py-2">{trainerSummary(item.training)}</td>
+            </tr>
+          )) : <tr><td colSpan={4} className="px-3 py-8 text-center text-muted-foreground">No scheduled training dates.</td></tr>}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function TrainingRecordsView({ rows }: { rows: TrainingResponse[] }) {
+  return (
+    <div className="mt-4 overflow-hidden rounded-sm border border-border bg-background">
+      <table className="w-full text-body">
+        <thead className="bg-success/30 text-left"><tr><th className="px-3 py-2">Program</th><th className="px-3 py-2">Title</th><th className="px-3 py-2">Trainees</th><th className="px-3 py-2">Completion</th><th className="px-3 py-2">Evidence</th></tr></thead>
+        <tbody>
+          {rows.length ? rows.map((training) => <TrainingRecordRow key={training.id} training={training} />) : <tr><td colSpan={5} className="px-3 py-8 text-center text-muted-foreground">No training records.</td></tr>}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function TrainingRecordRow({ training }: { training: TrainingResponse }) {
+  const assignments = useTrainingAssignments(training.id);
+  const rows = assignments.data ?? [];
+  const completed = rows.filter((assignment) => assignment.status === "COMPLETED");
+  const pct = rows.length ? Math.round((completed.length / rows.length) * 100) : 0;
+  return (
+    <tr className="border-t border-border">
+      <td className="px-3 py-2 font-semibold">{training.trainingCode}</td>
+      <td className="px-3 py-2">{training.title}</td>
+      <td className="px-3 py-2">{rows.length}</td>
+      <td className="px-3 py-2"><div className="max-w-36"><ProgressBar value={pct} /></div></td>
+      <td className="px-3 py-2">{completed.map((item) => item.completionEvidence).filter(Boolean).join("; ") || "-"}</td>
+    </tr>
+  );
+}
+
+function TrainingMatrixView({ rows }: { rows: TrainingResponse[] }) {
+  return (
+    <div className="mt-4 overflow-hidden rounded-sm border border-border bg-background">
+      <table className="w-full text-body">
+        <thead className="bg-success/30 text-left"><tr><th className="px-3 py-2">Program</th><th className="px-3 py-2">Audience</th><th className="px-3 py-2">Frequency</th><th className="px-3 py-2">Assignments</th><th className="px-3 py-2">Status</th></tr></thead>
+        <tbody>
+          {rows.length ? rows.map((training) => <TrainingMatrixRow key={training.id} training={training} />) : <tr><td colSpan={5} className="px-3 py-8 text-center text-muted-foreground">No matrix data.</td></tr>}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function TrainingMatrixRow({ training }: { training: TrainingResponse }) {
+  const assignments = useTrainingAssignments(training.id);
+  const rows = assignments.data ?? [];
+  const overdue = rows.filter((assignment) => assignment.status !== "COMPLETED" && assignment.dueDate && new Date(assignment.dueDate) < new Date()).length;
+  return (
+    <tr className="border-t border-border">
+      <td className="px-3 py-2 font-semibold">{training.trainingCode}</td>
+      <td className="px-3 py-2">{AUDIENCE_LABELS[training.intendedAudience]}</td>
+      <td className="px-3 py-2">{FREQUENCY_LABELS[training.requiredFrequency]}</td>
+      <td className="px-3 py-2">{rows.length}</td>
+      <td className="px-3 py-2">{overdue ? <span className="font-semibold text-error">{overdue} overdue</span> : "Current"}</td>
+    </tr>
+  );
+}
+
+function isSameDay(value: string | null, date: Date) {
+  if (!value) return false;
+  const d = new Date(value);
+  return d.getFullYear() === date.getFullYear() && d.getMonth() === date.getMonth() && d.getDate() === date.getDate();
+}
+
+function isBeforeToday(value: string | null) {
+  if (!value) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return new Date(value) < today;
 }

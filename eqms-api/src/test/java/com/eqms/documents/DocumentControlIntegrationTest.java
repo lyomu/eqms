@@ -61,7 +61,7 @@ class DocumentControlIntegrationTest extends AbstractIntegrationTest {
 
         mockMvc.perform(post("/api/documents").session(author.session)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(json(new CreateDocumentRequest("Cleaning SOP", DocumentType.SOP, "Body", 12))))
+                        .content(json(new CreateDocumentRequest("Cleaning SOP", DocumentType.SOP, "Body", 12, null))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value("DRAFT"))
                 .andExpect(jsonPath("$.majorVersion").value(1))
@@ -73,7 +73,7 @@ class DocumentControlIntegrationTest extends AbstractIntegrationTest {
         Ctx author = newUser("ADMIN");
         Ctx approver = newUser("ADMIN");
 
-        JsonNode created = create(author, new CreateDocumentRequest("Batch Record SOP", DocumentType.SOP, "Body", null));
+        JsonNode created = create(author, new CreateDocumentRequest("Batch Record SOP", DocumentType.SOP, "Body", null, null));
         long id = created.get("id").asLong();
         int version = created.get("version").asInt();
 
@@ -102,7 +102,7 @@ class DocumentControlIntegrationTest extends AbstractIntegrationTest {
     void authorCannotApproveOwnDocument() throws Exception {
         Ctx author = newUser("ADMIN");
 
-        JsonNode created = create(author, new CreateDocumentRequest("Self SOP", DocumentType.SOP, "Body", null));
+        JsonNode created = create(author, new CreateDocumentRequest("Self SOP", DocumentType.SOP, "Body", null, null));
         long id = created.get("id").asLong();
         int version = created.get("version").asInt();
         version = action(author, id, "submit-for-review", version, "UNDER_REVIEW");
@@ -118,7 +118,7 @@ class DocumentControlIntegrationTest extends AbstractIntegrationTest {
     @Test
     void staleVersionIsRejectedWithConflict() throws Exception {
         Ctx author = newUser("ADMIN");
-        JsonNode created = create(author, new CreateDocumentRequest("Stale SOP", DocumentType.SOP, "Body", null));
+        JsonNode created = create(author, new CreateDocumentRequest("Stale SOP", DocumentType.SOP, "Body", null, null));
         long id = created.get("id").asLong();
 
         mockMvc.perform(post("/api/documents/" + id + "/submit-for-review").session(author.session)
@@ -133,14 +133,14 @@ class DocumentControlIntegrationTest extends AbstractIntegrationTest {
 
         mockMvc.perform(post("/api/documents").session(operator.session)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(json(new CreateDocumentRequest("Nope", DocumentType.SOP, "Body", null))))
+                        .content(json(new CreateDocumentRequest("Nope", DocumentType.SOP, "Body", null, null))))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     void editDraftUpdatesFieldsAndIsAudited() throws Exception {
         Ctx author = newUser("ADMIN");
-        JsonNode created = create(author, new CreateDocumentRequest("Draft SOP", DocumentType.SOP, "Body", 12));
+        JsonNode created = create(author, new CreateDocumentRequest("Draft SOP", DocumentType.SOP, "Body", 12, null));
         long id = created.get("id").asLong();
         int version = created.get("version").asInt();
 

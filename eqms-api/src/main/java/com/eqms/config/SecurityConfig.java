@@ -2,6 +2,7 @@ package com.eqms.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -9,6 +10,8 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
 
@@ -50,13 +53,27 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
-                                                   SecurityContextRepository securityContextRepository)
+                                                   SecurityContextRepository securityContextRepository,
+                                                   @Value("${eqms.security.csrf.enabled:true}") boolean csrfEnabled)
             throws Exception {
+        CsrfTokenRequestAttributeHandler csrfHandler = new CsrfTokenRequestAttributeHandler();
+        csrfHandler.setCsrfRequestAttributeName("_csrf");
+
+        if (csrfEnabled) {
+            http.csrf(csrf -> csrf
+                    .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                    .csrfTokenRequestHandler(csrfHandler));
+        } else {
+            http.csrf(csrf -> csrf.disable());
+        }
+
         http
-                .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(reg -> reg
                         // Public: the first leg of login, and health probes.
+                        .requestMatchers("/api/auth/csrf").permitAll()
                         .requestMatchers("/api/auth/login").permitAll()
+                        .requestMatchers("/api/auth/password-reset/request").permitAll()
+                        .requestMatchers("/api/auth/password-reset/confirm").permitAll()
                         .requestMatchers("/api/platform/auth/login").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         // Everything else (incl. MFA step, /me, business endpoints) requires a session.

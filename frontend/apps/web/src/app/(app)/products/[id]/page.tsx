@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { LoadingScreen } from "@/components/ui/loading-spinner";
 import { ErrorAlert } from "@/components/ui/error-alert";
 import { ProductStatusBadge } from "@/components/products/ProductStatusBadge";
+import { ReasonModal } from "@/components/common/ReasonModal";
 import { SignatureModal } from "@/components/common/SignatureModal";
 import { AuditTrailTable } from "@/components/common/AuditTrailTable";
 import { formatDate } from "@/lib/format";
@@ -32,6 +33,7 @@ export default function ProductDetailPage() {
   const approve = useApproveProduct();
   const users = useUsers();
   const [approveOpen, setApproveOpen] = useState(false);
+  const [reasonAction, setReasonAction] = useState<null | { action: ProductAction; title: string; defaultReason: string }>(null);
 
   const ownerName = useMemo(() => {
     const by = product.data?.createdBy;
@@ -52,10 +54,8 @@ export default function ProductDetailPage() {
     }
   }
 
-  function promptAction(act: ProductAction, message: string, fallback: string) {
-    const reason = window.prompt(message);
-    if (reason === null) return;
-    runAction(act, reason || fallback);
+  function requestReasonAction(act: ProductAction, title: string, defaultReason: string) {
+    setReasonAction({ action: act, title, defaultReason });
   }
 
   return (
@@ -80,20 +80,20 @@ export default function ProductDetailPage() {
           )}
           {p.status === "PENDING_APPROVAL" && (
             <>
-              <Button variant="outline" onClick={() => promptAction("reject", "Reason for rejection:", "Rejected")} disabled={transition.isPending}>Reject</Button>
+              <Button variant="outline" onClick={() => requestReasonAction("reject", "Reject Product", "Rejected")} disabled={transition.isPending}>Reject</Button>
               <Button onClick={() => setApproveOpen(true)}>Approve</Button>
             </>
           )}
           {p.status === "ACTIVE" && (
             <>
-              <Button variant="outline" onClick={() => promptAction("put-on-hold", "Reason for hold:", "On hold")} disabled={transition.isPending}>Put On Hold</Button>
-              <Button variant="outline" onClick={() => promptAction("discontinue", "Reason for discontinuation:", "Discontinued")} disabled={transition.isPending}>Discontinue</Button>
+              <Button variant="outline" onClick={() => requestReasonAction("put-on-hold", "Put Product On Hold", "On hold")} disabled={transition.isPending}>Put On Hold</Button>
+              <Button variant="outline" onClick={() => requestReasonAction("discontinue", "Discontinue Product", "Discontinued")} disabled={transition.isPending}>Discontinue</Button>
             </>
           )}
           {p.status === "ON_HOLD" && (
             <>
               <Button onClick={() => runAction("resume", "Resumed")} disabled={transition.isPending}>Resume</Button>
-              <Button variant="outline" onClick={() => promptAction("discontinue", "Reason for discontinuation:", "Discontinued")} disabled={transition.isPending}>Discontinue</Button>
+              <Button variant="outline" onClick={() => requestReasonAction("discontinue", "Discontinue Product", "Discontinued")} disabled={transition.isPending}>Discontinue</Button>
             </>
           )}
         </div>
@@ -142,6 +142,18 @@ export default function ProductDetailPage() {
         successMessage="Approved successfully"
         onSign={async (creds) => {
           await approve.mutateAsync({ id, expectedVersion: p.version, password: creds.password, totpCode: creds.totpCode, reason: creds.reason, meaningStatement: creds.meaningStatement });
+        }}
+      />
+      <ReasonModal
+        open={!!reasonAction}
+        onOpenChange={(open) => !open && setReasonAction(null)}
+        title={reasonAction?.title ?? "Workflow Action"}
+        defaultReason={reasonAction?.defaultReason ?? ""}
+        submitLabel="Confirm"
+        isPending={transition.isPending}
+        onSubmit={async (reason) => {
+          if (!reasonAction) return;
+          await transition.mutateAsync({ id, action: reasonAction.action, expectedVersion: p.version, reason });
         }}
       />
     </div>

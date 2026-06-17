@@ -1,6 +1,7 @@
 package com.eqms.auth;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -10,6 +11,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,6 +24,9 @@ import com.eqms.auth.dto.LoginResponse;
 import com.eqms.auth.dto.MeResponse;
 import com.eqms.auth.dto.MfaEnrollResponse;
 import com.eqms.auth.dto.MfaVerifyRequest;
+import com.eqms.auth.dto.PasswordResetConfirmRequest;
+import com.eqms.auth.dto.PasswordResetRequest;
+import com.eqms.auth.dto.PasswordResetResponse;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -43,14 +48,25 @@ import jakarta.validation.Valid;
 public class AuthController {
 
     private final AuthService authService;
+    private final PasswordResetService passwordResetService;
     private final CustomUserDetailsService userDetailsService;
     private final SecurityContextRepository securityContextRepository;
 
-    public AuthController(AuthService authService, CustomUserDetailsService userDetailsService,
+    public AuthController(AuthService authService, PasswordResetService passwordResetService,
+                          CustomUserDetailsService userDetailsService,
                           SecurityContextRepository securityContextRepository) {
         this.authService = authService;
+        this.passwordResetService = passwordResetService;
         this.userDetailsService = userDetailsService;
         this.securityContextRepository = securityContextRepository;
+    }
+
+    @GetMapping("/csrf")
+    public ResponseEntity<Map<String, String>> csrf(CsrfToken token) {
+        return ResponseEntity.ok(Map.of(
+                "headerName", token.getHeaderName(),
+                "parameterName", token.getParameterName(),
+                "token", token.getToken()));
     }
 
     @PostMapping("/login")
@@ -74,6 +90,24 @@ public class AuthController {
             default -> ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(new LoginResponse(LoginStatus.INVALID_CREDENTIALS.name()));
         };
+    }
+
+    @PostMapping("/password-reset/request")
+    public ResponseEntity<PasswordResetResponse> requestPasswordReset(
+            @Valid @RequestBody PasswordResetRequest request,
+            HttpServletRequest httpRequest) {
+        String message = passwordResetService.requestReset(
+                request.email(), clientIp(httpRequest), userAgent(httpRequest));
+        return ResponseEntity.accepted().body(new PasswordResetResponse(message));
+    }
+
+    @PostMapping("/password-reset/confirm")
+    public ResponseEntity<Void> confirmPasswordReset(
+            @Valid @RequestBody PasswordResetConfirmRequest request,
+            HttpServletRequest httpRequest) {
+        passwordResetService.confirmReset(
+                request.token(), request.newPassword(), clientIp(httpRequest), userAgent(httpRequest));
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/mfa/enroll")

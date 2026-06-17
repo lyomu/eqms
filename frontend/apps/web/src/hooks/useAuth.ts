@@ -7,6 +7,7 @@ import type {
   LoginResponse,
   MeResponse,
   MfaEnrollResponse,
+  PasswordResetRequestResponse,
 } from "@/types/auth";
 
 export const ME_QUERY_KEY = ["auth", "me"] as const;
@@ -89,4 +90,24 @@ export function useAuth() {
     verifyMfa,
     logout,
   };
+}
+
+export function useRequestPasswordReset() {
+  return useMutation({
+    mutationFn: async (vars: { email: string }) => {
+      const { data } = await api.post<PasswordResetRequestResponse>(
+        "/api/auth/password-reset/request",
+        vars
+      );
+      return data;
+    },
+  });
+}
+
+export function useConfirmPasswordReset() {
+  return useMutation({
+    mutationFn: async (vars: { token: string; newPassword: string }) => {
+      await api.post("/api/auth/password-reset/confirm", vars);
+    },
+  });
 }

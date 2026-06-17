@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.eqms.audit.AuditEntryRequest;
 import com.eqms.audit.AuditLog;
 import com.eqms.audit.AuditService;
+import com.eqms.common.HtmlSanitizer;
 import com.eqms.common.ResourceNotFoundException;
 import com.eqms.sequences.SequenceService;
 import com.eqms.shared.constants.AuditAction;
@@ -38,6 +39,7 @@ public class TrainingService {
     private final TrainingProgramRepository programRepository;
     private final TrainingAssignmentRepository assignmentRepository;
     private final TrainingAutoRuleRepository ruleRepository;
+    private final TrainingSessionRepository sessionRepository;
     private final TrainingCompletionAuditRepository completionAuditRepository;
     private final SequenceService sequenceService;
     private final AuditService auditService;
@@ -46,11 +48,13 @@ public class TrainingService {
     public TrainingService(TrainingProgramRepository programRepository,
                            TrainingAssignmentRepository assignmentRepository,
                            TrainingAutoRuleRepository ruleRepository,
+                           TrainingSessionRepository sessionRepository,
                            TrainingCompletionAuditRepository completionAuditRepository,
                            SequenceService sequenceService, AuditService auditService, Clock utcClock) {
         this.programRepository = programRepository;
         this.assignmentRepository = assignmentRepository;
         this.ruleRepository = ruleRepository;
+        this.sessionRepository = sessionRepository;
         this.completionAuditRepository = completionAuditRepository;
         this.sequenceService = sequenceService;
         this.auditService = auditService;
@@ -65,11 +69,36 @@ public class TrainingService {
         TrainingProgram program = new TrainingProgram();
         program.setTrainingCode(code);
         program.setTitle(request.title());
-        program.setContent(request.content());
+        program.setContent(HtmlSanitizer.sanitize(request.content()));
         program.setIntendedAudience(request.intendedAudience());
         program.setRequiredFrequency(request.requiredFrequency());
+        program.setNumbering(blankToNull(request.numbering()));
+        program.setTrainingType(blankToNull(request.trainingType()));
+        program.setOccurrence(blankToNull(request.occurrence()));
+        program.setStartAt(request.startAt());
+        program.setEndAt(request.endAt());
+        program.setCompletionTargetAt(request.completionTargetAt());
+        program.setReleaseMode(blankToNull(request.releaseMode()));
+        program.setReleaseAt(request.releaseAt());
+        program.setMainTrainerName(blankToNull(request.mainTrainerName()));
+        program.setAdditionalTrainers(joinLines(request.additionalTrainers()));
+        program.setInternalDocuments(joinLines(request.internalDocuments()));
+        program.setLearningObjectives(HtmlSanitizer.sanitize(request.learningObjectives()));
+        program.setAssessmentCriteria(HtmlSanitizer.sanitize(request.assessmentCriteria()));
         program.setActive(true);
         program = programRepository.save(program);
+
+        if (request.sessions() != null) {
+            for (CreateTrainingRequest.TrainingSessionRequest item : request.sessions()) {
+                if (item.startAt() == null && item.endAt() == null) continue;
+                TrainingSession session = new TrainingSession();
+                session.setTrainingProgramId(program.getId());
+                session.setSessionIndex(item.sessionIndex());
+                session.setStartAt(item.startAt());
+                session.setEndAt(item.endAt());
+                sessionRepository.save(session);
+            }
+        }
 
         audit("TrainingProgram", program.getId(), AuditAction.CREATE, null, code,
                 "Training program created", actorId, actorName, ip, ua);
@@ -86,6 +115,12 @@ public class TrainingService {
     @Transactional(readOnly = true)
     public TrainingProgram get(Long id) {
         return requireProgram(id);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TrainingSession> sessions(Long programId) {
+        requireProgram(programId);
+        return sessionRepository.findByTrainingProgramIdOrderBySessionIndexAsc(programId);
     }
 
     @Transactional(readOnly = true)
@@ -230,5 +265,20 @@ public class TrainingService {
     private TrainingProgram requireProgram(Long id) {
         return programRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Training program not found: " + id));
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private static String joinLines(List<String> values) {
+        if (values == null || values.isEmpty()) {
+            return null;
+        }
+        String joined = String.join("\n", values.stream()
+                .filter(value -> value != null && !value.isBlank())
+                .map(String::trim)
+                .toList());
+        return joined.isBlank() ? null : joined;
     }
 }

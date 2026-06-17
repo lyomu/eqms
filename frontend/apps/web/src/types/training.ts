@@ -25,11 +25,32 @@ export interface TrainingResponse {
   content: string;
   intendedAudience: TrainingAudience;
   requiredFrequency: TrainingFrequency;
+  numbering: string | null;
+  trainingType: string | null;
+  occurrence: string | null;
+  startAt: string | null;
+  endAt: string | null;
+  completionTargetAt: string | null;
+  releaseMode: string | null;
+  releaseAt: string | null;
+  mainTrainerName: string | null;
+  additionalTrainers: string[];
+  internalDocuments: string[];
+  learningObjectives: string | null;
+  assessmentCriteria: string | null;
+  sessions: TrainingSession[];
   active: boolean;
   version: number;
   createdAt: string;
   createdBy: number | null;
   updatedAt: string;
+}
+
+export interface TrainingSession {
+  id: number;
+  sessionIndex: number;
+  startAt: string | null;
+  endAt: string | null;
 }
 
 export interface TrainingAssignment {

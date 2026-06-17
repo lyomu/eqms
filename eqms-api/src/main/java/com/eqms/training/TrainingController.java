@@ -85,7 +85,7 @@ public class TrainingController {
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public TrainingResponse get(@PathVariable Long id) {
-        return TrainingResponse.from(service.get(id));
+        return TrainingResponse.from(service.get(id), service.sessions(id));
     }
 
     @GetMapping("/{id}/assignments")

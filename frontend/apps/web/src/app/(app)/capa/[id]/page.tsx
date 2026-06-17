@@ -32,6 +32,7 @@ import {
 } from "@/hooks/useCapa";
 import { useUsers } from "@/hooks/useDocuments";
 import { AuditTrailTable } from "@/components/common/AuditTrailTable";
+import { ReasonModal } from "@/components/common/ReasonModal";
 import { SignatureModal } from "@/components/common/SignatureModal";
 import { CapaStatusBadge } from "@/components/capa/CapaStatusBadge";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { formatDate, formatDateTime } from "@/lib/format";
+import { sanitizeHtml } from "@/lib/html";
 import {
   CAPA_PRIORITY_LABELS,
   CAPA_SOURCE_LABELS,
@@ -142,6 +144,7 @@ export default function CapaDetailPage() {
   const [activeObject, setActiveObject] = useState<ObjectKey | null>(null);
   const [closeDraft, setCloseDraft] = useState({ email: "", comment: "", documents: "" });
   const [approveOpen, setApproveOpen] = useState(false);
+  const [reasonAction, setReasonAction] = useState<null | { action: CapaAction; title: string; defaultReason: string }>(null);
   const [closeOpen, setCloseOpen] = useState(false);
   const [closeWarningOpen, setCloseWarningOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -184,10 +187,8 @@ export default function CapaDetailPage() {
     }
   }
 
-  function promptAction(act: CapaAction, message: string, fallback: string) {
-    const reason = window.prompt(message);
-    if (reason === null) return;
-    runAction(act, reason || fallback);
+  function requestReasonAction(act: CapaAction, title: string, defaultReason: string) {
+    setReasonAction({ action: act, title, defaultReason });
   }
 
   function requestClose() {
@@ -260,12 +261,12 @@ export default function CapaDetailPage() {
           pending={transition.isPending}
           onSubmitInvestigation={() => runAction("submit-for-investigation", "Submitted for investigation")}
           onSubmitApproval={() => runAction("submit-for-approval", "Submitted for approval")}
-          onReject={() => promptAction("reject", "Reason for rejection:", "Rejected")}
+          onReject={() => requestReasonAction("reject", "Reject CAPA", "Rejected")}
           onApprove={() => setApproveOpen(true)}
           onStart={() => runAction("start-actions", "Actions started")}
           onEffectiveness={() => runAction("submit-for-effectiveness", "Submitted for effectiveness check")}
           onClose={requestClose}
-          onCancel={() => promptAction("cancel", "Reason for cancelling:", "Cancelled")}
+          onCancel={() => requestReasonAction("cancel", "Cancel CAPA", "Cancelled")}
         />
       </div>
 
@@ -566,6 +567,19 @@ export default function CapaDetailPage() {
           </Button>
         </ModalFooter>
       </Modal>
+
+      <ReasonModal
+        open={!!reasonAction}
+        onOpenChange={(open) => !open && setReasonAction(null)}
+        title={reasonAction?.title ?? "Workflow Action"}
+        defaultReason={reasonAction?.defaultReason ?? ""}
+        submitLabel="Confirm"
+        isPending={transition.isPending}
+        onSubmit={async (reason) => {
+          if (!reasonAction) return;
+          await transition.mutateAsync({ id, action: reasonAction.action, expectedVersion: c.version, reason });
+        }}
+      />
 
       <AddActionModal capaId={id} open={addOpen} onOpenChange={setAddOpen} users={users.data} />
       {printing ? <CapaPrintReport capa={c} draft={draft} actions={actions.data} ownerName={ownerName} /> : null}
@@ -1559,11 +1573,7 @@ function setKeyValue(source: string | null, key: string, value: string) {
 function sanitizeRichText(value: string | null | undefined) {
   if (!value) return "";
   if (!looksLikeHtml(value)) return escapeHtml(value).replace(/\r?\n/g, "<br />");
-  return value
-    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "")
-    .replace(/\son\w+="[^"]*"/gi, "")
-    .replace(/\son\w+='[^']*'/gi, "")
-    .replace(/javascript:/gi, "");
+  return sanitizeHtml(value);
 }
 
 function looksLikeHtml(value: string) {

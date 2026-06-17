@@ -23,6 +23,7 @@ import com.eqms.documents.dto.ApproveRequest;
 import com.eqms.documents.dto.AssignReadRequest;
 import com.eqms.documents.dto.AuditEntryResponse;
 import com.eqms.documents.dto.CreateDocumentRequest;
+import com.eqms.documents.dto.DocumentNoteResponse;
 import com.eqms.documents.dto.DocumentResponse;
 import com.eqms.documents.dto.PageResponse;
 import com.eqms.documents.dto.ReadAssignmentResponse;
@@ -31,6 +32,10 @@ import com.eqms.documents.dto.UpdateDocumentRequest;
 import com.eqms.documents.dto.VersionResponse;
 import com.eqms.notifications.NotificationDispatcher;
 import com.eqms.notifications.NotificationType;
+
+import org.springframework.web.bind.annotation.DeleteMapping;
+
+import jakarta.validation.constraints.NotBlank;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -49,10 +54,13 @@ public class DocumentController {
     private static final String SIGNED_IN_SESSION = "EQMS_SIGNED_IN_SESSION";
 
     private final DocumentService documentService;
+    private final DocumentNoteService noteService;
     private final NotificationDispatcher notifications;
 
-    public DocumentController(DocumentService documentService, NotificationDispatcher notifications) {
+    public DocumentController(DocumentService documentService, DocumentNoteService noteService,
+                               NotificationDispatcher notifications) {
         this.documentService = documentService;
+        this.noteService = noteService;
         this.notifications = notifications;
     }
 
@@ -72,7 +80,7 @@ public class DocumentController {
                                                     @AuthenticationPrincipal UserPrincipal principal,
                                                     HttpServletRequest http) {
         Document document = documentService.create(request.title(), request.type(), request.content(),
-                request.reviewPeriodMonths(), principal.getId(), principal.getFullName(),
+                request.reviewPeriodMonths(), request.folderId(), principal.getId(), principal.getFullName(),
                 clientIp(http), userAgent(http));
         return ResponseEntity.status(HttpStatus.CREATED).body(DocumentResponse.from(document));
     }
@@ -88,8 +96,8 @@ public class DocumentController {
     public DocumentResponse update(@PathVariable Long id, @Valid @RequestBody UpdateDocumentRequest request,
                                    @AuthenticationPrincipal UserPrincipal principal, HttpServletRequest http) {
         Document document = documentService.update(id, request.expectedVersion(), request.title(),
-                request.type(), request.content(), request.reviewPeriodMonths(), request.reason(),
-                principal.getId(), principal.getFullName(), clientIp(http), userAgent(http));
+                request.type(), request.content(), request.reviewPeriodMonths(), request.folderId(),
+                request.reason(), principal.getId(), principal.getFullName(), clientIp(http), userAgent(http));
         return DocumentResponse.from(document);
     }
 
@@ -214,6 +222,71 @@ public class DocumentController {
         return ReadAssignmentResponse.from(documentService.acknowledgeRead(assignmentId,
                 principal.getId(), principal.getFullName(), clientIp(http), userAgent(http)));
     }
+
+    // ── Notes ──────────────────────────────────────────────────────────────────
+
+    @GetMapping("/{id}/notes")
+    @PreAuthorize("isAuthenticated()")
+    public List<DocumentNoteResponse> notes(@PathVariable Long id) {
+        return noteService.listNotes(id).stream().map(DocumentNoteResponse::from).toList();
+    }
+
+    @PostMapping("/{id}/notes")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<DocumentNoteResponse> addNote(@PathVariable Long id,
+                                                        @RequestBody AddNoteRequest request,
+                                                        @AuthenticationPrincipal UserPrincipal principal) {
+        DocumentNote note = noteService.addNote(id, DocumentNote.NoteType.NOTE,
+                request.content(), principal.getId(), principal.getFullName());
+        return ResponseEntity.status(HttpStatus.CREATED).body(DocumentNoteResponse.from(note));
+    }
+
+    @DeleteMapping("/{id}/notes/{noteId}")
+    @PreAuthorize("hasAuthority('DOCUMENT_CREATE')")
+    public ResponseEntity<Void> deleteNote(@PathVariable Long id, @PathVariable Long noteId) {
+        noteService.deleteNote(id, noteId);
+        return ResponseEntity.noContent().build();
+    }
+
+    // ── Change Requests ────────────────────────────────────────────────────────
+
+    @GetMapping("/{id}/change-requests")
+    @PreAuthorize("isAuthenticated()")
+    public List<DocumentNoteResponse> changeRequests(@PathVariable Long id) {
+        return noteService.listChangeRequests(id).stream().map(DocumentNoteResponse::from).toList();
+    }
+
+    @PostMapping("/{id}/change-requests")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<DocumentNoteResponse> addChangeRequest(@PathVariable Long id,
+                                                                  @RequestBody AddNoteRequest request,
+                                                                  @AuthenticationPrincipal UserPrincipal principal) {
+        DocumentNote note = noteService.addNote(id, DocumentNote.NoteType.CHANGE_REQUEST,
+                request.content(), principal.getId(), principal.getFullName());
+        return ResponseEntity.status(HttpStatus.CREATED).body(DocumentNoteResponse.from(note));
+    }
+
+    // ── Check Out / Check In ──────────────────────────────────────────────────
+
+    @PostMapping("/{id}/check-out")
+    @PreAuthorize("hasAuthority('DOCUMENT_CREATE')")
+    public DocumentResponse checkOut(@PathVariable Long id,
+                                     @AuthenticationPrincipal UserPrincipal principal,
+                                     HttpServletRequest http) {
+        return DocumentResponse.from(documentService.checkOut(id,
+                principal.getId(), principal.getFullName(), clientIp(http), userAgent(http)));
+    }
+
+    @PostMapping("/{id}/check-in")
+    @PreAuthorize("hasAuthority('DOCUMENT_CREATE')")
+    public DocumentResponse checkIn(@PathVariable Long id,
+                                    @AuthenticationPrincipal UserPrincipal principal,
+                                    HttpServletRequest http) {
+        return DocumentResponse.from(documentService.checkIn(id,
+                principal.getId(), principal.getFullName(), clientIp(http), userAgent(http)));
+    }
+
+    public record AddNoteRequest(@NotBlank String content) {}
 
     private static String clientIp(HttpServletRequest request) {
         String forwarded = request.getHeader("X-Forwarded-For");

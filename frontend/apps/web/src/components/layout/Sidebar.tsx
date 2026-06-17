@@ -69,20 +69,21 @@ export function Sidebar() {
         </button>
       </div>
 
-      {/* Utility items: Search + Notifications (placeholders until their milestones) */}
+      {/* Utility items: Search + Notifications */}
       <div className="px-2">
         <ul className="space-y-1">
           <li>
-            <span
+            <Link
+              href="/search"
+              onClick={() => setMobileOpen(false)}
               className={cn(
-                "flex cursor-not-allowed items-center gap-3 rounded-md px-3 py-2 text-body text-muted-foreground opacity-60"
+                "flex items-center gap-3 rounded-md px-3 py-2 text-body transition-colors",
+                pathname === "/search" ? "bg-accent font-semibold text-accent-foreground shadow-sm" : "text-foreground/75 hover:bg-accent/80 hover:text-accent-foreground"
               )}
-              aria-disabled="true"
-              title="Search (coming soon)"
             >
               <Search className="h-5 w-5 shrink-0" aria-hidden="true" />
               {!collapsed && <span>Search</span>}
-            </span>
+            </Link>
           </li>
           <li>
             <Link

@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type {
   AuditEntry,
+  DocumentFolder,
+  DocumentNote,
   DocumentResponse,
   DocumentStatus,
   DocumentTypeKey,
@@ -17,9 +19,10 @@ const FIVE_MIN = 5 * 60 * 1000;
 
 export interface DocumentListParams {
   status?: DocumentStatus | "";
+  folderId?: number | null;
   page?: number;
   size?: number;
-  sort?: string; // e.g. "createdAt,desc"
+  sort?: string;
 }
 
 export const documentKeys = {
@@ -29,6 +32,8 @@ export const documentKeys = {
   versions: (id: number) => ["documents", id, "versions"] as const,
   audit: (id: number) => ["documents", id, "audit"] as const,
   approvals: (id: number) => ["documents", id, "approvals"] as const,
+  notes: (id: number) => ["documents", id, "notes"] as const,
+  changeRequests: (id: number) => ["documents", id, "change-requests"] as const,
 };
 
 export function useDocumentList(params: DocumentListParams) {
@@ -43,7 +48,42 @@ export function useDocumentList(params: DocumentListParams) {
       search.set("sort", sort);
       return (await api.get(`/api/documents?${search.toString()}`)).data;
     },
-    placeholderData: (prev) => prev, // keep previous page visible while fetching next
+    placeholderData: (prev) => prev,
+  });
+}
+
+export function useDocumentFolders() {
+  return useQuery({
+    queryKey: ["document-folders"],
+    queryFn: async (): Promise<DocumentFolder[]> =>
+      (await api.get("/api/document-folders")).data,
+    staleTime: FIVE_MIN,
+  });
+}
+
+export function useCreateFolder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { name: string; parentId?: number | null }) =>
+      (await api.post("/api/document-folders", input)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["document-folders"] }),
+  });
+}
+
+export function useRenameFolder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, name }: { id: number; name: string }) =>
+      (await api.put(`/api/document-folders/${id}`, { name })).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["document-folders"] }),
+  });
+}
+
+export function useDeleteFolder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => api.delete(`/api/document-folders/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["document-folders"] }),
   });
 }
 
@@ -51,7 +91,7 @@ export function useDocument(id: number) {
   return useQuery({
     queryKey: documentKeys.detail(id),
     queryFn: async (): Promise<DocumentResponse> => (await api.get(`/api/documents/${id}`)).data,
-    staleTime: FIVE_MIN, // cache detail for 5 minutes (per spec)
+    staleTime: FIVE_MIN,
     enabled: Number.isFinite(id) && id > 0,
   });
 }
@@ -83,6 +123,72 @@ export function useDocumentApprovals(id: number) {
   });
 }
 
+export function useDocumentNotes(id: number) {
+  return useQuery({
+    queryKey: documentKeys.notes(id),
+    queryFn: async (): Promise<DocumentNote[]> =>
+      (await api.get(`/api/documents/${id}/notes`)).data,
+    enabled: Number.isFinite(id) && id > 0,
+  });
+}
+
+export function useDocumentChangeRequests(id: number) {
+  return useQuery({
+    queryKey: documentKeys.changeRequests(id),
+    queryFn: async (): Promise<DocumentNote[]> =>
+      (await api.get(`/api/documents/${id}/change-requests`)).data,
+    enabled: Number.isFinite(id) && id > 0,
+  });
+}
+
+export function useAddNote(documentId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (content: string) =>
+      (await api.post(`/api/documents/${documentId}/notes`, { content })).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: documentKeys.notes(documentId) }),
+  });
+}
+
+export function useAddChangeRequest(documentId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (content: string) =>
+      (await api.post(`/api/documents/${documentId}/change-requests`, { content })).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: documentKeys.changeRequests(documentId) }),
+  });
+}
+
+export function useDeleteNote(documentId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (noteId: number) =>
+      api.delete(`/api/documents/${documentId}/notes/${noteId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: documentKeys.notes(documentId) });
+      qc.invalidateQueries({ queryKey: documentKeys.changeRequests(documentId) });
+    },
+  });
+}
+
+export function useCheckOut(documentId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () =>
+      (await api.post(`/api/documents/${documentId}/check-out`, {})).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: documentKeys.detail(documentId) }),
+  });
+}
+
+export function useCheckIn(documentId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () =>
+      (await api.post(`/api/documents/${documentId}/check-in`, {})).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: documentKeys.detail(documentId) }),
+  });
+}
+
 export function useUsers() {
   return useQuery({
     queryKey: ["users"],
@@ -98,6 +204,7 @@ export interface CreateDocumentInput {
   type: DocumentTypeKey;
   content: string;
   reviewPeriodMonths?: number | null;
+  folderId?: number | null;
 }
 
 export function useCreateDocument() {
@@ -116,6 +223,7 @@ export interface UpdateDocumentInput {
   type: DocumentTypeKey;
   content: string;
   reviewPeriodMonths?: number | null;
+  folderId?: number | null;
   reason?: string;
 }
 
@@ -131,7 +239,6 @@ export function useUpdateDocument() {
   });
 }
 
-/** A simple workflow action that takes { expectedVersion, reason }. */
 export type DocumentAction =
   | "submit-for-review"
   | "submit-for-approval"
@@ -186,7 +293,6 @@ export function useApproveDocument() {
   });
 }
 
-/** Upload a file attachment to a document (uses the generic attachments API). */
 export function useUploadAttachment() {
   const qc = useQueryClient();
   return useMutation({

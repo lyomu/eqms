@@ -34,10 +34,10 @@ export const api = axios.create({
 /* mutating request will echo it back in the `X-XSRF-TOKEN` header. Until     */
 /* then this adds nothing, so it is safe to ship now.                         */
 /* -------------------------------------------------------------------------- */
-const CSRF_ENABLED = false;
 const CSRF_COOKIE_NAME = "XSRF-TOKEN";
 const CSRF_HEADER_NAME = "X-XSRF-TOKEN";
 const SAFE_METHODS = new Set(["get", "head", "options"]);
+let csrfBootstrap: Promise<void> | null = null;
 
 function readCookie(name: string): string | undefined {
   if (typeof document === "undefined") return undefined;
@@ -47,16 +47,27 @@ function readCookie(name: string): string | undefined {
   return match ? decodeURIComponent(match.split("=")[1]) : undefined;
 }
 
-api.interceptors.request.use((config) => {
-  if (CSRF_ENABLED) {
-    const method = (config.method ?? "get").toLowerCase();
-    if (!SAFE_METHODS.has(method)) {
-      const token = readCookie(CSRF_COOKIE_NAME);
-      if (token) {
-        config.headers.set(CSRF_HEADER_NAME, token);
-      }
-    }
+api.interceptors.request.use(async (config) => {
+  const method = (config.method ?? "get").toLowerCase();
+  if (SAFE_METHODS.has(method) || config.url?.includes("/api/auth/csrf")) {
+    return config;
   }
+
+  if (!readCookie(CSRF_COOKIE_NAME)) {
+    csrfBootstrap ??= axios
+      .get("/api/auth/csrf", { baseURL, withCredentials: true })
+      .then(() => undefined)
+      .finally(() => {
+        csrfBootstrap = null;
+      });
+    await csrfBootstrap;
+  }
+
+  const token = readCookie(CSRF_COOKIE_NAME);
+  if (token) {
+    config.headers.set(CSRF_HEADER_NAME, token);
+  }
+
   return config;
 });
 

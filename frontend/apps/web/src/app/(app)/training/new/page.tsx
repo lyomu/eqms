@@ -77,28 +77,27 @@ export default function NewTrainingPage() {
     try {
       const training = await create.mutateAsync({
         title,
-        content: buildTrainingContent({
-          numbering,
-          type,
-          title,
-          audience,
-          occurrence,
-          frequency,
-          start,
-          end,
-          completionDate,
-          releaseMode,
-          releaseDate,
-          mainTrainer,
-          selectedTrainers,
-          selectedDocuments,
-          sessions,
-          description,
-          objectives,
-          assessment,
-        }),
+        content: description,
         intendedAudience: audience,
         requiredFrequency: occurrence === "Once" ? "ON_HIRE" : frequency,
+        numbering,
+        trainingType: type || null,
+        occurrence,
+        startAt: toInstant(start),
+        endAt: toInstant(end),
+        completionTargetAt: toInstant(completionDate),
+        releaseMode,
+        releaseAt: releaseMode === "Scheduled" ? toInstant(releaseDate) : null,
+        mainTrainerName: mainTrainer || null,
+        additionalTrainers: selectedTrainers,
+        internalDocuments: selectedDocuments,
+        learningObjectives: objectives,
+        assessmentCriteria: assessment,
+        sessions: sessions.map((session, index) => ({
+          sessionIndex: index + 1,
+          startAt: toInstant(session.start),
+          endAt: toInstant(session.end),
+        })),
       });
       toast.success("Training program created");
       router.push(`/training/${training.id}`);
@@ -417,77 +416,6 @@ function TransferList({ items, empty, direction, onClick }: { items: string[]; e
   );
 }
 
-function buildTrainingContent(input: {
-  numbering: string;
-  type: string;
-  title: string;
-  audience: TrainingAudience;
-  occurrence: Occurrence;
-  frequency: TrainingFrequency;
-  start: string;
-  end: string;
-  completionDate: string;
-  releaseMode: ReleaseMode;
-  releaseDate: string;
-  mainTrainer: string;
-  selectedTrainers: string[];
-  selectedDocuments: string[];
-  sessions: { start: string; end: string }[];
-  description: string;
-  objectives: string;
-  assessment: string;
-}) {
-  const lines = [
-    `Numbering: ${input.numbering}`,
-    `Type: ${input.type || "Document Training"}`,
-    `Audience: ${AUDIENCE_LABELS[input.audience]}`,
-    `Occurrence: ${input.occurrence}`,
-    `Recurrence: ${input.occurrence === "Recurring" ? FREQUENCY_LABELS[input.frequency] : "-"}`,
-    `Start: ${input.start || "-"}`,
-    `End: ${input.end || "-"}`,
-    `Completion Date: ${input.completionDate || "-"}`,
-    `Release Date: ${input.releaseMode === "Scheduled" ? input.releaseDate || "Scheduled" : input.releaseMode}`,
-    `Main Trainer: ${input.mainTrainer || "-"}`,
-    `Additional Trainers: ${input.selectedTrainers.join(", ") || "-"}`,
-    `Features: ${featureSummary(input)}`,
-  ];
-  input.sessions.forEach((session, index) => {
-    if (input.occurrence === "Multiple" || session.start || session.end) {
-      lines.push(`Start ${index + 1}: ${session.start || "-"}`);
-      lines.push(`End ${index + 1}: ${session.end || "-"}`);
-    }
-  });
-  lines.push(`Documents: ${input.selectedDocuments.join("; ") || "-"}`);
-  lines.push("");
-  lines.push("Description:");
-  lines.push(stripRichText(input.description));
-  lines.push("");
-  lines.push("Learning Objectives:");
-  lines.push(stripRichText(input.objectives));
-  lines.push("");
-  lines.push("Assessment / Completion Criteria:");
-  lines.push(stripRichText(input.assessment));
-  return lines.join("\n");
-}
-
-function featureSummary(input: { occurrence: Occurrence; selectedDocuments: string[]; selectedTrainers: string[] }) {
-  const features: string[] = [input.occurrence];
-  if (input.selectedDocuments.length > 0) features.push(`${input.selectedDocuments.length} document(s)`);
-  if (input.selectedTrainers.length > 0) features.push(`${input.selectedTrainers.length} additional trainer(s)`);
-  return features.join(", ");
-}
-
-function stripRichText(value: string) {
-  return value
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/(div|p|li|h[1-6]|blockquote)>/gi, "\n")
-    .replace(/<[^>]*>/g, "")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#039;/g, "'")
-    .replace(/\n{2,}/g, "\n")
-    .trim();
+function toInstant(value: string) {
+  return value ? new Date(value).toISOString() : null;
 }

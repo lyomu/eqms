@@ -1,5 +1,7 @@
 package com.eqms.training;
 
+import java.time.Instant;
+
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
@@ -34,6 +36,45 @@ public class TrainingProgram extends RegulatedEntity {
 
     @Column(name = "content", columnDefinition = "text")
     private String content;
+
+    @Column(name = "numbering", length = 80)
+    private String numbering;
+
+    @Column(name = "training_type", length = 80)
+    private String trainingType;
+
+    @Column(name = "occurrence", length = 30)
+    private String occurrence;
+
+    @Column(name = "start_at")
+    private Instant startAt;
+
+    @Column(name = "end_at")
+    private Instant endAt;
+
+    @Column(name = "completion_target_at")
+    private Instant completionTargetAt;
+
+    @Column(name = "release_mode", length = 40)
+    private String releaseMode;
+
+    @Column(name = "release_at")
+    private Instant releaseAt;
+
+    @Column(name = "main_trainer_name", length = 200)
+    private String mainTrainerName;
+
+    @Column(name = "additional_trainers", columnDefinition = "text")
+    private String additionalTrainers;
+
+    @Column(name = "internal_documents", columnDefinition = "text")
+    private String internalDocuments;
+
+    @Column(name = "learning_objectives", columnDefinition = "text")
+    private String learningObjectives;
+
+    @Column(name = "assessment_criteria", columnDefinition = "text")
+    private String assessmentCriteria;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "intended_audience", nullable = false, length = 30)

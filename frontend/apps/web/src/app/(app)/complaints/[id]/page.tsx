@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { toast } from "sonner";
 import { useComplaint, useComplaintAudit, useComplaintAction } from "@/hooks/useComplaint";
 import { useUsers } from "@/hooks/useDocuments";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { LoadingScreen } from "@/components/ui/loading-spinner";
 import { ErrorAlert } from "@/components/ui/error-alert";
 import { ComplaintStatusBadge } from "@/components/complaints/ComplaintStatusBadge";
+import { ReasonModal } from "@/components/common/ReasonModal";
 import { SignatureModal } from "@/components/common/SignatureModal";
 import { ActionFormModal } from "@/components/common/ActionFormModal";
 import { AuditTrailTable } from "@/components/common/AuditTrailTable";
@@ -29,6 +29,7 @@ export default function ComplaintDetailPage() {
   const users = useUsers();
   const [ackOpen, setAckOpen] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
   const [modal, setModal] = useState<FormModal>(null);
 
   const ownerName = useMemo(() => {
@@ -41,12 +42,6 @@ export default function ComplaintDetailPage() {
   if (complaint.isError || !complaint.data) return <ErrorAlert title="Error" message="Failed to load this complaint." />;
   const c = complaint.data;
   const inv = c.investigation;
-
-  function cancel() {
-    const reason = window.prompt("Reason for cancelling:");
-    if (reason === null) return;
-    action.mutate({ path: "cancel", body: { expectedVersion: c.version, reason: reason || "Cancelled" } }, { onSuccess: () => toast.success("Done") });
-  }
 
   return (
     <div className="space-y-4">
@@ -76,7 +71,7 @@ export default function ComplaintDetailPage() {
           )}
           {c.status === "RESOLVED" && <Button onClick={() => setCloseOpen(true)}>Close</Button>}
           {!["CLOSED", "CANCELLED"].includes(c.status) && (
-            <Button variant="ghost" onClick={cancel} disabled={action.isPending}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setCancelOpen(true)} disabled={action.isPending}>Cancel</Button>
           )}
         </div>
       </div>
@@ -148,6 +143,17 @@ export default function ComplaintDetailPage() {
         onSign={async (creds) => { await action.mutateAsync({ path: "acknowledge", body: { expectedVersion: c.version, reason: creds.reason || "Acknowledged within SLA", password: creds.password, totpCode: creds.totpCode, meaningStatement: creds.meaningStatement } }); }} />
       <SignatureModal open={closeOpen} onOpenChange={setCloseOpen} title="Close Complaint" recordNumber={c.complaintNo} recordTitle={c.complaintDescription} recordNoun="complaint" statusNode={<ComplaintStatusBadge status={c.status} />} isPending={action.isPending} successMessage="Complaint closed"
         onSign={async (creds) => { await action.mutateAsync({ path: "close", body: { expectedVersion: c.version, reason: creds.reason || "Closed", password: creds.password, totpCode: creds.totpCode, meaningStatement: creds.meaningStatement } }); }} />
+      <ReasonModal
+        open={cancelOpen}
+        onOpenChange={setCancelOpen}
+        title="Cancel Complaint"
+        defaultReason="Cancelled"
+        submitLabel="Confirm"
+        isPending={action.isPending}
+        onSubmit={async (reason) => {
+          await action.mutateAsync({ path: "cancel", body: { expectedVersion: c.version, reason } });
+        }}
+      />
 
       {/* Structured sub-actions */}
       <ActionFormModal open={modal === "investigate"} onOpenChange={(o) => !o && setModal(null)} title="Investigate" isPending={action.isPending} successMessage="Investigation recorded"

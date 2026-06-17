@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { LoadingScreen } from "@/components/ui/loading-spinner";
 import { ErrorAlert } from "@/components/ui/error-alert";
 import { MaterialStatusBadge } from "@/components/materials/MaterialStatusBadge";
+import { ReasonModal } from "@/components/common/ReasonModal";
 import { SignatureModal } from "@/components/common/SignatureModal";
 import { AuditTrailTable } from "@/components/common/AuditTrailTable";
 import { formatDate } from "@/lib/format";
@@ -33,6 +34,7 @@ export default function MaterialDetailPage() {
   const approve = useApproveMaterial();
   const users = useUsers();
   const [approveOpen, setApproveOpen] = useState(false);
+  const [reasonAction, setReasonAction] = useState<null | { action: MaterialAction; title: string; defaultReason: string }>(null);
 
   const ownerName = useMemo(() => {
     const by = material.data?.createdBy;
@@ -53,10 +55,8 @@ export default function MaterialDetailPage() {
     }
   }
 
-  function promptAction(act: MaterialAction, message: string, fallback: string) {
-    const reason = window.prompt(message);
-    if (reason === null) return;
-    runAction(act, reason || fallback);
+  function requestReasonAction(act: MaterialAction, title: string, defaultReason: string) {
+    setReasonAction({ action: act, title, defaultReason });
   }
 
   return (
@@ -84,20 +84,20 @@ export default function MaterialDetailPage() {
           )}
           {m.status === "PENDING_APPROVAL" && (
             <>
-              <Button variant="outline" onClick={() => promptAction("reject", "Reason for rejection:", "Rejected")} disabled={transition.isPending}>Reject</Button>
+              <Button variant="outline" onClick={() => requestReasonAction("reject", "Reject Material", "Rejected")} disabled={transition.isPending}>Reject</Button>
               <Button onClick={() => setApproveOpen(true)}>Approve</Button>
             </>
           )}
           {m.status === "APPROVED" && (
             <>
-              <Button variant="outline" onClick={() => promptAction("put-on-hold", "Reason for hold:", "On hold")} disabled={transition.isPending}>Put On Hold</Button>
-              <Button variant="outline" onClick={() => promptAction("obsolete", "Reason for obsoleting:", "Obsoleted")} disabled={transition.isPending}>Obsolete</Button>
+              <Button variant="outline" onClick={() => requestReasonAction("put-on-hold", "Put Material On Hold", "On hold")} disabled={transition.isPending}>Put On Hold</Button>
+              <Button variant="outline" onClick={() => requestReasonAction("obsolete", "Obsolete Material", "Obsoleted")} disabled={transition.isPending}>Obsolete</Button>
             </>
           )}
           {m.status === "ON_HOLD" && (
             <>
               <Button onClick={() => runAction("release", "Released")} disabled={transition.isPending}>Release</Button>
-              <Button variant="outline" onClick={() => promptAction("obsolete", "Reason for obsoleting:", "Obsoleted")} disabled={transition.isPending}>Obsolete</Button>
+              <Button variant="outline" onClick={() => requestReasonAction("obsolete", "Obsolete Material", "Obsoleted")} disabled={transition.isPending}>Obsolete</Button>
             </>
           )}
         </div>
@@ -151,6 +151,18 @@ export default function MaterialDetailPage() {
         successMessage="Approved successfully"
         onSign={async (creds) => {
           await approve.mutateAsync({ id, expectedVersion: m.version, password: creds.password, totpCode: creds.totpCode, reason: creds.reason, meaningStatement: creds.meaningStatement });
+        }}
+      />
+      <ReasonModal
+        open={!!reasonAction}
+        onOpenChange={(open) => !open && setReasonAction(null)}
+        title={reasonAction?.title ?? "Workflow Action"}
+        defaultReason={reasonAction?.defaultReason ?? ""}
+        submitLabel="Confirm"
+        isPending={transition.isPending}
+        onSubmit={async (reason) => {
+          if (!reasonAction) return;
+          await transition.mutateAsync({ id, action: reasonAction.action, expectedVersion: m.version, reason });
         }}
       />
     </div>
