@@ -30,13 +30,21 @@ const IMPORTANCE_OPTIONS = [
   { value: "NA",       label: "N/A",      ncType: "PROCESS" as NcType },
 ];
 
+// ─── ABOUT categories ─────────────────────────────────────────────────────────
+
+type AboutCategory = "Products" | "Processes" | "Customers" | "Suppliers" | "Users" | "Employees" | "Various";
+
+const ABOUT_CATEGORIES: AboutCategory[] = [
+  "Products", "Processes", "Customers", "Suppliers", "Users", "Employees", "Various",
+];
+
 // ─── Form schema ──────────────────────────────────────────────────────────────
 
 const schema = z.object({
-  productId:   z.string().optional(),
-  productRef:  z.string().optional(),
-  importance:  z.enum(["CRITICAL", "MAJOR", "MINOR", "NA"]).default("MINOR"),
-  description: z.string().trim().min(1, "Details are required"),
+  aboutCategory: z.string().default("Products"),
+  aboutEntryId:  z.string().optional(),
+  importance:    z.enum(["CRITICAL", "MAJOR", "MINOR", "NA"]).default("MINOR"),
+  description:   z.string().trim().min(1, "Details are required"),
 });
 type FormValues = z.infer<typeof schema>;
 
@@ -58,6 +66,7 @@ export default function NewNonConformancePage() {
     keywords:    false,
     documents:   false,
   });
+  const [aboutCategory, setAboutCategory] = useState<AboutCategory>("Products");
   const [containmentDetails, setContainmentDetails] = useState("");
   const [keywords,           setKeywords]           = useState("");
   const [assignStatus,       setAssignStatus]       = useState("");
@@ -92,8 +101,8 @@ export default function NewNonConformancePage() {
         title:            values.description.slice(0, 100),
         description:      values.description,
         ncType,
-        affectedItemId:   values.productId ? Number(values.productId) : null,
-        affectedItemType: values.productId ? "PRODUCT" : null,
+        affectedItemId:   values.aboutEntryId ? Number(values.aboutEntryId) : null,
+        affectedItemType: values.aboutEntryId ? aboutCategory.toUpperCase() : null,
         discoveredBy:     null,
       });
       toast.success("Non-conformance created");
@@ -189,22 +198,30 @@ export default function NewNonConformancePage() {
             <span className="text-destructive">*</span>
             <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
           </div>
-          <div className="flex flex-wrap items-start gap-3">
-            <div className="min-w-[220px] flex-1">
-              <Select {...register("productId")} className="w-full">
-                <option value="">Products</option>
-                {products.data?.content.map((p) => (
-                  <option key={p.id} value={String(p.id)}>
-                    {p.productCode} — {p.name}
-                  </option>
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Category selector */}
+            <div className="min-w-[200px] flex-1">
+              <Select
+                value={aboutCategory}
+                onChange={(e) => {
+                  setAboutCategory(e.target.value as AboutCategory);
+                  // reset the entry picker when category changes
+                }}
+                className="w-full"
+              >
+                {ABOUT_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>{c}</option>
                 ))}
               </Select>
             </div>
-            <div className="flex min-w-[180px] flex-1 items-center gap-1">
-              <Input
-                {...register("productRef")}
-                placeholder=""
-                className="flex-1 border border-border bg-background"
+
+            {/* Context-sensitive entry picker */}
+            <div className="flex min-w-[220px] flex-1 items-center gap-1">
+              <AboutEntryPicker
+                category={aboutCategory}
+                products={products.data?.content ?? []}
+                users={users.data ?? []}
+                register={register}
               />
               <Button type="button" variant="outline" size="icon">
                 <List className="h-4 w-4" />
@@ -212,7 +229,7 @@ export default function NewNonConformancePage() {
             </div>
           </div>
           <button type="button" className="mt-2 text-label text-brand-primary hover:underline">
-            or Add New Products
+            or Add New {aboutCategory}
           </button>
         </div>
 
@@ -512,6 +529,58 @@ function GreenToggle({ open }: { open: boolean }) {
     >
       {open ? "−" : "+"}
     </span>
+  );
+}
+
+// ─── AboutEntryPicker ─────────────────────────────────────────────────────────
+
+type Product = { id: number; productCode: string; name: string };
+type User    = { id: number; fullName: string };
+
+function AboutEntryPicker({
+  category,
+  products,
+  users,
+  register,
+}: {
+  category: AboutCategory;
+  products: Product[];
+  users: User[];
+  register: ReturnType<typeof import("react-hook-form").useForm<FormValues>>["register"];
+}) {
+  if (category === "Products") {
+    return (
+      <Select {...register("aboutEntryId")} className="flex-1">
+        <option value="">Select a product…</option>
+        {products.map((p) => (
+          <option key={p.id} value={String(p.id)}>
+            {p.productCode} — {p.name}
+          </option>
+        ))}
+      </Select>
+    );
+  }
+
+  if (category === "Users" || category === "Employees") {
+    return (
+      <Select {...register("aboutEntryId")} className="flex-1">
+        <option value="">Select a {category.toLowerCase().slice(0, -1)}…</option>
+        {users.map((u) => (
+          <option key={u.id} value={String(u.id)}>
+            {u.fullName}
+          </option>
+        ))}
+      </Select>
+    );
+  }
+
+  // Processes / Customers / Suppliers / Various — no API yet, free text
+  return (
+    <Input
+      {...register("aboutEntryId")}
+      placeholder={`Enter ${category.toLowerCase().replace(/s$/, "")} name…`}
+      className="flex-1 border border-border bg-background"
+    />
   );
 }
 
