@@ -47,6 +47,7 @@
     <include file="db/changelog/v030-document-folders-notes.xml"/>
     <include file="db/changelog/v031-password-reset.xml"/>
     <include file="db/changelog/v032-training-metadata.xml"/>
+    <include file="db/changelog/v033-record-comments.xml"/>
     <include file="db/changelog/v999-privileges.xml"/>
 
 </databaseChangeLog>

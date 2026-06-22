@@ -17,6 +17,7 @@ import { SignatureModal } from "@/components/common/SignatureModal";
 import { ReasonModal } from "@/components/common/ReasonModal";
 import { ActionFormModal, type FieldDef } from "@/components/common/ActionFormModal";
 import { AuditTrailTable } from "@/components/common/AuditTrailTable";
+import { RecordDossierPanel } from "@/components/common/RecordDossierPanel";
 import { formatDate } from "@/lib/format";
 import { CATEGORY_LABELS, riskScoreClass } from "@/types/risk";
 import { cn } from "@/lib/utils";
@@ -183,6 +184,26 @@ export default function RiskDetailPage() {
         <CardHeader><CardTitle>Audit Trail</CardTitle></CardHeader>
         <CardContent><AuditTrailTable entries={trail.data} isLoading={trail.isLoading} isError={trail.isError} /></CardContent>
       </Card>
+
+      <RecordDossierPanel
+        recordType="Risk"
+        recordId={r.id}
+        recordNumber={r.riskNo}
+        title={r.title}
+        fields={[
+          { label: "Status", value: <RiskStatusBadge status={r.status} /> },
+          { label: "Category", value: CATEGORY_LABELS[r.category] },
+          { label: "Risk Score", value: r.riskScore ?? "-" },
+          { label: "Accepted", value: formatDate(r.acceptedDate) },
+          { label: "Closed", value: formatDate(r.closedDate) },
+          { label: "Controls", value: r.mitigations.length },
+        ]}
+        sections={[
+          { title: "Description", content: <p className="whitespace-pre-wrap">{r.description}</p> },
+          { title: "Potential Impact", content: <p className="whitespace-pre-wrap">{r.potentialImpact}</p> },
+          { title: "Analysis", content: r.analysis?.findings || "No analysis recorded." },
+        ]}
+      />
 
       <SignatureModal open={acceptOpen} onOpenChange={setAcceptOpen} title="Accept Risk" recordNumber={r.riskNo} recordTitle={r.title} recordNoun="risk" statusNode={<RiskStatusBadge status={r.status} />} isPending={action.isPending} successMessage="Risk accepted"
         onSign={async (creds) => { await action.mutateAsync({ path: "accept", body: { expectedVersion: r.version, reason: creds.reason || "Residual risk accepted by management", password: creds.password, totpCode: creds.totpCode, meaningStatement: creds.meaningStatement } }); }} />

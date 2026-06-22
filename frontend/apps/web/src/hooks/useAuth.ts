@@ -45,6 +45,12 @@ export function useAuth() {
       const { data } = await api.post<LoginResponse>("/api/auth/login", vars);
       return data;
     },
+    onSuccess: async (data) => {
+      // Refetch /me so ProtectedRoute sees isAuthenticated=true before router.push fires.
+      if (data.status === "AUTHENTICATED") {
+        await queryClient.refetchQueries({ queryKey: ME_QUERY_KEY });
+      }
+    },
   });
 
   /** Step 2a: fetch enrollment material (only when status === ENROLLMENT_REQUIRED). */
@@ -63,7 +69,7 @@ export function useAuth() {
     },
     onSuccess: async (data) => {
       if (data.status === "AUTHENTICATED") {
-        await queryClient.invalidateQueries({ queryKey: ME_QUERY_KEY });
+        await queryClient.refetchQueries({ queryKey: ME_QUERY_KEY });
       }
     },
   });

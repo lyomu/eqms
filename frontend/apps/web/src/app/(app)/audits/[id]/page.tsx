@@ -16,6 +16,7 @@ import { ReasonModal } from "@/components/common/ReasonModal";
 import { SignatureModal } from "@/components/common/SignatureModal";
 import { ActionFormModal, type FieldDef } from "@/components/common/ActionFormModal";
 import { AuditTrailTable } from "@/components/common/AuditTrailTable";
+import { RecordDossierPanel } from "@/components/common/RecordDossierPanel";
 import { formatDate } from "@/lib/format";
 import { FINDING_SEVERITY_VARIANT, type FindingSeverity } from "@/types/audit";
 
@@ -155,6 +156,25 @@ export default function AuditDetailPage() {
         <CardHeader><CardTitle>Audit Trail</CardTitle></CardHeader>
         <CardContent><AuditTrailTable entries={trail.data} isLoading={trail.isLoading} isError={trail.isError} /></CardContent>
       </Card>
+
+      <RecordDossierPanel
+        recordType="Audit"
+        recordId={a.id}
+        recordNumber={a.auditNo}
+        title={a.auditTitle}
+        fields={[
+          { label: "Status", value: <AuditStatusBadge status={a.status} /> },
+          { label: "Type", value: a.auditType },
+          { label: "Audit Date", value: formatDate(a.auditDate) },
+          { label: "Auditee", value: users.data?.find((u) => u.id === a.auditeeId)?.fullName ?? (a.auditeeId ? `User #${a.auditeeId}` : "-") },
+          { label: "Completed", value: formatDate(a.completedDate) },
+          { label: "Findings", value: a.findings.length },
+        ]}
+        sections={[
+          { title: "Scope", content: <p className="whitespace-pre-wrap">{a.scope}</p> },
+          { title: "Findings Summary", content: a.findings.length ? `${a.findings.length} finding(s) recorded; ${a.findings.filter((f) => f.correctiveActionRequired).length} require corrective action.` : "No findings recorded." },
+        ]}
+      />
 
       <SignatureModal open={finalizeOpen} onOpenChange={setFinalizeOpen} title="Finalize Audit" recordNumber={a.auditNo} recordTitle={a.auditTitle} recordNoun="audit" statusNode={<AuditStatusBadge status={a.status} />} isPending={action.isPending} successMessage="Audit finalized"
         onSign={async (creds) => { await action.mutateAsync({ path: "finalize", body: { expectedVersion: a.version, reason: creds.reason || "Audit completed", password: creds.password, totpCode: creds.totpCode, meaningStatement: creds.meaningStatement } }); }} />

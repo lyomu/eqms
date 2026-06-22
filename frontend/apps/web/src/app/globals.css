@@ -31,6 +31,38 @@
   .rich-text-content a {
     @apply font-semibold text-brand-primary underline;
   }
+
+  .rich-text-content [data-align="center"] {
+    text-align: center;
+  }
+
+  .rich-text-content [data-align="right"] {
+    text-align: right;
+  }
+
+  .rich-text-content [data-align="justify"] {
+    text-align: justify;
+  }
+
+  .rich-text-content [data-color="brand"] {
+    @apply text-brand-primary;
+  }
+
+  .rich-text-content [data-highlight="warning"] {
+    @apply bg-warning/20;
+  }
+
+  .rich-text-content [data-indent="1"] {
+    @apply ml-6 inline-block;
+  }
+
+  .rich-text-content [data-size="small"] {
+    @apply text-label;
+  }
+
+  .rich-text-content [data-size="large"] {
+    @apply text-h3;
+  }
 }
 
 /**

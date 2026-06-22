@@ -17,6 +17,7 @@ import { OosStatusBadge } from "@/components/oos/OosStatusBadge";
 import { SignatureModal } from "@/components/common/SignatureModal";
 import { ActionFormModal } from "@/components/common/ActionFormModal";
 import { AuditTrailTable } from "@/components/common/AuditTrailTable";
+import { RecordDossierPanel } from "@/components/common/RecordDossierPanel";
 import { formatDate } from "@/lib/format";
 import { LIKELY_CAUSE_LABELS, type OosDisposition } from "@/types/oos";
 
@@ -153,6 +154,26 @@ export default function OosDetailPage() {
         <CardHeader><CardTitle>Audit Trail</CardTitle></CardHeader>
         <CardContent><AuditTrailTable entries={trail.data} isLoading={trail.isLoading} isError={trail.isError} /></CardContent>
       </Card>
+
+      <RecordDossierPanel
+        recordType="OOS"
+        recordId={o.id}
+        recordNumber={o.oosNo}
+        title={o.reportedResult}
+        fields={[
+          { label: "Status", value: <OosStatusBadge status={o.status} /> },
+          { label: "Test Method", value: o.testMethod || "-" },
+          { label: "Reported Result", value: o.reportedResult },
+          { label: "Specification", value: `${o.specificationLimitMin ?? "-"} - ${o.specificationLimitMax ?? "-"}` },
+          { label: "Reported By", value: o.reportedByName || "-" },
+          { label: "Closed", value: formatDate(o.closedDate) },
+        ]}
+        sections={[
+          { title: "Initial Assessment", content: o.initialAssessment?.assessmentFindings ? <p className="whitespace-pre-wrap">{o.initialAssessment.assessmentFindings}</p> : "No assessment recorded." },
+          { title: "Investigation", content: o.investigation?.rootCause || o.investigation?.investigationFindings || "No investigation recorded." },
+          { title: "Disposition", content: o.disposition ? `${o.disposition.disposition}: ${o.disposition.rationale}` : "No disposition recorded." },
+        ]}
+      />
 
       {/* Determine disposition (signed + decision + rationale) */}
       <SignatureModal open={dispoOpen} onOpenChange={(open) => { if (!open) setRationale(""); setDispoOpen(open); }} title="Determine Disposition" recordNumber={o.oosNo} recordTitle={o.reportedResult} recordNoun="OOS case" statusNode={<OosStatusBadge status={o.status} />} isPending={action.isPending} successMessage="Disposition determined"

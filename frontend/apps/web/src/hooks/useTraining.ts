@@ -14,6 +14,33 @@ import type {
 
 const FIVE_MIN = 5 * 60 * 1000;
 
+function stringList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+  }
+  if (typeof value !== "string" || !value.trim()) return [];
+
+  return value
+    .split(/\r?\n/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function normalizeTraining(value: TrainingResponse): TrainingResponse {
+  const raw = value as TrainingResponse & {
+    additionalTrainers?: unknown;
+    internalDocuments?: unknown;
+    sessions?: unknown;
+  };
+
+  return {
+    ...value,
+    additionalTrainers: stringList(raw.additionalTrainers),
+    internalDocuments: stringList(raw.internalDocuments),
+    sessions: Array.isArray(raw.sessions) ? raw.sessions : [],
+  };
+}
+
 export interface TrainingListParams {
   audience?: TrainingAudience | "";
   frequency?: TrainingFrequency | "";
@@ -42,7 +69,8 @@ export function useTrainingList(params: TrainingListParams) {
     queryFn: async (): Promise<PageResponse<TrainingResponse>> => {
       const s = new URLSearchParams({ page: String(page), size: String(size), sort });
       if (audience) s.set("audience", audience);
-      return (await api.get(`/api/training?${s.toString()}`)).data;
+      const response = (await api.get<PageResponse<TrainingResponse>>(`/api/training?${s.toString()}`)).data;
+      return { ...response, content: response.content.map(normalizeTraining) };
     },
     placeholderData: (prev) => prev,
   });
@@ -51,7 +79,7 @@ export function useTrainingList(params: TrainingListParams) {
 export function useTraining(id: number) {
   return useQuery({
     queryKey: trainingKeys.detail(id),
-    queryFn: async (): Promise<TrainingResponse> => (await api.get(`/api/training/${id}`)).data,
+    queryFn: async (): Promise<TrainingResponse> => normalizeTraining((await api.get(`/api/training/${id}`)).data),
     enabled: id > 0,
     staleTime: FIVE_MIN,
   });
@@ -96,7 +124,7 @@ export function useCreateTraining() {
       assessmentCriteria?: string | null;
       sessions?: Array<{ sessionIndex: number; startAt?: string | null; endAt?: string | null }>;
     }): Promise<TrainingResponse> =>
-      (await api.post("/api/training", input)).data,
+      normalizeTraining((await api.post("/api/training", input)).data),
     onSuccess: () => qc.invalidateQueries({ queryKey: trainingKeys.all }),
   });
 }

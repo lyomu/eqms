@@ -37,7 +37,7 @@
             -- Regulated MUTABLE tables: SELECT, INSERT, UPDATE (NO DELETE -> soft delete only).
             GRANT SELECT, INSERT, UPDATE ON
                 sites, departments, roles, permissions, users, user_roles,
-                role_permissions, attachments, record_sequences,
+                role_permissions, attachments, record_comments, record_sequences,
                 organizations, organization_sites, plans, modules, plan_modules,
                 organization_subscriptions, organization_licenses, organization_module_licenses,
                 platform_admins, organization_settings,

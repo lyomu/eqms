@@ -5,6 +5,13 @@ const ALLOWED_TAGS = new Set([
 ]);
 
 const SAFE_URL = /^(https?:|mailto:)/i;
+const DATA_ATTRS: Record<string, Set<string>> = {
+  "data-align": new Set(["left", "center", "right", "justify"]),
+  "data-color": new Set(["brand"]),
+  "data-highlight": new Set(["warning"]),
+  "data-indent": new Set(["1"]),
+  "data-size": new Set(["small", "normal", "large"]),
+};
 
 export function sanitizeHtml(html: string | null | undefined): string {
   if (!html) return "";
@@ -29,6 +36,9 @@ function sanitizeNode(node: Node) {
         const value = attr.value;
         if (name.startsWith("on") || name === "style" || name === "class") {
           element.removeAttribute(attr.name);
+          return;
+        }
+        if (name in DATA_ATTRS && DATA_ATTRS[name].has(value)) {
           return;
         }
         if (element.tagName === "A" && name === "href" && SAFE_URL.test(value)) {

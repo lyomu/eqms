@@ -15,6 +15,7 @@ import { EquipmentStatusBadge } from "@/components/equipment/EquipmentStatusBadg
 import { ReasonModal } from "@/components/common/ReasonModal";
 import { ActionFormModal } from "@/components/common/ActionFormModal";
 import { AuditTrailTable } from "@/components/common/AuditTrailTable";
+import { RecordDossierPanel } from "@/components/common/RecordDossierPanel";
 import { formatDate } from "@/lib/format";
 import { equipmentTypeLabel } from "@/types/equipment";
 
@@ -143,6 +144,25 @@ export default function EquipmentDetailPage() {
           {tab === "audit" && <AuditTrailTable entries={trail.data} isLoading={trail.isLoading} isError={trail.isError} />}
         </CardContent>
       </Card>
+
+      <RecordDossierPanel
+        recordType="Equipment"
+        recordId={e.id}
+        recordNumber={e.equipmentCode}
+        title={e.equipmentName}
+        fields={[
+          { label: "Status", value: <EquipmentStatusBadge status={e.status} /> },
+          { label: "Type", value: equipmentTypeLabel(e.equipmentType) },
+          { label: "Location", value: e.location || "-" },
+          { label: "Last Calibration", value: formatDate(e.lastCalibrationDate) },
+          { label: "Next Calibration", value: formatDate(e.nextCalibrationDate) },
+          { label: "Version", value: e.version },
+        ]}
+        sections={[
+          { title: "Asset Identity", content: `${e.manufacturer || "Unknown manufacturer"} ${e.model || ""} ${e.serialNumber ? `- serial ${e.serialNumber}` : ""}` },
+          { title: "Maintenance", content: `${e.maintenanceHistory.length} maintenance record(s) and ${e.specifications.length} specification(s) on file.` },
+        ]}
+      />
 
       <ActionFormModal open={modal === "perform"} onOpenChange={(o) => !o && setModal(null)} title="Perform Calibration" isPending={action.isPending} successMessage="Calibration recorded"
         fields={[
