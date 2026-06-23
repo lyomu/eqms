@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { ErrorAlert } from "@/components/ui/error-alert";
 import { cn } from "@/lib/utils";
 import { CATEGORY_LABELS, type RiskCategory } from "@/types/risk";
@@ -69,6 +69,8 @@ export default function NewRiskPage() {
     register,
     handleSubmit,
     control,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -197,21 +199,23 @@ export default function NewRiskPage() {
 
             {/* Description */}
             <FormField label="Risk Description" required error={errors.description?.message} className="sm:col-span-2">
-              <Textarea
-                rows={4}
-                placeholder="Describe the risk in detail — what could go wrong, under what conditions, in which processes or areas…"
+              <RichTextEditor
+                id="description"
+                value={watch("description") ?? ""}
+                minHeight={140}
                 aria-invalid={!!errors.description}
-                {...register("description")}
+                onChange={(v) => setValue("description", v, { shouldDirty: true, shouldValidate: true })}
               />
             </FormField>
 
             {/* Potential Impact */}
             <FormField label="Potential Impact / Effect" required error={errors.potentialImpact?.message} className="sm:col-span-2">
-              <Textarea
-                rows={3}
-                placeholder="What are the consequences if this risk materialises? Consider quality, safety, regulatory, and business impact…"
+              <RichTextEditor
+                id="potentialImpact"
+                value={watch("potentialImpact") ?? ""}
+                minHeight={120}
                 aria-invalid={!!errors.potentialImpact}
-                {...register("potentialImpact")}
+                onChange={(v) => setValue("potentialImpact", v, { shouldDirty: true, shouldValidate: true })}
               />
             </FormField>
           </CardContent>
@@ -223,10 +227,11 @@ export default function NewRiskPage() {
           <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {/* Scope / Context */}
             <FormField label="Scope / Context of Risk" className="sm:col-span-2">
-              <Textarea
-                rows={2}
-                placeholder="Define the scope, processes, or systems affected by this risk…"
-                {...register("scope")}
+              <RichTextEditor
+                id="scope"
+                value={watch("scope") ?? ""}
+                minHeight={100}
+                onChange={(v) => setValue("scope", v, { shouldDirty: true })}
               />
             </FormField>
 
@@ -237,22 +242,42 @@ export default function NewRiskPage() {
 
             {/* Possible Cause */}
             <FormField label="Possible Cause" className="sm:col-span-2">
-              <Textarea rows={2} placeholder="What could cause this risk to occur?" {...register("possibleCause")} />
+              <RichTextEditor
+                id="possibleCause"
+                value={watch("possibleCause") ?? ""}
+                minHeight={100}
+                onChange={(v) => setValue("possibleCause", v, { shouldDirty: true })}
+              />
             </FormField>
 
             {/* Possible Effect */}
             <FormField label="Possible Effect / Impact" className="sm:col-span-2">
-              <Textarea rows={2} placeholder="What would happen if this risk materialises?" {...register("possibleEffect")} />
+              <RichTextEditor
+                id="possibleEffect"
+                value={watch("possibleEffect") ?? ""}
+                minHeight={100}
+                onChange={(v) => setValue("possibleEffect", v, { shouldDirty: true })}
+              />
             </FormField>
 
             {/* Existing Controls */}
             <FormField label="Existing Controls" className="sm:col-span-2">
-              <Textarea rows={2} placeholder="What controls are currently in place to prevent or detect this risk?" {...register("existingControls")} />
+              <RichTextEditor
+                id="existingControls"
+                value={watch("existingControls") ?? ""}
+                minHeight={100}
+                onChange={(v) => setValue("existingControls", v, { shouldDirty: true })}
+              />
             </FormField>
 
             {/* Control Gaps */}
             <FormField label="Control Gaps" className="sm:col-span-2">
-              <Textarea rows={2} placeholder="Where are the gaps in existing controls?" {...register("controlGaps")} />
+              <RichTextEditor
+                id="controlGaps"
+                value={watch("controlGaps") ?? ""}
+                minHeight={100}
+                onChange={(v) => setValue("controlGaps", v, { shouldDirty: true })}
+              />
             </FormField>
 
             {/* Affected Products */}
