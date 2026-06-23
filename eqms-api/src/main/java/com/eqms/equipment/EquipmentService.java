@@ -230,7 +230,10 @@ public class EquipmentService {
                                 + request.calibrationDate() + ". "
                                 + (request.notes() != null ? request.notes() : "No additional notes."),
                         "Equipment quarantined and marked Out of Calibration. Investigation required before return to service.",
-                        request.calibrationDate().atStartOfDay(java.time.ZoneOffset.UTC).toInstant()),
+                        request.calibrationDate().atStartOfDay(java.time.ZoneOffset.UTC).toInstant(),
+                        null, null, null, null, null, null, null, null, null, null, null,
+                        null, null, null, null, null, null, null,
+                        null, null, null, null, null, null, null, null, null, null, null),
                 actorId, actorName, ip, ua);
 
         return equipment;

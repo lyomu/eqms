@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <!-- Extended Deviation module: additional columns + sub-entity tables. -->
+
+    <changeSet id="v035-1" author="system">
+        <sql>
+            ALTER TABLE deviations ADD COLUMN IF NOT EXISTS deviation_type VARCHAR(20);
+            ALTER TABLE deviations ADD COLUMN IF NOT EXISTS category VARCHAR(50);
+            ALTER TABLE deviations ADD COLUMN IF NOT EXISTS related_module VARCHAR(30);
+            ALTER TABLE deviations ADD COLUMN IF NOT EXISTS department VARCHAR(200);
+            ALTER TABLE deviations ADD COLUMN IF NOT EXISTS site VARCHAR(200);
+            ALTER TABLE deviations ADD COLUMN IF NOT EXISTS location VARCHAR(200);
+            ALTER TABLE deviations ADD COLUMN IF NOT EXISTS date_discovered TIMESTAMPTZ;
+            ALTER TABLE deviations ADD COLUMN IF NOT EXISTS date_reported TIMESTAMPTZ;
+            ALTER TABLE deviations ADD COLUMN IF NOT EXISTS reported_by_id BIGINT REFERENCES users(id);
+            ALTER TABLE deviations ADD COLUMN IF NOT EXISTS owner_id BIGINT REFERENCES users(id);
+            ALTER TABLE deviations ADD COLUMN IF NOT EXISTS qa_owner_id BIGINT REFERENCES users(id);
+            ALTER TABLE deviations ADD COLUMN IF NOT EXISTS initial_risk_level VARCHAR(20);
+            ALTER TABLE deviations ADD COLUMN IF NOT EXISTS final_severity VARCHAR(20);
+            ALTER TABLE deviations ADD COLUMN IF NOT EXISTS final_risk_level VARCHAR(20);
+            ALTER TABLE deviations ADD COLUMN IF NOT EXISTS product_affected BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE deviations ADD COLUMN IF NOT EXISTS material_affected BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE deviations ADD COLUMN IF NOT EXISTS batch_affected BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE deviations ADD COLUMN IF NOT EXISTS equipment_affected BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE deviations ADD COLUMN IF NOT EXISTS supplier_involved BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE deviations ADD COLUMN IF NOT EXISTS customer_impact_possible BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE deviations ADD COLUMN IF NOT EXISTS regulatory_impact_possible BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE deviations ADD COLUMN IF NOT EXISTS data_integrity_impact_possible BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE deviations ADD COLUMN IF NOT EXISTS containment_required BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE deviations ADD COLUMN IF NOT EXISTS investigation_required BOOLEAN NOT NULL DEFAULT TRUE;
+            ALTER TABLE deviations ADD COLUMN IF NOT EXISTS capa_required BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE deviations ADD COLUMN IF NOT EXISTS change_control_required BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE deviations ADD COLUMN IF NOT EXISTS target_investigation_due_date DATE;
+            ALTER TABLE deviations ADD COLUMN IF NOT EXISTS target_closure_due_date DATE;
+            ALTER TABLE deviations ADD COLUMN IF NOT EXISTS what_happened TEXT;
+            ALTER TABLE deviations ADD COLUMN IF NOT EXISTS where_happened VARCHAR(500);
+            ALTER TABLE deviations ADD COLUMN IF NOT EXISTS how_detected VARCHAR(500);
+            ALTER TABLE deviations ADD COLUMN IF NOT EXISTS who_involved VARCHAR(500);
+            ALTER TABLE deviations ADD COLUMN IF NOT EXISTS reopen_reason TEXT;
+            ALTER TABLE deviations ADD COLUMN IF NOT EXISTS reopened_at TIMESTAMPTZ;
+            ALTER TABLE deviations ADD COLUMN IF NOT EXISTS reopened_by_id BIGINT REFERENCES users(id);
+        </sql>
+    </changeSet>
+
+    <changeSet id="v035-2" author="system">
+        <sql>
+            CREATE TABLE IF NOT EXISTS deviation_containment_actions (
+              id BIGSERIAL PRIMARY KEY,
+              version INTEGER NOT NULL DEFAULT 0,
+              deviation_id BIGINT NOT NULL REFERENCES deviations(id),
+              description TEXT NOT NULL,
+              action_type VARCHAR(40) NOT NULL DEFAULT 'CONTAINMENT',
+              owner_id BIGINT REFERENCES users(id),
+              due_date DATE,
+              status VARCHAR(30) NOT NULL DEFAULT 'NOT_STARTED',
+              completion_evidence TEXT,
+              completion_date TIMESTAMPTZ,
+              verified_by_id BIGINT REFERENCES users(id),
+              verification_date TIMESTAMPTZ,
+              comments TEXT,
+              created_by BIGINT REFERENCES users(id),
+              created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              deleted_at TIMESTAMPTZ
+            );
+            CREATE INDEX IF NOT EXISTS idx_dev_containment_deviation_id ON deviation_containment_actions(deviation_id);
+        </sql>
+    </changeSet>
+
+    <changeSet id="v035-3" author="system">
+        <sql>
+            CREATE TABLE IF NOT EXISTS deviation_impact_assessments (
+              id BIGSERIAL PRIMARY KEY,
+              version INTEGER NOT NULL DEFAULT 0,
+              deviation_id BIGINT NOT NULL UNIQUE REFERENCES deviations(id),
+              product_quality_affected VARCHAR(10),
+              material_quality_affected VARCHAR(10),
+              process_quality_affected VARCHAR(10),
+              specification_impact VARCHAR(10),
+              batch_lot_impact VARCHAR(10),
+              quality_comments TEXT,
+              customer_impact VARCHAR(10),
+              patient_safety_impact VARCHAR(10),
+              complaint_risk VARCHAR(10),
+              recall_risk VARCHAR(10),
+              safety_comments TEXT,
+              regulatory_impact VARCHAR(10),
+              reportable_event VARCHAR(10),
+              inspection_audit_impact VARCHAR(10),
+              compliance_comments TEXT,
+              original_record_affected VARCHAR(10),
+              missing_incomplete_data VARCHAR(10),
+              unauthorized_change VARCHAR(10),
+              traceability_affected VARCHAR(10),
+              data_integrity_comments TEXT,
+              overall_impact VARCHAR(20),
+              assessment_status VARCHAR(30) NOT NULL DEFAULT 'NOT_STARTED',
+              assessed_by_id BIGINT REFERENCES users(id),
+              assessment_date TIMESTAMPTZ,
+              conclusion TEXT,
+              created_by BIGINT REFERENCES users(id),
+              created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            );
+        </sql>
+    </changeSet>
+
+    <changeSet id="v035-4" author="system">
+        <sql>
+            CREATE TABLE IF NOT EXISTS deviation_investigations (
+              id BIGSERIAL PRIMARY KEY,
+              version INTEGER NOT NULL DEFAULT 0,
+              deviation_id BIGINT NOT NULL UNIQUE REFERENCES deviations(id),
+              status VARCHAR(30) NOT NULL DEFAULT 'NOT_STARTED',
+              investigation_owner_id BIGINT REFERENCES users(id),
+              start_date TIMESTAMPTZ,
+              due_date DATE,
+              completion_date TIMESTAMPTZ,
+              summary TEXT,
+              evidence_reviewed TEXT,
+              root_cause_category VARCHAR(50),
+              root_cause_description TEXT,
+              contributing_factors TEXT,
+              most_probable_root_cause TEXT,
+              root_cause_confirmed BOOLEAN NOT NULL DEFAULT FALSE,
+              analysis_method VARCHAR(40),
+              investigation_conclusion TEXT,
+              created_by BIGINT REFERENCES users(id),
+              created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            );
+            CREATE INDEX IF NOT EXISTS idx_dev_investigation_deviation_id ON deviation_investigations(deviation_id);
+        </sql>
+    </changeSet>
+
+    <changeSet id="v035-5" author="system">
+        <sql>
+            CREATE TABLE IF NOT EXISTS deviation_linked_records (
+              id BIGSERIAL PRIMARY KEY,
+              deviation_id BIGINT NOT NULL REFERENCES deviations(id),
+              linked_record_type VARCHAR(40) NOT NULL,
+              linked_record_id BIGINT NOT NULL,
+              linked_record_number VARCHAR(100),
+              notes TEXT,
+              created_by BIGINT REFERENCES users(id),
+              created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              UNIQUE (deviation_id, linked_record_type, linked_record_id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_dev_linked_deviation_id ON deviation_linked_records(deviation_id);
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

@@ -8,7 +8,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -21,10 +23,21 @@ import com.eqms.auth.UserPrincipal;
 import com.eqms.common.dto.AuditEntryResponse;
 import com.eqms.common.dto.PageResponse;
 import com.eqms.deviations.dto.ApproveDeviationRequest;
+import com.eqms.deviations.dto.ContainmentActionResponse;
+import com.eqms.deviations.dto.CreateContainmentActionRequest;
 import com.eqms.deviations.dto.CreateDeviationRequest;
+import com.eqms.deviations.dto.CreateLinkedRecordRequest;
+import com.eqms.deviations.dto.DeviationInvestigationResponse;
 import com.eqms.deviations.dto.DeviationResponse;
 import com.eqms.deviations.dto.DeviationTransitionRequest;
+import com.eqms.deviations.dto.ImpactAssessmentResponse;
+import com.eqms.deviations.dto.LinkedRecordResponse;
+import com.eqms.deviations.dto.ReopenDeviationRequest;
+import com.eqms.deviations.dto.UpdateContainmentActionRequest;
+import com.eqms.deviations.dto.UpdateDeviationDetailsRequest;
 import com.eqms.deviations.dto.UpdateDeviationRootCauseRequest;
+import com.eqms.deviations.dto.UpsertImpactAssessmentRequest;
+import com.eqms.deviations.dto.UpsertInvestigationRequest;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -64,12 +77,31 @@ public class DeviationController {
         return DeviationResponse.from(service.get(id));
     }
 
+    @PatchMapping("/{id}")
+    @PreAuthorize("hasAuthority('DEVIATION_CREATE')")
+    public ResponseEntity<DeviationResponse> updateDetails(@PathVariable Long id,
+                                                           @Valid @RequestBody UpdateDeviationDetailsRequest r,
+                                                           @AuthenticationPrincipal UserPrincipal p, HttpServletRequest http) {
+        return ResponseEntity.ok(DeviationResponse.from(
+                service.updateDetails(id, r, p.getId(), p.getFullName(), ip(http), ua(http))));
+    }
+
     @PutMapping("/{id}/root-cause")
     @PreAuthorize("hasAuthority('DEVIATION_CREATE')")
     public DeviationResponse updateRootCause(@PathVariable Long id, @Valid @RequestBody UpdateDeviationRootCauseRequest r,
                                              @AuthenticationPrincipal UserPrincipal p, HttpServletRequest http) {
         return DeviationResponse.from(service.updateRootCause(id, r.expectedVersion(), r.rootCause(), r.reason(),
                 p.getId(), p.getFullName(), ip(http), ua(http)));
+    }
+
+    @PostMapping("/{id}/reopen")
+    @PreAuthorize("hasAuthority('DEVIATION_APPROVE')")
+    public ResponseEntity<DeviationResponse> reopen(@PathVariable Long id,
+                                                     @Valid @RequestBody ReopenDeviationRequest r,
+                                                     @AuthenticationPrincipal UserPrincipal p, HttpServletRequest http) {
+        return ResponseEntity.ok(DeviationResponse.from(
+                service.reopen(id, r.expectedVersion(), r.reason(),
+                        p.getId(), p.getFullName(), ip(http), ua(http))));
     }
 
     @PostMapping("/{id}/submit-for-investigation")
@@ -129,6 +161,105 @@ public class DeviationController {
     @PreAuthorize("hasAuthority('AUDIT_VIEW')")
     public List<AuditEntryResponse> auditTrail(@PathVariable Long id) {
         return service.auditTrail(id).stream().map(AuditEntryResponse::from).toList();
+    }
+
+    // --- Containment actions ---------------------------------------------------------------
+
+    @GetMapping("/{id}/containment-actions")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<ContainmentActionResponse>> listContainmentActions(@PathVariable Long id) {
+        return ResponseEntity.ok(service.listContainmentActions(id).stream()
+                .map(ContainmentActionResponse::from).toList());
+    }
+
+    @PostMapping("/{id}/containment-actions")
+    @PreAuthorize("hasAuthority('DEVIATION_CREATE')")
+    public ResponseEntity<ContainmentActionResponse> addContainmentAction(@PathVariable Long id,
+                                                                           @Valid @RequestBody CreateContainmentActionRequest r,
+                                                                           @AuthenticationPrincipal UserPrincipal p,
+                                                                           HttpServletRequest http) {
+        ContainmentAction action = service.addContainmentAction(id, r, p.getId(), p.getFullName(), ip(http), ua(http));
+        return ResponseEntity.status(HttpStatus.CREATED).body(ContainmentActionResponse.from(action));
+    }
+
+    @PatchMapping("/{id}/containment-actions/{actionId}")
+    @PreAuthorize("hasAuthority('DEVIATION_CREATE')")
+    public ResponseEntity<ContainmentActionResponse> updateContainmentAction(@PathVariable Long id,
+                                                                              @PathVariable Long actionId,
+                                                                              @Valid @RequestBody UpdateContainmentActionRequest r,
+                                                                              @AuthenticationPrincipal UserPrincipal p,
+                                                                              HttpServletRequest http) {
+        ContainmentAction action = service.updateContainmentAction(id, actionId, r, p.getId(), p.getFullName(), ip(http), ua(http));
+        return ResponseEntity.ok(ContainmentActionResponse.from(action));
+    }
+
+    // --- Impact assessment -----------------------------------------------------------------
+
+    @GetMapping("/{id}/impact-assessment")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ImpactAssessmentResponse> getImpactAssessment(@PathVariable Long id) {
+        return service.getImpactAssessment(id)
+                .map(a -> ResponseEntity.ok(ImpactAssessmentResponse.from(a)))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/{id}/impact-assessment")
+    @PreAuthorize("hasAuthority('DEVIATION_CREATE')")
+    public ResponseEntity<ImpactAssessmentResponse> upsertImpactAssessment(@PathVariable Long id,
+                                                                             @Valid @RequestBody UpsertImpactAssessmentRequest r,
+                                                                             @AuthenticationPrincipal UserPrincipal p,
+                                                                             HttpServletRequest http) {
+        DeviationImpactAssessment assessment = service.upsertImpactAssessment(id, r, p.getId(), p.getFullName(), ip(http), ua(http));
+        return ResponseEntity.ok(ImpactAssessmentResponse.from(assessment));
+    }
+
+    // --- Investigation ---------------------------------------------------------------------
+
+    @GetMapping("/{id}/investigation")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<DeviationInvestigationResponse> getInvestigation(@PathVariable Long id) {
+        return service.getInvestigation(id)
+                .map(i -> ResponseEntity.ok(DeviationInvestigationResponse.from(i)))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/{id}/investigation")
+    @PreAuthorize("hasAuthority('DEVIATION_CREATE')")
+    public ResponseEntity<DeviationInvestigationResponse> upsertInvestigation(@PathVariable Long id,
+                                                                               @Valid @RequestBody UpsertInvestigationRequest r,
+                                                                               @AuthenticationPrincipal UserPrincipal p,
+                                                                               HttpServletRequest http) {
+        DeviationInvestigation investigation = service.upsertInvestigation(id, r, p.getId(), p.getFullName(), ip(http), ua(http));
+        return ResponseEntity.ok(DeviationInvestigationResponse.from(investigation));
+    }
+
+    // --- Linked records --------------------------------------------------------------------
+
+    @GetMapping("/{id}/linked-records")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<LinkedRecordResponse>> listLinkedRecords(@PathVariable Long id) {
+        return ResponseEntity.ok(service.listLinkedRecords(id).stream()
+                .map(LinkedRecordResponse::from).toList());
+    }
+
+    @PostMapping("/{id}/linked-records")
+    @PreAuthorize("hasAuthority('DEVIATION_CREATE')")
+    public ResponseEntity<LinkedRecordResponse> addLinkedRecord(@PathVariable Long id,
+                                                                 @Valid @RequestBody CreateLinkedRecordRequest r,
+                                                                 @AuthenticationPrincipal UserPrincipal p,
+                                                                 HttpServletRequest http) {
+        DeviationLinkedRecord link = service.addLinkedRecord(id, r, p.getId(), p.getFullName(), ip(http), ua(http));
+        return ResponseEntity.status(HttpStatus.CREATED).body(LinkedRecordResponse.from(link));
+    }
+
+    @DeleteMapping("/{id}/linked-records/{linkId}")
+    @PreAuthorize("hasAuthority('DEVIATION_CREATE')")
+    public ResponseEntity<Void> removeLinkedRecord(@PathVariable Long id,
+                                                    @PathVariable Long linkId,
+                                                    @AuthenticationPrincipal UserPrincipal p,
+                                                    HttpServletRequest http) {
+        service.removeLinkedRecord(id, linkId, p.getId(), p.getFullName(), ip(http), ua(http));
+        return ResponseEntity.noContent().build();
     }
 
     private static String ip(HttpServletRequest request) {

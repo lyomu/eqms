@@ -1,6 +1,7 @@
 package com.eqms.deviations.dto;
 
 import java.time.Instant;
+import java.time.LocalDate;
 
 import com.eqms.deviations.Deviation;
 
@@ -19,7 +20,43 @@ public record DeviationResponse(
         Long createdBy,
         Long submittedBy,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        // Extended fields
+        String deviationType,
+        String category,
+        String relatedModule,
+        String department,
+        String site,
+        String location,
+        Instant dateDiscovered,
+        Instant dateReported,
+        Long reportedById,
+        Long ownerId,
+        Long qaOwnerId,
+        String initialRiskLevel,
+        String finalSeverity,
+        String finalRiskLevel,
+        boolean productAffected,
+        boolean materialAffected,
+        boolean batchAffected,
+        boolean equipmentAffected,
+        boolean supplierInvolved,
+        boolean customerImpactPossible,
+        boolean regulatoryImpactPossible,
+        boolean dataIntegrityImpactPossible,
+        boolean containmentRequired,
+        boolean investigationRequired,
+        boolean capaRequired,
+        boolean changeControlRequired,
+        LocalDate targetInvestigationDueDate,
+        LocalDate targetClosureDueDate,
+        String whatHappened,
+        String whereHappened,
+        String howDetected,
+        String whoInvolved,
+        String reopenReason,
+        Instant reopenedAt,
+        Long reopenedById
 ) {
     public static DeviationResponse from(Deviation d) {
         return new DeviationResponse(
@@ -37,6 +74,41 @@ public record DeviationResponse(
                 d.getCreatedBy(),
                 d.getSubmittedBy(),
                 d.getCreatedAt(),
-                d.getUpdatedAt());
+                d.getUpdatedAt(),
+                d.getDeviationType() == null ? null : d.getDeviationType().name(),
+                d.getCategory() == null ? null : d.getCategory().name(),
+                d.getRelatedModule(),
+                d.getDepartment(),
+                d.getSite(),
+                d.getLocation(),
+                d.getDateDiscovered(),
+                d.getDateReported(),
+                d.getReportedById(),
+                d.getOwnerId(),
+                d.getQaOwnerId(),
+                d.getInitialRiskLevel() == null ? null : d.getInitialRiskLevel().name(),
+                d.getFinalSeverity() == null ? null : d.getFinalSeverity().name(),
+                d.getFinalRiskLevel() == null ? null : d.getFinalRiskLevel().name(),
+                d.isProductAffected(),
+                d.isMaterialAffected(),
+                d.isBatchAffected(),
+                d.isEquipmentAffected(),
+                d.isSupplierInvolved(),
+                d.isCustomerImpactPossible(),
+                d.isRegulatoryImpactPossible(),
+                d.isDataIntegrityImpactPossible(),
+                d.isContainmentRequired(),
+                d.isInvestigationRequired(),
+                d.isCapaRequired(),
+                d.isChangeControlRequired(),
+                d.getTargetInvestigationDueDate(),
+                d.getTargetClosureDueDate(),
+                d.getWhatHappened(),
+                d.getWhereHappened(),
+                d.getHowDetected(),
+                d.getWhoInvolved(),
+                d.getReopenReason(),
+                d.getReopenedAt(),
+                d.getReopenedById());
     }
 }

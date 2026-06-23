@@ -60,6 +60,27 @@ export interface CreateDeviationInput {
   description: string;
   immediateAction?: string | null;
   occurredDate?: string | null;
+  // Extended fields added in M6 UI rebuild
+  deviationType?: string;
+  category?: string;
+  relatedModule?: string;
+  department?: string;
+  initialRiskLevel?: string;
+  whatHappened?: string;
+  productAffected?: boolean;
+  materialAffected?: boolean;
+  batchAffected?: boolean;
+  equipmentAffected?: boolean;
+  supplierInvolved?: boolean;
+  customerImpactPossible?: boolean;
+  regulatoryImpactPossible?: boolean;
+  dataIntegrityImpactPossible?: boolean;
+  containmentRequired?: boolean;
+  investigationRequired?: boolean;
+  capaRequired?: boolean;
+  changeControlRequired?: boolean;
+  targetInvestigationDueDate?: string;
+  targetClosureDueDate?: string;
 }
 
 export function useCreateDeviation() {
