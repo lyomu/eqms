@@ -63,7 +63,9 @@ class AuditManagementIntegrationTest extends AbstractIntegrationTest {
         Ctx manager = newUser("ADMIN");
         mockMvc.perform(post("/api/audits").session(manager.session).contentType(MediaType.APPLICATION_JSON)
                         .content(json(new CreateAuditRequest("Q3 Internal GMP Audit", AuditType.INTERNAL,
-                                "Warehouse and QC lab", Instant.now(), null))))
+                                "Warehouse and QC lab", "Verify GMP compliance", "ISO 13485 clause 8.2",
+                                Instant.now(), null, null, null, null, null, null, null, null, null,
+                                null, null, null, null, null, null, null, null, null))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value("PLANNED"))
                 .andExpect(jsonPath("$.auditType").value("INTERNAL"))
@@ -184,7 +186,10 @@ class AuditManagementIntegrationTest extends AbstractIntegrationTest {
     void createWithoutPermissionIsForbidden() throws Exception {
         Ctx operator = newUser("OPERATOR");
         mockMvc.perform(post("/api/audits").session(operator.session).contentType(MediaType.APPLICATION_JSON)
-                        .content(json(new CreateAuditRequest("nope", AuditType.SUPPLIER, "scope", null, null))))
+                        .content(json(new CreateAuditRequest("nope", AuditType.SUPPLIER, "scope",
+                                "objective", "criteria", null, null,
+                                null, null, null, null, null, null, null, null,
+                                null, null, null, null, null, null, null, null, null))))
                 .andExpect(status().isForbidden());
     }
 
@@ -207,7 +212,9 @@ class AuditManagementIntegrationTest extends AbstractIntegrationTest {
         MvcResult result = mockMvc.perform(post("/api/audits").session(ctx.session)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(new CreateAuditRequest("Supplier Qualification Audit", AuditType.SUPPLIER,
-                                "Raw material supplier", Instant.now(), null))))
+                                "Raw material supplier", "Verify supplier quality system", "ISO 9001 clause 8.4",
+                                Instant.now(), null, null, null, null, null, null, null, null, null,
+                                null, null, null, null, null, null, null, null, null))))
                 .andExpect(status().isCreated()).andReturn();
         return objectMapper.readTree(result.getResponse().getContentAsString());
     }

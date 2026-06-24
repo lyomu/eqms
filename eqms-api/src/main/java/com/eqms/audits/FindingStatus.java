@@ -1,0 +1,16 @@
+package com.eqms.audits;
+
+public enum FindingStatus {
+    DRAFT,
+    ISSUED,
+    ACKNOWLEDGED,
+    RESPONSE_PENDING,
+    ACTION_PLAN_SUBMITTED,
+    ACTION_PLAN_APPROVED,
+    IN_PROGRESS,
+    VERIFICATION_PENDING,
+    EFFECTIVENESS_CHECK_PENDING,
+    CLOSED,
+    REJECTED,
+    REOPENED
+}

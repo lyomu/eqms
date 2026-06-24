@@ -1,9 +1,12 @@
 package com.eqms.audits;
 
 import java.time.Instant;
+import java.time.LocalDate;
 
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import jakarta.persistence.Column;
@@ -62,4 +65,62 @@ public class AuditFinding {
     @CreatedBy
     @Column(name = "created_by", updatable = false)
     private Long createdBy;
+
+    // --- enriched fields -----------------------------------------------------------------------
+
+    @Column(name = "finding_code", length = 60)
+    private String findingCode;
+
+    @Column(name = "title", length = 400)
+    private String title;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "finding_type", length = 30)
+    private FindingType findingType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "risk_level", length = 20)
+    private AuditRiskLevel riskLevel;
+
+    @Column(name = "requirement_reference", length = 400)
+    private String requirementReference;
+
+    @Column(name = "responsible_owner_id")
+    private Long responsibleOwnerId;
+
+    @Column(name = "immediate_correction_required", nullable = false)
+    private boolean immediateCorrectionRequired = false;
+
+    @Column(name = "root_cause_required", nullable = false)
+    private boolean rootCauseRequired = false;
+
+    @Column(name = "capa_required", nullable = false)
+    private boolean capaRequired = false;
+
+    @Column(name = "due_date")
+    private LocalDate dueDate;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "finding_status", nullable = false, length = 30)
+    private FindingStatus findingStatus = FindingStatus.DRAFT;
+
+    @Column(name = "recurrence_flag", nullable = false)
+    private boolean recurrenceFlag = false;
+
+    @Column(name = "closed_by_id")
+    private Long closedById;
+
+    @Column(name = "closed_at")
+    private Instant closedAt;
+
+    @Column(name = "closure_comments", columnDefinition = "text")
+    private String closureComments;
+
+    @LastModifiedDate
+    @Column(name = "updated_at")
+    private Instant updatedAt;
+
+    @LastModifiedBy
+    @Column(name = "updated_by")
+    private Long updatedBy;
 }

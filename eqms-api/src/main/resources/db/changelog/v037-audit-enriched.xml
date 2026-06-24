@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <changeSet id="v037-1" author="system">
+        <sql>
+            ALTER TABLE audits ADD COLUMN IF NOT EXISTS objective TEXT;
+            ALTER TABLE audits ADD COLUMN IF NOT EXISTS criteria TEXT;
+            ALTER TABLE audits ADD COLUMN IF NOT EXISTS category VARCHAR(30);
+            ALTER TABLE audits ADD COLUMN IF NOT EXISTS department VARCHAR(200);
+            ALTER TABLE audits ADD COLUMN IF NOT EXISTS process_area VARCHAR(200);
+            ALTER TABLE audits ADD COLUMN IF NOT EXISTS site VARCHAR(200);
+            ALTER TABLE audits ADD COLUMN IF NOT EXISTS related_module VARCHAR(50);
+            ALTER TABLE audits ADD COLUMN IF NOT EXISTS risk_level VARCHAR(20);
+            ALTER TABLE audits ADD COLUMN IF NOT EXISTS planned_start_date TIMESTAMPTZ;
+            ALTER TABLE audits ADD COLUMN IF NOT EXISTS planned_end_date TIMESTAMPTZ;
+            ALTER TABLE audits ADD COLUMN IF NOT EXISTS actual_start_date TIMESTAMPTZ;
+            ALTER TABLE audits ADD COLUMN IF NOT EXISTS actual_end_date TIMESTAMPTZ;
+            ALTER TABLE audits ADD COLUMN IF NOT EXISTS lead_auditor_id BIGINT;
+            ALTER TABLE audits ADD COLUMN IF NOT EXISTS audit_team_members TEXT;
+            ALTER TABLE audits ADD COLUMN IF NOT EXISTS auditee_owner_id BIGINT;
+            ALTER TABLE audits ADD COLUMN IF NOT EXISTS audit_sponsor_id BIGINT;
+            ALTER TABLE audits ADD COLUMN IF NOT EXISTS method VARCHAR(20);
+            ALTER TABLE audits ADD COLUMN IF NOT EXISTS frequency VARCHAR(20);
+            ALTER TABLE audits ADD COLUMN IF NOT EXISTS reason_for_audit VARCHAR(50);
+            ALTER TABLE audits ADD COLUMN IF NOT EXISTS previous_audit_id BIGINT;
+            ALTER TABLE audits ADD COLUMN IF NOT EXISTS checklist_required BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE audits ADD COLUMN IF NOT EXISTS opening_meeting_required BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE audits ADD COLUMN IF NOT EXISTS closing_meeting_required BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE audits ADD COLUMN IF NOT EXISTS auditor_independence_confirmed BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE audits ADD COLUMN IF NOT EXISTS closure_status VARCHAR(30);
+            ALTER TABLE audits ADD COLUMN IF NOT EXISTS closed_by_id BIGINT;
+            ALTER TABLE audits ADD COLUMN IF NOT EXISTS closed_at TIMESTAMPTZ;
+            ALTER TABLE audits ADD COLUMN IF NOT EXISTS closure_comments TEXT;
+        </sql>
+    </changeSet>
+
+    <changeSet id="v037-2" author="system">
+        <sql>
+            ALTER TABLE audit_findings ADD COLUMN IF NOT EXISTS finding_code VARCHAR(60);
+            ALTER TABLE audit_findings ADD COLUMN IF NOT EXISTS title VARCHAR(400);
+            ALTER TABLE audit_findings ADD COLUMN IF NOT EXISTS finding_type VARCHAR(30);
+            ALTER TABLE audit_findings ADD COLUMN IF NOT EXISTS risk_level VARCHAR(20);
+            ALTER TABLE audit_findings ADD COLUMN IF NOT EXISTS requirement_reference VARCHAR(400);
+            ALTER TABLE audit_findings ADD COLUMN IF NOT EXISTS responsible_owner_id BIGINT;
+            ALTER TABLE audit_findings ADD COLUMN IF NOT EXISTS immediate_correction_required BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE audit_findings ADD COLUMN IF NOT EXISTS root_cause_required BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE audit_findings ADD COLUMN IF NOT EXISTS capa_required BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE audit_findings ADD COLUMN IF NOT EXISTS due_date DATE;
+            ALTER TABLE audit_findings ADD COLUMN IF NOT EXISTS finding_status VARCHAR(30) NOT NULL DEFAULT 'DRAFT';
+            ALTER TABLE audit_findings ADD COLUMN IF NOT EXISTS recurrence_flag BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE audit_findings ADD COLUMN IF NOT EXISTS closed_by_id BIGINT;
+            ALTER TABLE audit_findings ADD COLUMN IF NOT EXISTS closed_at TIMESTAMPTZ;
+            ALTER TABLE audit_findings ADD COLUMN IF NOT EXISTS closure_comments TEXT;
+            ALTER TABLE audit_findings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ;
+            ALTER TABLE audit_findings ADD COLUMN IF NOT EXISTS updated_by BIGINT;
+        </sql>
+    </changeSet>
+
+    <changeSet id="v037-3" author="system">
+        <sql>
+            CREATE TABLE IF NOT EXISTS audit_checklist_items (
+              id BIGSERIAL PRIMARY KEY,
+              audit_id BIGINT NOT NULL REFERENCES audits(id),
+              section VARCHAR(200),
+              requirement_reference VARCHAR(400),
+              question TEXT NOT NULL,
+              expected_evidence TEXT,
+              checklist_method VARCHAR(30),
+              responsible_auditor_id BIGINT,
+              applicable BOOLEAN NOT NULL DEFAULT TRUE,
+              response VARCHAR(30),
+              evidence_summary TEXT,
+              finding_required BOOLEAN NOT NULL DEFAULT FALSE,
+              linked_finding_id BIGINT REFERENCES audit_findings(id),
+              comments TEXT,
+              sort_order INT NOT NULL DEFAULT 0,
+              created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              created_by BIGINT,
+              updated_at TIMESTAMPTZ,
+              updated_by BIGINT
+            );
+            CREATE INDEX IF NOT EXISTS idx_audit_checklist_audit_id ON audit_checklist_items(audit_id);
+        </sql>
+    </changeSet>
+
+    <changeSet id="v037-4" author="system">
+        <sql>
+            CREATE TABLE IF NOT EXISTS audit_evidence (
+              id BIGSERIAL PRIMARY KEY,
+              audit_id BIGINT NOT NULL REFERENCES audits(id),
+              evidence_type VARCHAR(30) NOT NULL,
+              description TEXT NOT NULL,
+              reference_number VARCHAR(100),
+              area_audited VARCHAR(200),
+              person_interviewed VARCHAR(200),
+              records_reviewed TEXT,
+              related_checklist_item_id BIGINT REFERENCES audit_checklist_items(id),
+              related_finding_id BIGINT REFERENCES audit_findings(id),
+              auditor_notes TEXT,
+              created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              created_by BIGINT,
+              updated_at TIMESTAMPTZ,
+              updated_by BIGINT
+            );
+            CREATE INDEX IF NOT EXISTS idx_audit_evidence_audit_id ON audit_evidence(audit_id);
+        </sql>
+    </changeSet>
+
+    <changeSet id="v037-5" author="system">
+        <sql>
+            CREATE TABLE IF NOT EXISTS audit_action_plans (
+              id BIGSERIAL PRIMARY KEY,
+              audit_id BIGINT NOT NULL REFERENCES audits(id),
+              finding_id BIGINT REFERENCES audit_findings(id),
+              action_type VARCHAR(30) NOT NULL,
+              description TEXT NOT NULL,
+              root_cause_analysis TEXT,
+              action_owner_id BIGINT,
+              due_date DATE,
+              priority VARCHAR(20),
+              status VARCHAR(30) NOT NULL DEFAULT 'NOT_STARTED',
+              completion_evidence TEXT,
+              completed_by_id BIGINT,
+              completion_date DATE,
+              verified_by_id BIGINT,
+              verification_date DATE,
+              effectiveness_check_required BOOLEAN NOT NULL DEFAULT FALSE,
+              effectiveness_check_date DATE,
+              effectiveness_result VARCHAR(30),
+              comments TEXT,
+              created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              created_by BIGINT,
+              updated_at TIMESTAMPTZ,
+              updated_by BIGINT
+            );
+            CREATE INDEX IF NOT EXISTS idx_audit_action_plans_audit_id ON audit_action_plans(audit_id);
+        </sql>
+    </changeSet>
+
+    <changeSet id="v037-6" author="system">
+        <sql>
+            CREATE TABLE IF NOT EXISTS audit_meetings (
+              id BIGSERIAL PRIMARY KEY,
+              audit_id BIGINT NOT NULL REFERENCES audits(id),
+              meeting_type VARCHAR(30) NOT NULL,
+              meeting_date_time TIMESTAMPTZ,
+              attendees TEXT,
+              agenda TEXT,
+              discussion_summary TEXT,
+              key_decisions TEXT,
+              agreed_actions TEXT,
+              minutes_approved BOOLEAN NOT NULL DEFAULT FALSE,
+              approved_by_id BIGINT,
+              approval_date DATE,
+              created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              created_by BIGINT,
+              updated_at TIMESTAMPTZ,
+              updated_by BIGINT
+            );
+            CREATE INDEX IF NOT EXISTS idx_audit_meetings_audit_id ON audit_meetings(audit_id);
+        </sql>
+    </changeSet>
+
+    <changeSet id="v037-7" author="system">
+        <sql>
+            CREATE TABLE IF NOT EXISTS audit_linked_records (
+              id BIGSERIAL PRIMARY KEY,
+              audit_id BIGINT NOT NULL REFERENCES audits(id),
+              record_type VARCHAR(30) NOT NULL,
+              record_id VARCHAR(100) NOT NULL,
+              record_reference VARCHAR(200),
+              record_title VARCHAR(400),
+              record_status VARCHAR(100),
+              notes TEXT,
+              created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              created_by BIGINT,
+              UNIQUE(audit_id, record_type, record_id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_audit_linked_records_audit_id ON audit_linked_records(audit_id);
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

@@ -2,19 +2,14 @@ package com.eqms.audits.dto;
 
 import java.time.Instant;
 
-import com.eqms.audits.AuditType;
-
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-
-public record CreateAuditRequest(
-        @NotBlank String auditTitle,
-        @NotNull AuditType auditType,
-        @NotBlank String scope,
-        @NotBlank String objective,
-        @NotBlank String criteria,
-        Instant auditDate,
-        Long auditeeId,
+public record UpdateAuditDetailsRequest(
+        int expectedVersion,
+        String reason,
+        String auditTitle,
+        String auditType,
+        String objective,
+        String scope,
+        String criteria,
         String category,
         String department,
         String processArea,
@@ -24,6 +19,7 @@ public record CreateAuditRequest(
         Instant plannedStartDate,
         Instant plannedEndDate,
         Long leadAuditorId,
+        String auditTeamMembers,
         Long auditeeOwnerId,
         Long auditSponsorId,
         String method,
@@ -31,6 +27,7 @@ public record CreateAuditRequest(
         String reasonForAudit,
         Boolean checklistRequired,
         Boolean openingMeetingRequired,
-        Boolean closingMeetingRequired
+        Boolean closingMeetingRequired,
+        Boolean auditorIndependenceConfirmed
 ) {
 }

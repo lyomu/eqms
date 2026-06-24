@@ -66,6 +66,98 @@ public class Audit extends RegulatedEntity implements WorkflowAware {
     @Column(name = "completed_date")
     private Instant completedDate;
 
+    // --- enriched fields -----------------------------------------------------------------------
+
+    @Column(name = "objective", columnDefinition = "text")
+    private String objective;
+
+    @Column(name = "criteria", columnDefinition = "text")
+    private String criteria;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "category", length = 30)
+    private AuditCategory category;
+
+    @Column(name = "department", length = 200)
+    private String department;
+
+    @Column(name = "process_area", length = 200)
+    private String processArea;
+
+    @Column(name = "site", length = 200)
+    private String site;
+
+    @Column(name = "related_module", length = 50)
+    private String relatedModule;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "risk_level", length = 20)
+    private AuditRiskLevel riskLevel;
+
+    @Column(name = "planned_start_date")
+    private Instant plannedStartDate;
+
+    @Column(name = "planned_end_date")
+    private Instant plannedEndDate;
+
+    @Column(name = "actual_start_date")
+    private Instant actualStartDate;
+
+    @Column(name = "actual_end_date")
+    private Instant actualEndDate;
+
+    @Column(name = "lead_auditor_id")
+    private Long leadAuditorId;
+
+    @Column(name = "audit_team_members", columnDefinition = "text")
+    private String auditTeamMembers;
+
+    @Column(name = "auditee_owner_id")
+    private Long auditeeOwnerId;
+
+    @Column(name = "audit_sponsor_id")
+    private Long auditSponsorId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "method", length = 20)
+    private AuditMethod method;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "frequency", length = 20)
+    private AuditFrequency frequency;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "reason_for_audit", length = 50)
+    private ReasonForAudit reasonForAudit;
+
+    @Column(name = "previous_audit_id")
+    private Long previousAuditId;
+
+    @Column(name = "checklist_required", nullable = false)
+    private boolean checklistRequired = false;
+
+    @Column(name = "opening_meeting_required", nullable = false)
+    private boolean openingMeetingRequired = false;
+
+    @Column(name = "closing_meeting_required", nullable = false)
+    private boolean closingMeetingRequired = false;
+
+    @Column(name = "auditor_independence_confirmed", nullable = false)
+    private boolean auditorIndependenceConfirmed = false;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "closure_status", length = 30)
+    private ClosureStatus closureStatus;
+
+    @Column(name = "closed_by_id")
+    private Long closedById;
+
+    @Column(name = "closed_at")
+    private Instant closedAt;
+
+    @Column(name = "closure_comments", columnDefinition = "text")
+    private String closureComments;
+
     // --- WorkflowAware -----------------------------------------------------------------------
 
     @Override

@@ -1,0 +1,15 @@
+package com.eqms.audits;
+
+public enum ActionPlanType {
+    CORRECTION,
+    CORRECTIVE_ACTION,
+    PREVENTIVE_ACTION,
+    CONTAINMENT,
+    TRAINING,
+    DOCUMENT_UPDATE,
+    PROCESS_CHANGE,
+    SUPPLIER_ACTION,
+    EQUIPMENT_ACTION,
+    RISK_REVIEW,
+    OTHER
+}
