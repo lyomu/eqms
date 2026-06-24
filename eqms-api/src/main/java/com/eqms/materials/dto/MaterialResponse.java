@@ -1,5 +1,6 @@
 package com.eqms.materials.dto;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 import com.eqms.materials.Material;
@@ -17,7 +18,34 @@ public record MaterialResponse(
         Long createdBy,
         Long submittedBy,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        String category,
+        String criticality,
+        String intendedUse,
+        String alternativeUnitOfMeasure,
+        BigDecimal conversionFactor,
+        String grade,
+        String casNumber,
+        String specificationReference,
+        String standardStorageCondition,
+        boolean qcTestingRequired,
+        boolean samplingRequired,
+        boolean coaRequired,
+        boolean sdsRequired,
+        boolean approvedSupplierRequired,
+        boolean expiryDateRequired,
+        boolean retestDateRequired,
+        boolean quarantineRequiredOnReceipt,
+        boolean qaReleaseRequiredBeforeUse,
+        boolean riskAssessmentRequired,
+        BigDecimal minimumStockLevel,
+        BigDecimal maximumStockLevel,
+        BigDecimal reorderLevel,
+        BigDecimal reorderQuantity,
+        boolean fefoRequired,
+        boolean fifoRequired,
+        String defaultWarehouse,
+        String defaultStorageLocation
 ) {
     public static MaterialResponse from(Material m) {
         return new MaterialResponse(
@@ -33,6 +61,33 @@ public record MaterialResponse(
                 m.getCreatedBy(),
                 m.getSubmittedBy(),
                 m.getCreatedAt(),
-                m.getUpdatedAt());
+                m.getUpdatedAt(),
+                m.getCategory() != null ? m.getCategory().name() : null,
+                m.getCriticality() != null ? m.getCriticality().name() : null,
+                m.getIntendedUse(),
+                m.getAlternativeUnitOfMeasure(),
+                m.getConversionFactor(),
+                m.getGrade() != null ? m.getGrade().name() : null,
+                m.getCasNumber(),
+                m.getSpecificationReference(),
+                m.getStandardStorageCondition() != null ? m.getStandardStorageCondition().name() : null,
+                m.isQcTestingRequired(),
+                m.isSamplingRequired(),
+                m.isCoaRequired(),
+                m.isSdsRequired(),
+                m.isApprovedSupplierRequired(),
+                m.isExpiryDateRequired(),
+                m.isRetestDateRequired(),
+                m.isQuarantineRequiredOnReceipt(),
+                m.isQaReleaseRequiredBeforeUse(),
+                m.isRiskAssessmentRequired(),
+                m.getMinimumStockLevel(),
+                m.getMaximumStockLevel(),
+                m.getReorderLevel(),
+                m.getReorderQuantity(),
+                m.isFefoRequired(),
+                m.isFifoRequired(),
+                m.getDefaultWarehouse(),
+                m.getDefaultStorageLocation());
     }
 }

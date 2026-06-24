@@ -1,5 +1,7 @@
 package com.eqms.materials;
 
+import java.math.BigDecimal;
+
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
@@ -55,6 +57,93 @@ public class Material extends RegulatedEntity implements WorkflowAware {
 
     @Column(name = "submitted_by")
     private Long submittedBy;
+
+    // --- Enriched fields -------------------------------------------------------------------
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "category", length = 20)
+    private MaterialCategory category;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "criticality", length = 20)
+    private MaterialCriticality criticality;
+
+    @Column(name = "intended_use", columnDefinition = "text")
+    private String intendedUse;
+
+    @Column(name = "alternative_unit_of_measure", length = 20)
+    private String alternativeUnitOfMeasure;
+
+    @Column(name = "conversion_factor")
+    private BigDecimal conversionFactor;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "grade", length = 30)
+    private MaterialGrade grade;
+
+    @Column(name = "cas_number", length = 50)
+    private String casNumber;
+
+    @Column(name = "specification_reference", length = 400)
+    private String specificationReference;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "standard_storage_condition", length = 30)
+    private StorageCondition standardStorageCondition;
+
+    @Column(name = "qc_testing_required", nullable = false)
+    private boolean qcTestingRequired = false;
+
+    @Column(name = "sampling_required", nullable = false)
+    private boolean samplingRequired = false;
+
+    @Column(name = "coa_required", nullable = false)
+    private boolean coaRequired = false;
+
+    @Column(name = "sds_required", nullable = false)
+    private boolean sdsRequired = false;
+
+    @Column(name = "approved_supplier_required", nullable = false)
+    private boolean approvedSupplierRequired = false;
+
+    @Column(name = "expiry_date_required", nullable = false)
+    private boolean expiryDateRequired = false;
+
+    @Column(name = "retest_date_required", nullable = false)
+    private boolean retestDateRequired = false;
+
+    @Column(name = "quarantine_required_on_receipt", nullable = false)
+    private boolean quarantineRequiredOnReceipt = true;
+
+    @Column(name = "qa_release_required_before_use", nullable = false)
+    private boolean qaReleaseRequiredBeforeUse = true;
+
+    @Column(name = "risk_assessment_required", nullable = false)
+    private boolean riskAssessmentRequired = false;
+
+    @Column(name = "minimum_stock_level")
+    private BigDecimal minimumStockLevel;
+
+    @Column(name = "maximum_stock_level")
+    private BigDecimal maximumStockLevel;
+
+    @Column(name = "reorder_level")
+    private BigDecimal reorderLevel;
+
+    @Column(name = "reorder_quantity")
+    private BigDecimal reorderQuantity;
+
+    @Column(name = "fefo_required", nullable = false)
+    private boolean fefoRequired = false;
+
+    @Column(name = "fifo_required", nullable = false)
+    private boolean fifoRequired = false;
+
+    @Column(name = "default_warehouse", length = 200)
+    private String defaultWarehouse;
+
+    @Column(name = "default_storage_location", length = 200)
+    private String defaultStorageLocation;
 
     // --- WorkflowAware ---------------------------------------------------------------------
 

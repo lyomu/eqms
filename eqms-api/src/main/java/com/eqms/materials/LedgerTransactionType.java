@@ -1,0 +1,23 @@
+package com.eqms.materials;
+
+public enum LedgerTransactionType {
+    RECEIPT,
+    QUARANTINE,
+    SAMPLING,
+    QC_HOLD,
+    RELEASE,
+    CONDITIONAL_RELEASE,
+    REJECTION,
+    ISSUE_TO_PRODUCTION,
+    ISSUE_TO_LABORATORY,
+    ISSUE_TO_DEPARTMENT,
+    RETURN_TO_STOCK,
+    TRANSFER_LOCATION,
+    ADJUSTMENT,
+    DISPOSAL,
+    DESTRUCTION,
+    RECALL,
+    EXPIRY,
+    RETEST,
+    STOCK_COUNT_CORRECTION
+}

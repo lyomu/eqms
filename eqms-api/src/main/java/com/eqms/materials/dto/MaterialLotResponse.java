@@ -1,0 +1,86 @@
+package com.eqms.materials.dto;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+
+import com.eqms.materials.MaterialLot;
+
+public record MaterialLotResponse(
+        Long id,
+        Long materialId,
+        String internalLotNumber,
+        String supplierLotNumber,
+        Long supplierId,
+        String manufacturer,
+        String manufacturerSite,
+        String countryOfOrigin,
+        String purchaseOrderNumber,
+        String deliveryNoteNumber,
+        String invoiceNumber,
+        BigDecimal receivedQuantity,
+        BigDecimal acceptedQuantity,
+        BigDecimal rejectedQuantity,
+        BigDecimal remainingQuantity,
+        String unitOfMeasure,
+        LocalDate dateReceived,
+        Long receivedById,
+        LocalDate expiryDate,
+        LocalDate retestDate,
+        String storageLocation,
+        String lotStatus,
+        Instant releasedAt,
+        Long releasedById,
+        Instant rejectedAt,
+        Long rejectedById,
+        Instant disposedAt,
+        Long disposedById,
+        String rejectionReason,
+        String holdReason,
+        String disposalReason,
+        String releaseConditions,
+        Instant createdAt,
+        Long createdBy,
+        Instant updatedAt,
+        Long updatedBy
+) {
+    public static MaterialLotResponse from(MaterialLot l) {
+        return new MaterialLotResponse(
+                l.getId(),
+                l.getMaterialId(),
+                l.getInternalLotNumber(),
+                l.getSupplierLotNumber(),
+                l.getSupplierId(),
+                l.getManufacturer(),
+                l.getManufacturerSite(),
+                l.getCountryOfOrigin(),
+                l.getPurchaseOrderNumber(),
+                l.getDeliveryNoteNumber(),
+                l.getInvoiceNumber(),
+                l.getReceivedQuantity(),
+                l.getAcceptedQuantity(),
+                l.getRejectedQuantity(),
+                l.getRemainingQuantity(),
+                l.getUnitOfMeasure(),
+                l.getDateReceived(),
+                l.getReceivedById(),
+                l.getExpiryDate(),
+                l.getRetestDate(),
+                l.getStorageLocation(),
+                l.getLotStatus() != null ? l.getLotStatus().name() : null,
+                l.getReleasedAt(),
+                l.getReleasedById(),
+                l.getRejectedAt(),
+                l.getRejectedById(),
+                l.getDisposedAt(),
+                l.getDisposedById(),
+                l.getRejectionReason(),
+                l.getHoldReason(),
+                l.getDisposalReason(),
+                l.getReleaseConditions(),
+                l.getCreatedAt(),
+                l.getCreatedBy(),
+                l.getUpdatedAt(),
+                l.getUpdatedBy());
+    }
+}

@@ -2,16 +2,12 @@ package com.eqms.materials.dto;
 
 import java.math.BigDecimal;
 
-import com.eqms.materials.MaterialType;
-import com.eqms.materials.UnitOfMeasure;
-
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-
-public record CreateMaterialRequest(
-        @NotBlank String name,
-        @NotNull MaterialType materialType,
-        @NotNull UnitOfMeasure unitOfMeasure,
+public record UpdateMaterialDetailsRequest(
+        int expectedVersion,
+        String reason,
+        String name,
+        String materialType,
+        String unitOfMeasure,
         String specification,
         String description,
         String category,

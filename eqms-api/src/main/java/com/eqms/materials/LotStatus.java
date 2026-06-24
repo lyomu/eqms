@@ -1,0 +1,17 @@
+package com.eqms.materials;
+
+public enum LotStatus {
+    RECEIVED,
+    QUARANTINED,
+    SAMPLING_PENDING,
+    UNDER_QC_TESTING,
+    QA_REVIEW_PENDING,
+    RELEASED,
+    CONDITIONALLY_RELEASED,
+    REJECTED,
+    ON_HOLD,
+    EXPIRED,
+    RECALLED,
+    CONSUMED,
+    DISPOSED
+}

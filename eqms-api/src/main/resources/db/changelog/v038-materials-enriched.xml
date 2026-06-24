@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <!-- Enriched Materials module: additional columns on materials + sub-entity tables. -->
+
+    <changeSet id="v038-1" author="system">
+        <sql>
+            ALTER TABLE materials ADD COLUMN IF NOT EXISTS category VARCHAR(20);
+            ALTER TABLE materials ADD COLUMN IF NOT EXISTS criticality VARCHAR(20);
+            ALTER TABLE materials ADD COLUMN IF NOT EXISTS intended_use TEXT;
+            ALTER TABLE materials ADD COLUMN IF NOT EXISTS alternative_unit_of_measure VARCHAR(20);
+            ALTER TABLE materials ADD COLUMN IF NOT EXISTS conversion_factor DECIMAL(15,4);
+            ALTER TABLE materials ADD COLUMN IF NOT EXISTS grade VARCHAR(30);
+            ALTER TABLE materials ADD COLUMN IF NOT EXISTS cas_number VARCHAR(50);
+            ALTER TABLE materials ADD COLUMN IF NOT EXISTS specification_reference VARCHAR(400);
+            ALTER TABLE materials ADD COLUMN IF NOT EXISTS standard_storage_condition VARCHAR(30);
+            ALTER TABLE materials ADD COLUMN IF NOT EXISTS qc_testing_required BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE materials ADD COLUMN IF NOT EXISTS sampling_required BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE materials ADD COLUMN IF NOT EXISTS coa_required BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE materials ADD COLUMN IF NOT EXISTS sds_required BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE materials ADD COLUMN IF NOT EXISTS approved_supplier_required BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE materials ADD COLUMN IF NOT EXISTS expiry_date_required BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE materials ADD COLUMN IF NOT EXISTS retest_date_required BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE materials ADD COLUMN IF NOT EXISTS quarantine_required_on_receipt BOOLEAN NOT NULL DEFAULT TRUE;
+            ALTER TABLE materials ADD COLUMN IF NOT EXISTS qa_release_required_before_use BOOLEAN NOT NULL DEFAULT TRUE;
+            ALTER TABLE materials ADD COLUMN IF NOT EXISTS risk_assessment_required BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE materials ADD COLUMN IF NOT EXISTS minimum_stock_level DECIMAL(15,4);
+            ALTER TABLE materials ADD COLUMN IF NOT EXISTS maximum_stock_level DECIMAL(15,4);
+            ALTER TABLE materials ADD COLUMN IF NOT EXISTS reorder_level DECIMAL(15,4);
+            ALTER TABLE materials ADD COLUMN IF NOT EXISTS reorder_quantity DECIMAL(15,4);
+            ALTER TABLE materials ADD COLUMN IF NOT EXISTS fefo_required BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE materials ADD COLUMN IF NOT EXISTS fifo_required BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE materials ADD COLUMN IF NOT EXISTS default_warehouse VARCHAR(200);
+            ALTER TABLE materials ADD COLUMN IF NOT EXISTS default_storage_location VARCHAR(200);
+        </sql>
+    </changeSet>
+
+    <changeSet id="v038-2" author="system">
+        <sql>
+            CREATE TABLE IF NOT EXISTS material_supplier_links (
+              id BIGSERIAL PRIMARY KEY,
+              material_id BIGINT NOT NULL REFERENCES materials(id),
+              supplier_id BIGINT NOT NULL,
+              approved_for_material BOOLEAN NOT NULL DEFAULT FALSE,
+              scope_of_approval TEXT,
+              approval_conditions TEXT,
+              effective_date DATE,
+              review_date DATE,
+              created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              created_by BIGINT,
+              UNIQUE(material_id, supplier_id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_mat_supplier_links_material_id ON material_supplier_links(material_id);
+        </sql>
+    </changeSet>
+
+    <changeSet id="v038-3" author="system">
+        <sql>
+            CREATE TABLE IF NOT EXISTS material_lots (
+              id BIGSERIAL PRIMARY KEY,
+              material_id BIGINT NOT NULL REFERENCES materials(id),
+              internal_lot_number VARCHAR(60) NOT NULL UNIQUE,
+              supplier_lot_number VARCHAR(200),
+              supplier_id BIGINT,
+              manufacturer VARCHAR(200),
+              manufacturer_site VARCHAR(200),
+              country_of_origin VARCHAR(100),
+              purchase_order_number VARCHAR(100),
+              delivery_note_number VARCHAR(100),
+              invoice_number VARCHAR(100),
+              received_quantity DECIMAL(15,4) NOT NULL,
+              accepted_quantity DECIMAL(15,4),
+              rejected_quantity DECIMAL(15,4),
+              remaining_quantity DECIMAL(15,4),
+              unit_of_measure VARCHAR(20) NOT NULL,
+              date_received DATE,
+              received_by_id BIGINT,
+              expiry_date DATE,
+              retest_date DATE,
+              storage_location VARCHAR(200),
+              lot_status VARCHAR(30) NOT NULL DEFAULT 'QUARANTINED',
+              released_at TIMESTAMPTZ,
+              released_by_id BIGINT,
+              rejected_at TIMESTAMPTZ,
+              rejected_by_id BIGINT,
+              disposed_at TIMESTAMPTZ,
+              disposed_by_id BIGINT,
+              rejection_reason TEXT,
+              hold_reason TEXT,
+              disposal_reason TEXT,
+              release_conditions TEXT,
+              created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              created_by BIGINT,
+              updated_at TIMESTAMPTZ,
+              updated_by BIGINT,
+              deleted_at TIMESTAMPTZ
+            );
+            CREATE INDEX IF NOT EXISTS idx_mat_lots_material_id ON material_lots(material_id);
+            CREATE INDEX IF NOT EXISTS idx_mat_lots_lot_status ON material_lots(lot_status);
+        </sql>
+    </changeSet>
+
+    <changeSet id="v038-4" author="system">
+        <sql>
+            CREATE TABLE IF NOT EXISTS material_receipts (
+              id BIGSERIAL PRIMARY KEY,
+              material_id BIGINT NOT NULL REFERENCES materials(id),
+              material_lot_id BIGINT REFERENCES material_lots(id),
+              receipt_number VARCHAR(60) NOT NULL UNIQUE,
+              supplier_id BIGINT,
+              manufacturer VARCHAR(200),
+              supplier_lot_number VARCHAR(200),
+              purchase_order_number VARCHAR(100),
+              delivery_note_number VARCHAR(100),
+              invoice_number VARCHAR(100),
+              date_received DATE NOT NULL,
+              received_by_id BIGINT,
+              quantity_received DECIMAL(15,4) NOT NULL,
+              unit_of_measure VARCHAR(20) NOT NULL,
+              number_of_containers INT,
+              container_condition VARCHAR(30),
+              transport_condition VARCHAR(30),
+              storage_condition_on_arrival TEXT,
+              coa_received BOOLEAN NOT NULL DEFAULT FALSE,
+              sds_received BOOLEAN NOT NULL DEFAULT FALSE,
+              expiry_date DATE,
+              retest_date DATE,
+              initial_status VARCHAR(30),
+              receipt_notes TEXT,
+              created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              created_by BIGINT,
+              updated_at TIMESTAMPTZ,
+              updated_by BIGINT
+            );
+            CREATE INDEX IF NOT EXISTS idx_mat_receipts_material_id ON material_receipts(material_id);
+            CREATE INDEX IF NOT EXISTS idx_mat_receipts_lot_id ON material_receipts(material_lot_id);
+        </sql>
+    </changeSet>
+
+    <changeSet id="v038-5" author="system">
+        <sql>
+            CREATE TABLE IF NOT EXISTS material_inventory_ledger (
+              id BIGSERIAL PRIMARY KEY,
+              material_id BIGINT NOT NULL REFERENCES materials(id),
+              material_lot_id BIGINT REFERENCES material_lots(id),
+              transaction_type VARCHAR(40) NOT NULL,
+              from_location VARCHAR(200),
+              to_location VARCHAR(200),
+              quantity_in DECIMAL(15,4),
+              quantity_out DECIMAL(15,4),
+              balance DECIMAL(15,4),
+              unit_of_measure VARCHAR(20),
+              performed_by_id BIGINT,
+              reference_document VARCHAR(200),
+              related_record_type VARCHAR(50),
+              related_record_id VARCHAR(100),
+              reason TEXT,
+              transaction_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              created_by BIGINT
+            );
+            CREATE INDEX IF NOT EXISTS idx_mat_ledger_material_id ON material_inventory_ledger(material_id);
+            CREATE INDEX IF NOT EXISTS idx_mat_ledger_lot_id ON material_inventory_ledger(material_lot_id);
+        </sql>
+    </changeSet>
+
+    <changeSet id="v038-6" author="system">
+        <sql>
+            CREATE TABLE IF NOT EXISTS material_issues (
+              id BIGSERIAL PRIMARY KEY,
+              material_id BIGINT NOT NULL REFERENCES materials(id),
+              material_lot_id BIGINT NOT NULL REFERENCES material_lots(id),
+              issue_number VARCHAR(60) NOT NULL UNIQUE,
+              quantity_requested DECIMAL(15,4),
+              quantity_issued DECIMAL(15,4) NOT NULL,
+              issued_to VARCHAR(30),
+              department VARCHAR(200),
+              batch_work_order_ref VARCHAR(200),
+              requested_by_id BIGINT,
+              issued_by_id BIGINT,
+              issue_date DATE NOT NULL,
+              purpose_of_use TEXT,
+              usage_notes TEXT,
+              created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              created_by BIGINT
+            );
+            CREATE INDEX IF NOT EXISTS idx_mat_issues_material_id ON material_issues(material_id);
+            CREATE INDEX IF NOT EXISTS idx_mat_issues_lot_id ON material_issues(material_lot_id);
+        </sql>
+    </changeSet>
+
+    <changeSet id="v038-7" author="system">
+        <sql>
+            CREATE TABLE IF NOT EXISTS material_quality_issue_links (
+              id BIGSERIAL PRIMARY KEY,
+              material_id BIGINT NOT NULL REFERENCES materials(id),
+              material_lot_id BIGINT REFERENCES material_lots(id),
+              record_type VARCHAR(30) NOT NULL,
+              record_id VARCHAR(100) NOT NULL,
+              record_reference VARCHAR(200),
+              record_title VARCHAR(400),
+              record_status VARCHAR(100),
+              notes TEXT,
+              created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              created_by BIGINT,
+              UNIQUE(material_id, record_type, record_id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_mat_quality_links_material_id ON material_quality_issue_links(material_id);
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>
