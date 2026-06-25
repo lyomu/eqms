@@ -9,7 +9,6 @@ import {
   Bell,
   Settings,
   LogOut,
-  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/stores/ui-store";
@@ -28,23 +27,12 @@ import { NAV_GROUPS } from "./nav-config";
  */
 export function Sidebar() {
   const pathname = usePathname();
+  const settingsActive = pathname === "/settings" || pathname.startsWith("/settings/");
   const collapsed = useUiStore((s) => s.sidebarCollapsed);
   const toggleSidebar = useUiStore((s) => s.toggleSidebar);
   const setMobileOpen = useUiStore((s) => s.setMobileSidebarOpen);
-  const { currentUser, logout } = useAuth();
+  const { logout } = useAuth();
   const unread = useUnreadCount();
-  const isOrgAdmin = currentUser?.authorities.some(
-    (authority) => authority === "ROLE_ADMIN" || authority === "ADMIN"
-  );
-
-  const initials = currentUser?.fullName
-    ? currentUser.fullName
-        .split(" ")
-        .map((n) => n[0])
-        .slice(0, 2)
-        .join("")
-        .toUpperCase()
-    : "?";
 
   return (
     <nav
@@ -164,46 +152,17 @@ export function Sidebar() {
         ))}
       </div>
 
-      {/* Bottom: user + settings + logout */}
+      {/* Bottom: settings + logout */}
       <div className="border-t border-border p-2">
-        <div className={cn("flex items-center gap-2 px-2 py-2", collapsed && "justify-center")}>
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-primary text-label font-medium text-white">
-            {initials}
-          </span>
-          {!collapsed && (
-            <div className="min-w-0">
-              <p className="truncate text-body font-semibold">{currentUser?.fullName ?? "Account"}</p>
-              <p className="truncate text-label text-muted-foreground">{currentUser?.email}</p>
-            </div>
-          )}
-        </div>
         <ul className="space-y-1">
-          {isOrgAdmin && (
-            <li>
-              <Link
-                href="/admin/settings"
-                onClick={() => setMobileOpen(false)}
-                aria-current={pathname === "/admin/settings" ? "page" : undefined}
-                className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-body transition-colors",
-                  pathname.startsWith("/admin/settings")
-                    ? "bg-accent font-semibold text-accent-foreground shadow-sm"
-                    : "text-foreground/75 hover:bg-accent/80 hover:text-accent-foreground"
-                )}
-              >
-                <ShieldCheck className="h-5 w-5 shrink-0" aria-hidden="true" />
-                {!collapsed && <span>Organization Admin</span>}
-              </Link>
-            </li>
-          )}
           <li>
             <Link
               href="/settings"
               onClick={() => setMobileOpen(false)}
-              aria-current={pathname === "/settings" ? "page" : undefined}
+              aria-current={settingsActive ? "page" : undefined}
               className={cn(
                 "flex items-center gap-3 rounded-md px-3 py-2 text-body transition-colors",
-                pathname === "/settings"
+                settingsActive
                   ? "bg-accent font-semibold text-accent-foreground shadow-sm"
                   : "text-foreground/75 hover:bg-accent/80 hover:text-accent-foreground"
               )}

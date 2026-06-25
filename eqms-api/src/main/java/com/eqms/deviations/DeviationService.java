@@ -11,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.eqms.admin.settings.OrganizationSettingsPolicyService;
 import com.eqms.audit.AuditEntryRequest;
 import com.eqms.audit.AuditLog;
 import com.eqms.audit.AuditService;
@@ -51,6 +52,7 @@ public class DeviationService {
     private final WorkflowService workflowService;
     private final SignatureService signatureService;
     private final AuditService auditService;
+    private final OrganizationSettingsPolicyService settingsPolicy;
     private final Clock clock;
 
     public DeviationService(DeviationRepository repository,
@@ -62,6 +64,7 @@ public class DeviationService {
                             WorkflowService workflowService,
                             SignatureService signatureService,
                             AuditService auditService,
+                            OrganizationSettingsPolicyService settingsPolicy,
                             Clock utcClock) {
         this.repository = repository;
         this.containmentActionRepository = containmentActionRepository;
@@ -72,6 +75,7 @@ public class DeviationService {
         this.workflowService = workflowService;
         this.signatureService = signatureService;
         this.auditService = auditService;
+        this.settingsPolicy = settingsPolicy;
         this.clock = utcClock;
     }
 
@@ -222,6 +226,9 @@ public class DeviationService {
     @Transactional
     public Deviation submitForApproval(Long id, int v, String reason, Long actorId, String actorName, String ip, String ua) {
         Deviation deviation = require(id);
+        if (settingsPolicy.enabled("quality-events", "rootCauseRequired", true) && isBlank(deviation.getRootCause())) {
+            throw new WorkflowException("Root cause is required before submitting deviation for approval");
+        }
         deviation.setSubmittedBy(actorId);
         transition(deviation, DeviationWorkflow.SUBMIT_FOR_APPROVAL, v, reason, actorId, actorName, ip, ua);
         return deviation;
@@ -257,6 +264,9 @@ public class DeviationService {
     @Transactional
     public Deviation close(Long id, int v, String reason, Long actorId, String actorName, String ip, String ua) {
         Deviation deviation = require(id);
+        if (settingsPolicy.enabled("quality-events", "rootCauseRequired", true) && isBlank(deviation.getRootCause())) {
+            throw new WorkflowException("Root cause is required before closing deviation");
+        }
         deviation.setClosedDate(Instant.now(clock));
         transition(deviation, DeviationWorkflow.CLOSE, v, reason, actorId, actorName, ip, ua);
         return deviation;
@@ -548,6 +558,10 @@ public class DeviationService {
             throw new StaleVersionException("Stale version: record is at v" + current
                     + " but the request was made against v" + expected);
         }
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     private Deviation require(Long id) {

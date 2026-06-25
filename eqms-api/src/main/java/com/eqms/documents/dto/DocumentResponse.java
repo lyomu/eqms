@@ -1,6 +1,7 @@
 package com.eqms.documents.dto;
 
 import java.time.Instant;
+import java.util.Set;
 
 import com.eqms.documents.Document;
 
@@ -12,6 +13,7 @@ public record DocumentResponse(
         String type,
         String status,
         int majorVersion,
+        int minorVersion,
         int version,
         String content,
         Instant effectiveDate,
@@ -21,6 +23,12 @@ public record DocumentResponse(
         Long createdBy,
         Long submittedBy,
         Long folderId,
+        Long ownerId,
+        Long approvalProfileId,
+        String keywords,
+        String referenceUrl,
+        boolean pdfRenditionRequired,
+        Set<Long> referenceDocumentIds,
         Long checkedOutBy,
         Instant checkedOutAt,
         Instant createdAt,
@@ -34,6 +42,7 @@ public record DocumentResponse(
                 d.getDocumentType().name(),
                 d.getDocumentStatus().name(),
                 d.getMajorVersion(),
+                d.getMinorVersion(),
                 d.getVersion(),
                 d.getContent(),
                 d.getEffectiveDate(),
@@ -43,6 +52,12 @@ public record DocumentResponse(
                 d.getCreatedBy(),
                 d.getSubmittedBy(),
                 d.getFolderId(),
+                d.getOwnerId(),
+                d.getApprovalProfileId(),
+                d.getKeywords(),
+                d.getReferenceUrl(),
+                d.isPdfRenditionRequired(),
+                Set.copyOf(d.getReferenceDocumentIds()),
                 d.getCheckedOutBy(),
                 d.getCheckedOutAt(),
                 d.getCreatedAt(),

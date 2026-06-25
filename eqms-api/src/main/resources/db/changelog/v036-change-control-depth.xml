@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <changeSet id="v036-001-change-control-intake-depth" author="eqms">
+        <addColumn tableName="change_controls">
+            <column name="location_name" type="VARCHAR(200)"/>
+            <column name="purpose_of_change" type="VARCHAR(200)"/>
+            <column name="regulatory_mandate_effective_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="regulatory_mandate_source" type="VARCHAR(500)"/>
+            <column name="change_category" type="VARCHAR(300)"/>
+            <column name="related_market" type="VARCHAR(300)"/>
+            <column name="related_customer" type="VARCHAR(300)"/>
+            <column name="vendor_code" type="VARCHAR(120)"/>
+            <column name="vendor_name" type="VARCHAR(300)"/>
+            <column name="product_item_code" type="VARCHAR(120)"/>
+            <column name="product_item_description" type="VARCHAR(500)"/>
+            <column name="equipment_id_number" type="VARCHAR(120)"/>
+            <column name="equipment_name" type="VARCHAR(300)"/>
+            <column name="document_name" type="VARCHAR(500)"/>
+            <column name="document_number" type="VARCHAR(120)"/>
+            <column name="current_status_brief" type="TEXT"/>
+            <column name="proposed_change_brief" type="TEXT"/>
+            <column name="change_nature" type="VARCHAR(80)"/>
+            <column name="temporary_change_period" type="VARCHAR(500)"/>
+            <column name="change_owner" type="VARCHAR(200)"/>
+            <column name="change_owner_hod" type="VARCHAR(200)"/>
+            <column name="qa_responsible" type="VARCHAR(200)"/>
+            <column name="rad_assessment_required" type="VARCHAR(80)"/>
+            <column name="customer_cg_assessment_required" type="VARCHAR(120)"/>
+            <column name="customer_cg_comments" type="TEXT"/>
+            <column name="qa_assessment_by" type="VARCHAR(200)"/>
+            <column name="qa_assessment_on" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="internal_customer" type="VARCHAR(300)"/>
+            <column name="change_acceptance" type="VARCHAR(120)"/>
+            <column name="qa_comment" type="TEXT"/>
+            <column name="recommendations" type="TEXT"/>
+            <column name="qp_comments" type="TEXT"/>
+            <column name="variation_classification" type="VARCHAR(200)"/>
+            <column name="documents_requested_for_filing" type="TEXT"/>
+            <column name="recommendation_for_release" type="TEXT"/>
+            <column name="other_recommendations" type="TEXT"/>
+            <column name="rad_assessment" type="TEXT"/>
+            <column name="other_departments_review" type="TEXT"/>
+            <column name="final_qa_decision" type="VARCHAR(200)"/>
+            <column name="qa_review_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="qa_reviewer" type="VARCHAR(200)"/>
+            <column name="implementation_details" type="TEXT"/>
+            <column name="implementation_review" type="TEXT"/>
+            <column name="action_confirmation_comment" type="TEXT"/>
+            <column name="change_effective_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="closure_remarks" type="TEXT"/>
+            <column name="batch_ar_number" type="VARCHAR(200)"/>
+            <column name="product_material_code" type="VARCHAR(200)"/>
+            <column name="product_material_name" type="VARCHAR(400)"/>
+            <column name="closed_by_name" type="VARCHAR(200)"/>
+        </addColumn>
+        <createIndex tableName="change_controls" indexName="ix_change_controls_owner_name">
+            <column name="change_owner"/>
+        </createIndex>
+        <createIndex tableName="change_controls" indexName="ix_change_controls_qa_responsible">
+            <column name="qa_responsible"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v036-002-change-control-departments" author="eqms">
+        <createTable tableName="change_control_departments">
+            <column name="change_control_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="department_name" type="VARCHAR(200)"><constraints nullable="false"/></column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="change_control_departments" baseColumnNames="change_control_id"
+                constraintName="fk_change_control_departments_change"
+                referencedTableName="change_controls" referencedColumnNames="id"/>
+        <createIndex tableName="change_control_departments" indexName="ix_change_control_departments_change">
+            <column name="change_control_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v036-003-change-control-impact-tasks" author="eqms">
+        <createTable tableName="change_control_impact_tasks">
+            <column name="change_control_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="task_order" type="INT"><constraints nullable="false"/></column>
+            <column name="checkpoint_no" type="INT"/>
+            <column name="impact_area" type="VARCHAR(300)"/>
+            <column name="applicability" type="VARCHAR(80)"/>
+            <column name="proposed_task" type="TEXT"/>
+            <column name="task_assignee" type="VARCHAR(200)"/>
+            <column name="remarks" type="VARCHAR(500)"/>
+        </createTable>
+        <addPrimaryKey tableName="change_control_impact_tasks"
+                columnNames="change_control_id, task_order"
+                constraintName="pk_change_control_impact_tasks"/>
+        <addForeignKeyConstraint baseTableName="change_control_impact_tasks" baseColumnNames="change_control_id"
+                constraintName="fk_change_control_impact_tasks_change"
+                referencedTableName="change_controls" referencedColumnNames="id"/>
+    </changeSet>
+</databaseChangeLog>

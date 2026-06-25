@@ -36,6 +36,7 @@ export interface DocumentResponse {
   type: DocumentTypeKey;
   status: DocumentStatus;
   majorVersion: number;
+  minorVersion?: number;
   version: number;
   content: string | null;
   effectiveDate: string | null;
@@ -45,6 +46,12 @@ export interface DocumentResponse {
   createdBy: number | null;
   submittedBy: number | null;
   folderId: number | null;
+  ownerId?: number | null;
+  approvalProfileId?: number | null;
+  keywords?: string | null;
+  referenceUrl?: string | null;
+  pdfRenditionRequired?: boolean;
+  referenceDocumentIds?: number[];
   checkedOutBy: number | null;
   checkedOutAt: string | null;
   createdAt: string;
@@ -57,6 +64,12 @@ export interface DocumentFolder {
   name: string;
   parentId: number | null;
   children: DocumentFolder[];
+}
+
+export interface DocumentApprovalProfile {
+  id: number;
+  name: string;
+  description: string | null;
 }
 
 /** GET /api/documents/{id}/notes and /change-requests */
@@ -127,6 +140,7 @@ export interface AttachmentResponse {
   contentType: string;
   sizeBytes: number;
   sha256: string;
+  attachmentRole?: "SOURCE" | "SUPPORTING";
   uploadedBy: number | null;
   uploadedAt: string;
 }

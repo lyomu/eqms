@@ -29,6 +29,13 @@ public record CreateTrainingRequest(
         String assessmentCriteria,
         List<TrainingSessionRequest> sessions
 ) {
+    /** Backwards-compatible compact request used by the core training integration tests. */
+    public CreateTrainingRequest(String title, String content, TrainingAudience intendedAudience,
+                                 TrainingFrequency requiredFrequency) {
+        this(title, content, intendedAudience, requiredFrequency, null, null, null,
+                null, null, null, null, null, null, List.of(), List.of(), null, null, List.of());
+    }
+
     public record TrainingSessionRequest(int sessionIndex, Instant startAt, Instant endAt) {
     }
 }

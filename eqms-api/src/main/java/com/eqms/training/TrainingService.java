@@ -11,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.eqms.admin.settings.OrganizationSettingsPolicyService;
 import com.eqms.audit.AuditEntryRequest;
 import com.eqms.audit.AuditLog;
 import com.eqms.audit.AuditService;
@@ -43,6 +44,7 @@ public class TrainingService {
     private final TrainingCompletionAuditRepository completionAuditRepository;
     private final SequenceService sequenceService;
     private final AuditService auditService;
+    private final OrganizationSettingsPolicyService settingsPolicy;
     private final Clock clock;
 
     public TrainingService(TrainingProgramRepository programRepository,
@@ -50,7 +52,8 @@ public class TrainingService {
                            TrainingAutoRuleRepository ruleRepository,
                            TrainingSessionRepository sessionRepository,
                            TrainingCompletionAuditRepository completionAuditRepository,
-                           SequenceService sequenceService, AuditService auditService, Clock utcClock) {
+                           SequenceService sequenceService, AuditService auditService,
+                           OrganizationSettingsPolicyService settingsPolicy, Clock utcClock) {
         this.programRepository = programRepository;
         this.assignmentRepository = assignmentRepository;
         this.ruleRepository = ruleRepository;
@@ -58,6 +61,7 @@ public class TrainingService {
         this.completionAuditRepository = completionAuditRepository;
         this.sequenceService = sequenceService;
         this.auditService = auditService;
+        this.settingsPolicy = settingsPolicy;
         this.clock = utcClock;
     }
 
@@ -173,6 +177,9 @@ public class TrainingService {
         if (assignment.getStatus() == AssignmentStatus.COMPLETED) {
             throw new WorkflowException("Assignment is already completed");
         }
+        if (settingsPolicy.enabled("training", "trainingEvidenceRequired", true) && isBlank(evidence)) {
+            throw new WorkflowException("Training completion evidence is required");
+        }
         Instant now = Instant.now(clock);
         assignment.setStatus(AssignmentStatus.COMPLETED);
         assignment.setCompletionDate(now);
@@ -269,6 +276,10 @@ public class TrainingService {
 
     private static String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     private static String joinLines(List<String> values) {

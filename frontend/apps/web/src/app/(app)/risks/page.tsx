@@ -326,7 +326,7 @@ export default function RiskListPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-body">
             <thead>
-              <tr className="border-b border-border bg-muted/30">
+              <tr className="border-b border-border bg-muted/30 [&>th:first-child]:pl-4">
                 <SortableHeader label="Risk No." sortKey="riskNo" current={sortKey} dir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Title" sortKey="title" current={sortKey} dir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Category" sortKey="category" current={sortKey} dir={sortDir} onSort={toggleSort} />
@@ -353,7 +353,7 @@ export default function RiskListPage() {
                       onClick={() => setExpandedId(isExpanded ? null : r.id)}
                       className="cursor-pointer border-b border-border last:border-0 hover:bg-accent/20 transition-colors"
                     >
-                      <td className="py-2 pr-4 font-medium text-brand-primary">
+                      <td className="py-2 pl-4 pr-4 font-medium text-brand-primary">
                         <Link href={`/risks/${r.id}`} onClick={(ev) => ev.stopPropagation()} className="hover:underline">
                           {r.riskNo}
                         </Link>

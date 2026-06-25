@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
@@ -51,12 +52,13 @@ class MaterialIntegrationTest extends AbstractIntegrationTest {
     @Autowired PasswordEncoder passwordEncoder;
     @Autowired TotpService totpService;
     @Autowired ObjectMapper objectMapper;
+    @Autowired JdbcTemplate jdbc;
 
     @Test
     void createAssignsMaterialCodeAndStartsInDraft() throws Exception {
         Ctx author = newUser("ADMIN");
         mockMvc.perform(post("/api/materials").session(author.session).contentType(MediaType.APPLICATION_JSON)
-                        .content(json(new CreateMaterialRequest("Microcrystalline Cellulose", MaterialType.EXCIPIENT,
+                        .content(json(materialRequest("Microcrystalline Cellulose", MaterialType.EXCIPIENT,
                                 UnitOfMeasure.KG, "USP grade", "Binder"))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value("DRAFT"))
@@ -124,7 +126,7 @@ class MaterialIntegrationTest extends AbstractIntegrationTest {
     void creatingWithoutPermissionIsForbidden() throws Exception {
         Ctx operator = newUser("OPERATOR");
         mockMvc.perform(post("/api/materials").session(operator.session).contentType(MediaType.APPLICATION_JSON)
-                        .content(json(new CreateMaterialRequest("Nope", MaterialType.OTHER, UnitOfMeasure.UNIT, null, null))))
+                        .content(json(materialRequest("Nope", MaterialType.OTHER, UnitOfMeasure.UNIT, null, null))))
                 .andExpect(status().isForbidden());
     }
 
@@ -132,10 +134,47 @@ class MaterialIntegrationTest extends AbstractIntegrationTest {
 
     private JsonNode create(Ctx ctx) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/materials").session(ctx.session).contentType(MediaType.APPLICATION_JSON)
-                        .content(json(new CreateMaterialRequest("Lactose Monohydrate", MaterialType.EXCIPIENT,
+                        .content(json(materialRequest("Lactose Monohydrate", MaterialType.EXCIPIENT,
                                 UnitOfMeasure.KG, "USP", "Filler"))))
                 .andExpect(status().isCreated()).andReturn();
         return objectMapper.readTree(result.getResponse().getContentAsString());
+    }
+
+    private CreateMaterialRequest materialRequest(String name, MaterialType materialType, UnitOfMeasure unitOfMeasure,
+            String specification, String description) {
+        return new CreateMaterialRequest(
+                name,
+                materialType,
+                unitOfMeasure,
+                specification,
+                description,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                null,
+                null,
+                null,
+                null,
+                false,
+                false,
+                null,
+                null);
     }
 
     private int transition(Ctx ctx, long id, String action, int version, String expectedStatus) throws Exception {
@@ -159,7 +198,25 @@ class MaterialIntegrationTest extends AbstractIntegrationTest {
     private Ctx newUser(String roleName) throws Exception {
         String secret = totpService.generateSecret();
         String suffix = UUID.randomUUID().toString().substring(0, 8);
+        Long orgId = jdbc.queryForObject("""
+                insert into organizations (code, name, status, version, created_at, updated_at)
+                values (?, ?, 'active', 0, now(), now())
+                returning id
+                """, Long.class, "MAT-" + suffix, "Material Test Org " + suffix);
+        jdbc.update("""
+                insert into organization_licenses (organization_id, status, user_limit, starts_at, expires_at, version, created_at, updated_at)
+                values (?, 'active', 25, now(), now() + interval '30 days', 0, now(), now())
+                """, orgId);
+        jdbc.update("""
+                insert into organization_module_licenses (organization_id, module_id, enabled, status, starts_at, expires_at, version, created_at, updated_at)
+                select ?, id, true, 'active', now(), now() + interval '30 days', 0, now(), now()
+                from modules
+                where code = 'materials'
+                on conflict (organization_id, module_id) do update
+                  set enabled = excluded.enabled, status = excluded.status, updated_at = now()
+                """, orgId);
         User user = new User();
+        user.setOrganizationId(orgId);
         user.setEmail("mat-" + suffix + "@test.io");
         user.setUsername("mat-" + suffix);
         user.setFullName("Mat User " + suffix);

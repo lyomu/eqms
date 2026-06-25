@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import type {
   AuditEntry,
   DocumentFolder,
+  DocumentApprovalProfile,
   DocumentNote,
   DocumentResponse,
   DocumentStatus,
@@ -58,6 +59,24 @@ export function useDocumentFolders() {
     queryFn: async (): Promise<DocumentFolder[]> =>
       (await api.get("/api/document-folders")).data,
     staleTime: FIVE_MIN,
+  });
+}
+
+export function useDocumentApprovalProfiles() {
+  return useQuery({
+    queryKey: ["document-approval-profiles"],
+    queryFn: async (): Promise<DocumentApprovalProfile[]> =>
+      (await api.get("/api/document-approval-profiles")).data,
+    staleTime: FIVE_MIN,
+  });
+}
+
+export function useCreateDocumentApprovalProfile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { name: string; description?: string | null }): Promise<DocumentApprovalProfile> =>
+      (await api.post("/api/document-approval-profiles", input)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["document-approval-profiles"] }),
   });
 }
 
@@ -205,6 +224,14 @@ export interface CreateDocumentInput {
   content: string;
   reviewPeriodMonths?: number | null;
   folderId?: number | null;
+  ownerId?: number | null;
+  approvalProfileId?: number | null;
+  keywords?: string | null;
+  referenceUrl?: string | null;
+  majorVersion?: number;
+  minorVersion?: number;
+  pdfRenditionRequired?: boolean;
+  referenceDocumentIds?: number[];
 }
 
 export function useCreateDocument() {
@@ -296,9 +323,10 @@ export function useApproveDocument() {
 export function useUploadAttachment() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (vars: { documentId: number; file: File }) => {
+    mutationFn: async (vars: { documentId: number; file: File; role?: "SOURCE" | "SUPPORTING" }) => {
       const form = new FormData();
       form.append("file", vars.file);
+      form.append("role", vars.role ?? "SUPPORTING");
       return (
         await api.post(`/api/attachments/Document/${vars.documentId}`, form, {
           headers: { "Content-Type": "multipart/form-data" },

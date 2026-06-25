@@ -3,18 +3,25 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
+  approveSettingsChangeRequest,
+  createSettingsChangeRequest,
   getAdminSettingsAuditLog,
   getAdminSettingsSummary,
   getLicenseStatus,
   getNotificationTemplates,
   getNumberingSchemes,
+  getSettingsChangeRequests,
+  getSettingsReferences,
   getSettingsSection,
+  previewNumberingScheme,
+  rejectSettingsChangeRequest,
   updateNotificationTemplate,
   updateNumberingScheme,
   updateSettingsSection,
   type NotificationTemplate,
   type NumberingScheme,
   type SettingsSection,
+  type SettingsUpdateMetadata,
 } from "@/lib/admin/settings";
 
 export const ADMIN_SETTINGS_KEYS = {
@@ -24,6 +31,8 @@ export const ADMIN_SETTINGS_KEYS = {
   numbering: ["admin-settings", "numbering"] as const,
   notifications: ["admin-settings", "notifications"] as const,
   audit: ["admin-settings", "audit"] as const,
+  references: ["admin-settings", "references"] as const,
+  changeRequests: ["admin-settings", "change-requests"] as const,
 };
 
 export function useAdminSettingsSummary() {
@@ -40,10 +49,31 @@ export function useSettingsSection(section: SettingsSection) {
   });
 }
 
+export function useSettingsReferences() {
+  return useQuery({
+    queryKey: ADMIN_SETTINGS_KEYS.references,
+    queryFn: getSettingsReferences,
+  });
+}
+
 export function useUpdateSettingsSection(section: SettingsSection) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (values: Record<string, unknown>) => updateSettingsSection(section, values),
+    mutationFn: (
+      input:
+        | Record<string, unknown>
+        | { values: Record<string, unknown>; metadata?: SettingsUpdateMetadata }
+    ) => {
+      if ("values" in input && typeof input.values === "object" && input.values !== null) {
+        const values = input.values as Record<string, unknown>;
+        const metadata =
+          "metadata" in input && typeof input.metadata === "object" && input.metadata !== null
+            ? (input.metadata as SettingsUpdateMetadata)
+            : undefined;
+        return updateSettingsSection(section, values, metadata);
+      }
+      return updateSettingsSection(section, input);
+    },
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ADMIN_SETTINGS_KEYS.section(section) }),
@@ -51,6 +81,57 @@ export function useUpdateSettingsSection(section: SettingsSection) {
         queryClient.invalidateQueries({ queryKey: ADMIN_SETTINGS_KEYS.audit }),
       ]);
       toast.success("Organization settings saved.");
+    },
+  });
+}
+
+export function useCreateSettingsChangeRequest(section: SettingsSection) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ values, metadata }: { values: Record<string, unknown>; metadata: SettingsUpdateMetadata }) =>
+      createSettingsChangeRequest(section, values, metadata),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ADMIN_SETTINGS_KEYS.changeRequests }),
+        queryClient.invalidateQueries({ queryKey: ADMIN_SETTINGS_KEYS.audit }),
+      ]);
+      toast.success("Settings change request submitted.");
+    },
+  });
+}
+
+export function useSettingsChangeRequests() {
+  return useQuery({
+    queryKey: ADMIN_SETTINGS_KEYS.changeRequests,
+    queryFn: getSettingsChangeRequests,
+  });
+}
+
+export function useApproveSettingsChangeRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, comment }: { id: number; comment: string }) => approveSettingsChangeRequest(id, comment),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ADMIN_SETTINGS_KEYS.changeRequests }),
+        queryClient.invalidateQueries({ queryKey: ADMIN_SETTINGS_KEYS.audit }),
+        queryClient.invalidateQueries({ queryKey: ["admin-settings"] }),
+      ]);
+      toast.success("Settings change request approved.");
+    },
+  });
+}
+
+export function useRejectSettingsChangeRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, comment }: { id: number; comment: string }) => rejectSettingsChangeRequest(id, comment),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ADMIN_SETTINGS_KEYS.changeRequests }),
+        queryClient.invalidateQueries({ queryKey: ADMIN_SETTINGS_KEYS.audit }),
+      ]);
+      toast.success("Settings change request rejected.");
     },
   });
 }
@@ -81,6 +162,13 @@ export function useUpdateNumberingScheme() {
       ]);
       toast.success("Numbering scheme saved.");
     },
+  });
+}
+
+export function usePreviewNumberingScheme() {
+  return useMutation({
+    mutationFn: ({ moduleCode, values }: { moduleCode: string; values: Partial<NumberingScheme> }) =>
+      previewNumberingScheme(moduleCode, values),
   });
 }
 

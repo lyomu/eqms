@@ -11,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.eqms.admin.settings.OrganizationSettingsPolicyService;
 import com.eqms.audit.AuditEntryRequest;
 import com.eqms.audit.AuditLog;
 import com.eqms.audit.AuditService;
@@ -77,6 +78,7 @@ public class AuditManagementService {
     private final WorkflowService workflowService;
     private final SignatureService signatureService;
     private final AuditService auditService;
+    private final OrganizationSettingsPolicyService settingsPolicy;
     private final Clock clock;
 
     public AuditManagementService(AuditRepository repository, AuditFindingRepository findingRepository,
@@ -89,7 +91,8 @@ public class AuditManagementService {
                                   AuditLinkedRecordRepository linkedRecordRepository,
                                   CapaService capaService,
                                   SequenceService sequenceService, WorkflowService workflowService,
-                                  SignatureService signatureService, AuditService auditService, Clock utcClock) {
+                                  SignatureService signatureService, AuditService auditService,
+                                  OrganizationSettingsPolicyService settingsPolicy, Clock utcClock) {
         this.repository = repository;
         this.findingRepository = findingRepository;
         this.capaLinkRepository = capaLinkRepository;
@@ -104,6 +107,7 @@ public class AuditManagementService {
         this.workflowService = workflowService;
         this.signatureService = signatureService;
         this.auditService = auditService;
+        this.settingsPolicy = settingsPolicy;
         this.clock = utcClock;
     }
 
@@ -256,6 +260,7 @@ public class AuditManagementService {
     public Audit close(Long id, CloseAuditRequest request, Long actorId, String actorName, String ip, String ua) {
         Audit audit = require(id);
         checkVersion(audit.getVersion(), request.expectedVersion());
+        requireAuditClosureControls(audit);
         audit.setAuditStatus(AuditStatus.CLOSED);
         audit.setClosureStatus(ClosureStatus.CLOSED);
         audit.setClosedById(actorId);
@@ -284,6 +289,10 @@ public class AuditManagementService {
     @Transactional
     public Audit plan(Long id, PlanAuditRequest request, Long actorId, String actorName, String ip, String ua) {
         Audit audit = require(id);
+        if (settingsPolicy.enabled("audit", "auditorIndependenceRequired", true)
+                && !audit.isAuditorIndependenceConfirmed()) {
+            throw new WorkflowException("Auditor independence must be confirmed before starting audit fieldwork");
+        }
         audit.setScope(request.scope());
         if (request.auditeeId() != null) {
             audit.setAuditeeId(request.auditeeId());
@@ -305,6 +314,9 @@ public class AuditManagementService {
         if (audit.getAuditStatus() != AuditStatus.IN_PROGRESS) {
             throw new WorkflowException("Findings can only be recorded while the audit is IN_PROGRESS");
         }
+        if (settingsPolicy.enabled("audit", "evidenceRequiredForFindings", true) && isBlank(request.evidence())) {
+            throw new WorkflowException("Evidence is required for audit findings");
+        }
         int number = (int) findingRepository.countByAuditId(id) + 1;
         AuditFinding finding = new AuditFinding();
         finding.setAuditId(id);
@@ -314,8 +326,11 @@ public class AuditManagementService {
         finding.setSeverity(request.severity());
         finding.setEvidence(request.evidence());
         finding.setRootCause(request.rootCause());
+        boolean capaRequired = settingsPolicy.enabled("audit", "capaRequiredForMajorFindings", true)
+                && isMajorOrCritical(request.severity());
         finding.setCorrectiveActionRequired(request.correctiveActionRequired()
-                || request.severity() == FindingSeverity.CRITICAL);
+                || request.severity() == FindingSeverity.CRITICAL || capaRequired);
+        finding.setCapaRequired(capaRequired);
         finding.setFindingCode(audit.getAuditNo() + "-F" + String.format("%02d", number));
         finding = findingRepository.save(finding);
 
@@ -331,6 +346,9 @@ public class AuditManagementService {
         Audit audit = require(id);
         int number = (int) findingRepository.countByAuditId(id) + 1;
         FindingSeverity severity = FindingSeverity.valueOf(request.severity());
+        if (settingsPolicy.enabled("audit", "evidenceRequiredForFindings", true) && isBlank(request.evidence())) {
+            throw new WorkflowException("Evidence is required for audit findings");
+        }
 
         AuditFinding finding = new AuditFinding();
         finding.setAuditId(id);
@@ -349,8 +367,10 @@ public class AuditManagementService {
         finding.setRequirementReference(request.requirementReference());
         finding.setEvidence(request.evidence());
         finding.setRootCause(request.rootCause());
+        boolean capaRequiredByPolicy = settingsPolicy.enabled("audit", "capaRequiredForMajorFindings", true)
+                && isMajorOrCritical(severity);
         boolean caRequired = (request.correctiveActionRequired() != null && request.correctiveActionRequired())
-                || severity == FindingSeverity.CRITICAL;
+                || severity == FindingSeverity.CRITICAL || capaRequiredByPolicy;
         finding.setCorrectiveActionRequired(caRequired);
         if (request.immediateCorrectionRequired() != null) {
             finding.setImmediateCorrectionRequired(request.immediateCorrectionRequired());
@@ -358,7 +378,8 @@ public class AuditManagementService {
         if (request.rootCauseRequired() != null) {
             finding.setRootCauseRequired(request.rootCauseRequired());
         }
-        boolean capaReq = (request.capaRequired() != null && request.capaRequired()) || severity == FindingSeverity.CRITICAL;
+        boolean capaReq = (request.capaRequired() != null && request.capaRequired())
+                || severity == FindingSeverity.CRITICAL || capaRequiredByPolicy;
         finding.setCapaRequired(capaReq);
         finding.setResponsibleOwnerId(request.responsibleOwnerId());
         if (request.dueDate() != null && !request.dueDate().isBlank()) {
@@ -383,6 +404,10 @@ public class AuditManagementService {
         if (request.description() != null) finding.setDescription(request.description());
         if (request.findingType() != null) finding.setFindingType(FindingType.valueOf(request.findingType()));
         if (request.severity() != null) finding.setSeverity(FindingSeverity.valueOf(request.severity()));
+        if (settingsPolicy.enabled("audit", "evidenceRequiredForFindings", true)
+                && request.evidence() != null && isBlank(request.evidence())) {
+            throw new WorkflowException("Evidence is required for audit findings");
+        }
         if (request.riskLevel() != null) finding.setRiskLevel(AuditRiskLevel.valueOf(request.riskLevel()));
         if (request.requirementReference() != null) finding.setRequirementReference(request.requirementReference());
         if (request.evidence() != null) finding.setEvidence(request.evidence());
@@ -471,6 +496,7 @@ public class AuditManagementService {
                                boolean firstSignatureInSession, String meaningStatement,
                                Long actorId, String actorName, String ip, String ua) {
         Audit audit = require(id);
+        requireAuditClosureControls(audit);
         signatureService.sign(SignatureRequest.builder()
                 .userId(actorId)
                 .recordType(AuditWorkflow.RECORD_TYPE).recordId(String.valueOf(audit.getId()))
@@ -836,5 +862,41 @@ public class AuditManagementService {
             throw new WorkflowException("Finding " + findingId + " does not belong to audit " + auditId);
         }
         return finding;
+    }
+
+    private void requireAuditClosureControls(Audit audit) {
+        if (settingsPolicy.enabled("audit", "auditorIndependenceRequired", true)
+                && !audit.isAuditorIndependenceConfirmed()) {
+            throw new WorkflowException("Auditor independence must be confirmed before audit completion");
+        }
+        List<AuditFinding> findings = findingRepository.findByAuditIdOrderByFindingNumberAsc(audit.getId());
+        if (settingsPolicy.enabled("audit", "evidenceRequiredForFindings", true)) {
+            boolean missingEvidence = findings.stream().anyMatch(finding -> isBlank(finding.getEvidence()));
+            if (missingEvidence) {
+                throw new WorkflowException("All audit findings must include evidence before audit completion");
+            }
+        }
+        if (settingsPolicy.enabled("audit", "capaRequiredForMajorFindings", true)) {
+            List<Long> requiredFindingIds = findings.stream()
+                    .filter(finding -> finding.isCapaRequired() || isMajorOrCritical(finding.getSeverity()))
+                    .map(AuditFinding::getId)
+                    .toList();
+            if (!requiredFindingIds.isEmpty()
+                    && capaLinkRepository.findByAuditFindingIdIn(requiredFindingIds).size() < requiredFindingIds.size()) {
+                throw new WorkflowException("Major and critical audit findings require linked CAPA records before audit completion");
+            }
+        }
+        if (settingsPolicy.enabled("audit", "auditReportApprovalRequired", true)
+                && audit.getAuditStatus() == AuditStatus.PENDING_CLOSURE && audit.getCompletedDate() == null) {
+            throw new WorkflowException("Audit report approval is required before audit closure");
+        }
+    }
+
+    private static boolean isMajorOrCritical(FindingSeverity severity) {
+        return severity == FindingSeverity.MAJOR || severity == FindingSeverity.CRITICAL;
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 }

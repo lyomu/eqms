@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.eqms.audit.AuditEntryRequest;
 import com.eqms.audit.AuditLog;
 import com.eqms.audit.AuditService;
+import com.eqms.admin.settings.OrganizationSettingsPolicyService;
 import com.eqms.common.ResourceNotFoundException;
 import com.eqms.deviations.DeviationSeverity;
 import com.eqms.deviations.DeviationService;
@@ -47,6 +48,7 @@ public class EquipmentService {
     private final WorkflowService workflowService;
     private final DeviationService deviationService;
     private final AuditService auditService;
+    private final OrganizationSettingsPolicyService settingsPolicy;
     private final Clock clock;
 
     public EquipmentService(EquipmentRepository equipmentRepository,
@@ -57,6 +59,7 @@ public class EquipmentService {
                             WorkflowService workflowService,
                             DeviationService deviationService,
                             AuditService auditService,
+                            OrganizationSettingsPolicyService settingsPolicy,
                             Clock utcClock) {
         this.equipmentRepository = equipmentRepository;
         this.calibrationRepository = calibrationRepository;
@@ -66,11 +69,16 @@ public class EquipmentService {
         this.workflowService = workflowService;
         this.deviationService = deviationService;
         this.auditService = auditService;
+        this.settingsPolicy = settingsPolicy;
         this.clock = utcClock;
     }
 
     @Transactional
     public Equipment create(CreateEquipmentRequest request, Long actorId, String actorName, String ip, String ua) {
+        if (settingsPolicy.enabled("equipment", "calibrationRequired", true)
+                && request.calibrationFrequencyMonths() == null) {
+            throw new WorkflowException("Calibration frequency is required by organization equipment settings");
+        }
         int year = Instant.now(clock).atZone(ZoneOffset.UTC).getYear();
         String code = sequenceService.next(EQUIPMENT_PREFIX, year);
 

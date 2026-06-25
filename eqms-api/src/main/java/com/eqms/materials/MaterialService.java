@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.eqms.audit.AuditEntryRequest;
 import com.eqms.audit.AuditLog;
 import com.eqms.audit.AuditService;
+import com.eqms.admin.settings.OrganizationSettingsPolicyService;
 import com.eqms.common.ResourceNotFoundException;
 import com.eqms.materials.dto.CreateQualityIssueLinkRequest;
 import com.eqms.materials.dto.CreateSupplierLinkRequest;
@@ -53,6 +54,7 @@ public class MaterialService {
     private final WorkflowService workflowService;
     private final SignatureService signatureService;
     private final AuditService auditService;
+    private final OrganizationSettingsPolicyService settingsPolicy;
     private final Clock clock;
 
     public MaterialService(MaterialRepository repository,
@@ -66,6 +68,7 @@ public class MaterialService {
                            WorkflowService workflowService,
                            SignatureService signatureService,
                            AuditService auditService,
+                           OrganizationSettingsPolicyService settingsPolicy,
                            Clock utcClock) {
         this.repository = repository;
         this.lotRepository = lotRepository;
@@ -78,6 +81,7 @@ public class MaterialService {
         this.workflowService = workflowService;
         this.signatureService = signatureService;
         this.auditService = auditService;
+        this.settingsPolicy = settingsPolicy;
         this.clock = utcClock;
     }
 
@@ -357,6 +361,9 @@ public class MaterialService {
     public MaterialLot releaseLot(Long materialId, Long lotId, ReleaseLotRequest req,
                                   Long actorId, String actorName, String ip, String ua) {
         MaterialLot lot = requireLot(materialId, lotId);
+        if (settingsPolicy.enabled("material", "qaReleaseRequired", true) && isBlank(req.reason())) {
+            throw new WorkflowException("Material lot release requires a QA release reason by organization settings");
+        }
         lot.setLotStatus(LotStatus.RELEASED);
         lot.setReleasedAt(Instant.now(clock));
         lot.setReleasedById(actorId);
@@ -421,6 +428,13 @@ public class MaterialService {
     public MaterialIssue issueMaterial(Long materialId, Long lotId, IssueMaterialRequest req,
                                        Long actorId, String actorName, String ip, String ua) {
         MaterialLot lot = requireLot(materialId, lotId);
+        if (settingsPolicy.enabled("material", "blockRejectedLots", true) && lot.getLotStatus() == LotStatus.REJECTED) {
+            throw new WorkflowException("Rejected material lots are blocked from issue by organization settings");
+        }
+        if (settingsPolicy.enabled("material", "blockExpiredMaterials", true)
+                && lot.getExpiryDate() != null && lot.getExpiryDate().isBefore(LocalDate.now(clock))) {
+            throw new WorkflowException("Expired material lots are blocked from issue by organization settings");
+        }
         if (lot.getLotStatus() != LotStatus.RELEASED && lot.getLotStatus() != LotStatus.CONDITIONALLY_RELEASED) {
             throw new WorkflowException("Cannot issue from a lot that is not RELEASED");
         }
@@ -566,6 +580,10 @@ public class MaterialService {
             throw new StaleVersionException("Stale version: record is at v" + current
                     + " but the request was made against v" + expected);
         }
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
     }
 
     private Material require(Long id) {

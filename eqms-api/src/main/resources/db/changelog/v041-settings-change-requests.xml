@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <changeSet id="v041-001-settings-change-requests" author="eqms">
+        <sql dbms="postgresql" splitStatements="false"><![CDATA[
+            CREATE TABLE IF NOT EXISTS settings_change_requests (
+                id BIGSERIAL PRIMARY KEY,
+                organization_id BIGINT NOT NULL REFERENCES organizations(id),
+                section VARCHAR(80) NOT NULL,
+                old_value JSONB,
+                proposed_value JSONB NOT NULL,
+                change_reason VARCHAR(500) NOT NULL,
+                change_impact VARCHAR(1000),
+                effective_date DATE NOT NULL,
+                status VARCHAR(40) NOT NULL DEFAULT 'PENDING',
+                requested_by BIGINT NOT NULL REFERENCES users(id),
+                requested_by_name VARCHAR(200) NOT NULL,
+                requested_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                reviewed_by BIGINT REFERENCES users(id),
+                reviewed_by_name VARCHAR(200),
+                reviewed_at TIMESTAMPTZ,
+                review_comment VARCHAR(1000),
+                version INT NOT NULL DEFAULT 0,
+                deleted_at TIMESTAMPTZ
+            );
+
+            CREATE INDEX IF NOT EXISTS ix_settings_change_requests_org_status
+                ON settings_change_requests (organization_id, status, requested_at DESC);
+
+            ALTER TABLE numbering_schemes
+                ADD COLUMN IF NOT EXISTS year_format VARCHAR(20) NOT NULL DEFAULT 'YYYY',
+                ADD COLUMN IF NOT EXISTS sequence_length INT NOT NULL DEFAULT 5,
+                ADD COLUMN IF NOT EXISTS separator VARCHAR(5) NOT NULL DEFAULT '-',
+                ADD COLUMN IF NOT EXISTS reset_frequency VARCHAR(20) NOT NULL DEFAULT 'Yearly',
+                ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT true;
+        ]]></sql>
+    </changeSet>
+
+</databaseChangeLog>

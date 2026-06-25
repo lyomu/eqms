@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <changeSet id="v034-001-document-intake-metadata" author="eqms">
+        <addColumn tableName="documents">
+            <column name="owner_id" type="BIGINT"/>
+            <column name="approval_profile_id" type="BIGINT"/>
+            <column name="keywords" type="TEXT"/>
+            <column name="reference_url" type="VARCHAR(1000)"/>
+            <column name="minor_version" type="INT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="pdf_rendition_required" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <addForeignKeyConstraint baseTableName="documents" baseColumnNames="owner_id"
+                constraintName="fk_documents_owner" referencedTableName="users" referencedColumnNames="id"/>
+        <createIndex tableName="documents" indexName="ix_documents_owner">
+            <column name="owner_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v034-002-document-approval-profiles" author="eqms">
+        <createTable tableName="document_approval_profiles">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_document_approval_profiles" nullable="false"/>
+            </column>
+            <column name="organization_id" type="BIGINT"/>
+            <column name="name" type="VARCHAR(200)"><constraints nullable="false"/></column>
+            <column name="description" type="VARCHAR(500)"/>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true"><constraints nullable="false"/></column>
+            <column name="version" type="INT" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="now()"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="now()"><constraints nullable="false"/></column>
+            <column name="updated_by" type="BIGINT"/>
+            <column name="deleted_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="documents" baseColumnNames="approval_profile_id"
+                constraintName="fk_documents_approval_profile"
+                referencedTableName="document_approval_profiles" referencedColumnNames="id"/>
+        <createIndex tableName="document_approval_profiles" indexName="ix_document_approval_profiles_org">
+            <column name="organization_id"/><column name="active"/>
+        </createIndex>
+        <createIndex tableName="documents" indexName="ix_documents_approval_profile">
+            <column name="approval_profile_id"/>
+        </createIndex>
+        <sql dbms="postgresql"><![CDATA[
+            INSERT INTO document_approval_profiles
+                (organization_id, name, description, active, version, created_at, updated_at)
+            SELECT id, 'Standard Review & Approval', 'Document owner review followed by Quality approval', true, 0, now(), now()
+            FROM organizations WHERE code = 'DEFAULT';
+            INSERT INTO document_approval_profiles
+                (organization_id, name, description, active, version, created_at, updated_at)
+            SELECT id, 'Quality Approval', 'Quality reviewer and Quality approver routing', true, 0, now(), now()
+            FROM organizations WHERE code = 'DEFAULT';
+        ]]></sql>
+    </changeSet>
+
+    <changeSet id="v034-003-document-references" author="eqms">
+        <createTable tableName="document_references">
+            <column name="document_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="referenced_document_id" type="BIGINT"><constraints nullable="false"/></column>
+        </createTable>
+        <addPrimaryKey tableName="document_references"
+                columnNames="document_id, referenced_document_id"
+                constraintName="pk_document_references"/>
+        <addForeignKeyConstraint baseTableName="document_references" baseColumnNames="document_id"
+                constraintName="fk_document_references_document"
+                referencedTableName="documents" referencedColumnNames="id"/>
+        <addForeignKeyConstraint baseTableName="document_references" baseColumnNames="referenced_document_id"
+                constraintName="fk_document_references_referenced"
+                referencedTableName="documents" referencedColumnNames="id"/>
+        <createIndex tableName="document_references" indexName="ix_document_references_target">
+            <column name="referenced_document_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v034-004-attachment-role" author="eqms">
+        <addColumn tableName="attachments">
+            <column name="attachment_role" type="VARCHAR(30)" defaultValue="SUPPORTING">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

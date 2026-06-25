@@ -49,6 +49,9 @@ public class Attachment extends RegulatedEntity {
     @Column(name = "sha256", nullable = false, length = 64)
     private String sha256;
 
+    @Column(name = "attachment_role", nullable = false, length = 30)
+    private String attachmentRole = "SUPPORTING";
+
     @Column(name = "uploaded_by", nullable = false)
     private Long uploadedBy;
 

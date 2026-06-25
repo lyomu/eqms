@@ -80,8 +80,10 @@ public class DocumentController {
                                                     @AuthenticationPrincipal UserPrincipal principal,
                                                     HttpServletRequest http) {
         Document document = documentService.create(request.title(), request.type(), request.content(),
-                request.reviewPeriodMonths(), request.folderId(), principal.getId(), principal.getFullName(),
-                clientIp(http), userAgent(http));
+                request.reviewPeriodMonths(), request.folderId(), request.ownerId(), request.approvalProfileId(),
+                request.keywords(), request.referenceUrl(), request.majorVersion(), request.minorVersion(),
+                request.pdfRenditionRequired(), request.referenceDocumentIds(),
+                principal.getId(), principal.getFullName(), clientIp(http), userAgent(http));
         return ResponseEntity.status(HttpStatus.CREATED).body(DocumentResponse.from(document));
     }
 

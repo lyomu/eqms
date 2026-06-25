@@ -1,0 +1,331 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <!-- Enriched OOS/OOT module: additional columns on oos_cases + 7 new sub-entity tables. -->
+
+    <changeSet id="v039-1" author="system">
+        <sql>
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS title VARCHAR(400);
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS description TEXT;
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS record_type VARCHAR(40);
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS severity VARCHAR(20);
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS department VARCHAR(200);
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS lab VARCHAR(200);
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS date_detected TIMESTAMPTZ;
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS detected_by_id BIGINT;
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS owner_id BIGINT;
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS qa_reviewer_id BIGINT;
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS due_date DATE;
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS test_category VARCHAR(40);
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS test_name VARCHAR(200);
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS sample_id VARCHAR(200);
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS sample_type VARCHAR(40);
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS batch_id VARCHAR(200);
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS material_id BIGINT;
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS material_lot_id BIGINT;
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS specification_reference VARCHAR(400);
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS trend_limit VARCHAR(100);
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS unit_of_measure VARCHAR(50);
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS analyst_id BIGINT;
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS reviewer_id BIGINT;
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS equipment_id VARCHAR(200);
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS calibration_status_at_test VARCHAR(40);
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS reagent_used VARCHAR(200);
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS reagent_lot VARCHAR(100);
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS reference_std_lot VARCHAR(100);
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS immediate_hold_required BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS hold_applied BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS hold_applied_to VARCHAR(40);
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS hold_reason TEXT;
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS immediate_action_taken TEXT;
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS production_impact BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS released_product_impact BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS customer_impact BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS regulatory_impact BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS investigation_required BOOLEAN NOT NULL DEFAULT TRUE;
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS capa_required BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS retest_requested BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS resample_requested BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS qa_decision VARCHAR(40);
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS closure_comments TEXT;
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS closed_by_id BIGINT;
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS reopened_by_id BIGINT;
+            ALTER TABLE oos_cases ADD COLUMN IF NOT EXISTS reopened_at TIMESTAMPTZ;
+        </sql>
+    </changeSet>
+
+    <changeSet id="v039-2" author="system">
+        <sql>
+            ALTER TABLE oos_initial_assessment ADD COLUMN IF NOT EXISTS lab_supervisor_id BIGINT;
+            ALTER TABLE oos_initial_assessment ADD COLUMN IF NOT EXISTS lab_supervisor_review TEXT;
+            ALTER TABLE oos_initial_assessment ADD COLUMN IF NOT EXISTS assessment_outcome VARCHAR(40);
+            ALTER TABLE oos_initial_assessment ADD COLUMN IF NOT EXISTS lab_error_description TEXT;
+            ALTER TABLE oos_initial_assessment ADD COLUMN IF NOT EXISTS assessment_started_date TIMESTAMPTZ;
+            ALTER TABLE oos_initial_assessment ADD COLUMN IF NOT EXISTS assessment_completed_date TIMESTAMPTZ;
+            ALTER TABLE oos_initial_assessment ADD COLUMN IF NOT EXISTS assessment_comments TEXT;
+            ALTER TABLE oos_initial_assessment ADD COLUMN IF NOT EXISTS lab_error_suspected BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE oos_initial_assessment ADD COLUMN IF NOT EXISTS correct_sample_tested BOOLEAN;
+            ALTER TABLE oos_initial_assessment ADD COLUMN IF NOT EXISTS correct_test_method_used BOOLEAN;
+            ALTER TABLE oos_initial_assessment ADD COLUMN IF NOT EXISTS correct_specification_applied BOOLEAN;
+            ALTER TABLE oos_initial_assessment ADD COLUMN IF NOT EXISTS calculations_checked BOOLEAN;
+            ALTER TABLE oos_initial_assessment ADD COLUMN IF NOT EXISTS dilutions_checked BOOLEAN;
+            ALTER TABLE oos_initial_assessment ADD COLUMN IF NOT EXISTS system_suitability_checked BOOLEAN;
+            ALTER TABLE oos_initial_assessment ADD COLUMN IF NOT EXISTS instrument_calibration_valid BOOLEAN;
+            ALTER TABLE oos_initial_assessment ADD COLUMN IF NOT EXISTS instrument_performance_acceptable BOOLEAN;
+            ALTER TABLE oos_initial_assessment ADD COLUMN IF NOT EXISTS reagents_standards_valid BOOLEAN;
+            ALTER TABLE oos_initial_assessment ADD COLUMN IF NOT EXISTS analyst_followed_procedure BOOLEAN;
+            ALTER TABLE oos_initial_assessment ADD COLUMN IF NOT EXISTS environmental_conditions_acceptable BOOLEAN;
+            ALTER TABLE oos_initial_assessment ADD COLUMN IF NOT EXISTS sample_preparation_checked BOOLEAN;
+            ALTER TABLE oos_initial_assessment ADD COLUMN IF NOT EXISTS raw_data_reviewed BOOLEAN;
+            ALTER TABLE oos_initial_assessment ADD COLUMN IF NOT EXISTS transcription_checked BOOLEAN;
+            ALTER TABLE oos_initial_assessment ADD COLUMN IF NOT EXISTS previous_results_reviewed BOOLEAN;
+            ALTER TABLE oos_initial_assessment ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+        </sql>
+    </changeSet>
+
+    <changeSet id="v039-3" author="system">
+        <sql>
+            ALTER TABLE oos_investigation ADD COLUMN IF NOT EXISTS investigation_scope TEXT;
+            ALTER TABLE oos_investigation ADD COLUMN IF NOT EXISTS investigation_plan TEXT;
+            ALTER TABLE oos_investigation ADD COLUMN IF NOT EXISTS investigation_status VARCHAR(30);
+            ALTER TABLE oos_investigation ADD COLUMN IF NOT EXISTS investigation_owner_id BIGINT;
+            ALTER TABLE oos_investigation ADD COLUMN IF NOT EXISTS investigation_team TEXT;
+            ALTER TABLE oos_investigation ADD COLUMN IF NOT EXISTS investigation_start_date TIMESTAMPTZ;
+            ALTER TABLE oos_investigation ADD COLUMN IF NOT EXISTS investigation_due_date TIMESTAMPTZ;
+            ALTER TABLE oos_investigation ADD COLUMN IF NOT EXISTS investigation_completion_date TIMESTAMPTZ;
+            ALTER TABLE oos_investigation ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+        </sql>
+    </changeSet>
+
+    <changeSet id="v039-4" author="system">
+        <sql>
+            ALTER TABLE oos_disposition ADD COLUMN IF NOT EXISTS qa_decision VARCHAR(40);
+            ALTER TABLE oos_disposition ADD COLUMN IF NOT EXISTS final_conclusion TEXT;
+            ALTER TABLE oos_disposition ADD COLUMN IF NOT EXISTS disposition_quantity DECIMAL(20,6);
+            ALTER TABLE oos_disposition ADD COLUMN IF NOT EXISTS affected_lots TEXT;
+            ALTER TABLE oos_disposition ADD COLUMN IF NOT EXISTS conditions_of_release TEXT;
+            ALTER TABLE oos_disposition ADD COLUMN IF NOT EXISTS closure_comments TEXT;
+            ALTER TABLE oos_disposition ADD COLUMN IF NOT EXISTS closed_by_id BIGINT;
+            ALTER TABLE oos_disposition ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+        </sql>
+    </changeSet>
+
+    <changeSet id="v039-5" author="system">
+        <sql>
+            CREATE TABLE IF NOT EXISTS oos_containment (
+              id BIGSERIAL PRIMARY KEY,
+              oos_id BIGINT NOT NULL REFERENCES oos_cases(id),
+              hold_required BOOLEAN NOT NULL DEFAULT FALSE,
+              hold_type VARCHAR(40),
+              hold_target VARCHAR(40),
+              target_reference VARCHAR(200),
+              hold_reason TEXT,
+              hold_applied_at TIMESTAMPTZ,
+              hold_applied_by BIGINT,
+              hold_released_at TIMESTAMPTZ,
+              hold_released_by BIGINT,
+              immediate_actions TEXT,
+              notification_issued BOOLEAN NOT NULL DEFAULT FALSE,
+              regulatory_notification_required BOOLEAN NOT NULL DEFAULT FALSE,
+              customer_notification_required BOOLEAN NOT NULL DEFAULT FALSE,
+              notes TEXT,
+              containment_status VARCHAR(30) NOT NULL DEFAULT 'DRAFT',
+              created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              created_by BIGINT,
+              updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              updated_by BIGINT,
+              deleted_at TIMESTAMPTZ,
+              UNIQUE(oos_id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_oos_containment_oos_id ON oos_containment(oos_id);
+        </sql>
+    </changeSet>
+
+    <changeSet id="v039-6" author="system">
+        <sql>
+            CREATE TABLE IF NOT EXISTS oos_investigation_items (
+              id BIGSERIAL PRIMARY KEY,
+              oos_id BIGINT NOT NULL REFERENCES oos_cases(id),
+              item_type VARCHAR(40) NOT NULL,
+              item_number INT NOT NULL DEFAULT 1,
+              description TEXT NOT NULL,
+              finding TEXT,
+              source VARCHAR(200),
+              evidence_ref VARCHAR(400),
+              performed_by_id BIGINT,
+              performed_date TIMESTAMPTZ,
+              item_status VARCHAR(20) NOT NULL DEFAULT 'OPEN',
+              created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              created_by BIGINT,
+              updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              updated_by BIGINT
+            );
+            CREATE INDEX IF NOT EXISTS idx_oos_inv_items_oos_id ON oos_investigation_items(oos_id);
+        </sql>
+    </changeSet>
+
+    <changeSet id="v039-7" author="system">
+        <sql>
+            CREATE TABLE IF NOT EXISTS oos_retest_resample (
+              id BIGSERIAL PRIMARY KEY,
+              oos_id BIGINT NOT NULL REFERENCES oos_cases(id),
+              test_type VARCHAR(30) NOT NULL,
+              test_number INT NOT NULL DEFAULT 1,
+              ordered_by_id BIGINT,
+              ordered_date TIMESTAMPTZ,
+              rationale TEXT,
+              sample_reference VARCHAR(200),
+              analyst_id BIGINT,
+              performed_date TIMESTAMPTZ,
+              result VARCHAR(200),
+              result_pass BOOLEAN,
+              equipment_used VARCHAR(200),
+              analyst_comments TEXT,
+              reviewer_id BIGINT,
+              reviewed_date TIMESTAMPTZ,
+              test_status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+              created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              created_by BIGINT,
+              updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              updated_by BIGINT
+            );
+            CREATE INDEX IF NOT EXISTS idx_oos_retest_oos_id ON oos_retest_resample(oos_id);
+        </sql>
+    </changeSet>
+
+    <changeSet id="v039-8" author="system">
+        <sql>
+            CREATE TABLE IF NOT EXISTS oos_impact_assessment (
+              id BIGSERIAL PRIMARY KEY,
+              oos_id BIGINT NOT NULL REFERENCES oos_cases(id),
+              scope_of_impact TEXT,
+              batches_potentially_affected TEXT,
+              products_potentially_affected TEXT,
+              released_product_impact BOOLEAN NOT NULL DEFAULT FALSE,
+              customer_impact BOOLEAN NOT NULL DEFAULT FALSE,
+              regulatory_impact BOOLEAN NOT NULL DEFAULT FALSE,
+              patient_safety_risk VARCHAR(20),
+              risk_justification TEXT,
+              quarantine_required BOOLEAN NOT NULL DEFAULT FALSE,
+              recall_required BOOLEAN NOT NULL DEFAULT FALSE,
+              authority_notification_required BOOLEAN NOT NULL DEFAULT FALSE,
+              authority_notified_at TIMESTAMPTZ,
+              authority_notified_by BIGINT,
+              assessed_by_id BIGINT,
+              assessed_date TIMESTAMPTZ,
+              created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              created_by BIGINT,
+              updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              updated_by BIGINT,
+              deleted_at TIMESTAMPTZ,
+              UNIQUE(oos_id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_oos_impact_oos_id ON oos_impact_assessment(oos_id);
+        </sql>
+    </changeSet>
+
+    <changeSet id="v039-9" author="system">
+        <sql>
+            CREATE TABLE IF NOT EXISTS oos_root_cause (
+              id BIGSERIAL PRIMARY KEY,
+              oos_id BIGINT NOT NULL REFERENCES oos_cases(id),
+              root_cause_category VARCHAR(40),
+              root_cause_description TEXT,
+              root_cause_method VARCHAR(40),
+              contributing_factors TEXT,
+              immediate_cause TEXT,
+              systematic_issue BOOLEAN NOT NULL DEFAULT FALSE,
+              recurrence_prevention TEXT,
+              assessed_by_id BIGINT,
+              assessed_date TIMESTAMPTZ,
+              reviewed_by_id BIGINT,
+              reviewed_date TIMESTAMPTZ,
+              created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              created_by BIGINT,
+              updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              updated_by BIGINT,
+              deleted_at TIMESTAMPTZ,
+              UNIQUE(oos_id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_oos_root_cause_oos_id ON oos_root_cause(oos_id);
+        </sql>
+    </changeSet>
+
+    <changeSet id="v039-10" author="system">
+        <sql>
+            CREATE TABLE IF NOT EXISTS oos_linked_records (
+              id BIGSERIAL PRIMARY KEY,
+              oos_id BIGINT NOT NULL REFERENCES oos_cases(id),
+              linked_record_type VARCHAR(40) NOT NULL,
+              linked_record_id VARCHAR(100) NOT NULL,
+              linked_record_reference VARCHAR(200),
+              linked_record_title VARCHAR(400),
+              linked_record_status VARCHAR(100),
+              relationship_type VARCHAR(40),
+              notes TEXT,
+              added_by BIGINT,
+              created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              created_by BIGINT
+            );
+            CREATE INDEX IF NOT EXISTS idx_oos_linked_oos_id ON oos_linked_records(oos_id);
+        </sql>
+    </changeSet>
+
+    <changeSet id="v039-11" author="system">
+        <sql>
+            CREATE TABLE IF NOT EXISTS oos_evidence (
+              id BIGSERIAL PRIMARY KEY,
+              oos_id BIGINT NOT NULL REFERENCES oos_cases(id),
+              evidence_type VARCHAR(40) NOT NULL,
+              evidence_number INT NOT NULL DEFAULT 1,
+              title VARCHAR(400) NOT NULL,
+              description TEXT,
+              file_name VARCHAR(400),
+              file_size BIGINT,
+              content_type VARCHAR(200),
+              storage_key VARCHAR(800),
+              attachment_id BIGINT,
+              submitted_by BIGINT,
+              submitted_date TIMESTAMPTZ,
+              evidence_status VARCHAR(30) NOT NULL DEFAULT 'PENDING_REVIEW',
+              reviewed_by BIGINT,
+              reviewed_date TIMESTAMPTZ,
+              created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              created_by BIGINT,
+              updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              updated_by BIGINT
+            );
+            CREATE INDEX IF NOT EXISTS idx_oos_evidence_oos_id ON oos_evidence(oos_id);
+        </sql>
+    </changeSet>
+
+    <changeSet id="v039-12" author="system">
+        <sql dbms="postgresql"><![CDATA[
+            INSERT INTO permissions (code, description, version, created_at, updated_at) VALUES
+              ('OOS_INVESTIGATE',    'Manage OOS investigations and sub-entities',     0, now(), now()),
+              ('OOS_RETEST_APPROVE', 'Order and record retest/resample results',       0, now(), now()),
+              ('OOS_DISPOSE',        'Perform QA disposition decisions on OOS cases',  0, now(), now()),
+              ('OOS_REOPEN',         'Reopen closed OOS cases',                        0, now(), now())
+            ON CONFLICT (code) DO NOTHING;
+
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r
+            JOIN permissions p ON p.code IN ('OOS_INVESTIGATE','OOS_RETEST_APPROVE','OOS_DISPOSE','OOS_REOPEN')
+            WHERE r.name IN ('ADMIN','QA_MANAGER')
+            ON CONFLICT DO NOTHING;
+
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r
+            JOIN permissions p ON p.code IN ('OOS_INVESTIGATE','OOS_RETEST_APPROVE')
+            WHERE r.name = 'AUTHOR'
+            ON CONFLICT DO NOTHING;
+        ]]></sql>
+    </changeSet>
+
+</databaseChangeLog>

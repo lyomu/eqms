@@ -29,6 +29,8 @@ import {
   useDocumentNotes,
   useDocumentChangeRequests,
   useDocumentFolders,
+  useDocumentApprovalProfiles,
+  useDocumentList,
   useAddNote,
   useAddChangeRequest,
   useDeleteNote,
@@ -70,6 +72,8 @@ export default function DocumentDetailPage() {
   const doc = useDocument(id);
   const users = useUsers();
   const folders = useDocumentFolders();
+  const approvalProfiles = useDocumentApprovalProfiles();
+  const relatedDocuments = useDocumentList({ page: 0, size: 100, sort: "documentNumber,asc" });
   const notes = useDocumentNotes(id);
   const action = useDocumentAction();
   const checkOut = useCheckOut(id);
@@ -81,10 +85,23 @@ export default function DocumentDetailPage() {
   const [optionsOpen, setOptionsOpen] = useState(false);
 
   const ownerName = useMemo(() => {
-    const cb = doc.data?.createdBy;
+    const cb = doc.data?.ownerId ?? doc.data?.createdBy;
     if (!cb) return "—";
     return users.data?.find((u) => u.id === cb)?.fullName ?? `User #${cb}`;
   }, [doc.data, users.data]);
+
+  const approvalProfileName = useMemo(() => {
+    if (!doc.data?.approvalProfileId) return "—";
+    return approvalProfiles.data?.find((profile) => profile.id === doc.data?.approvalProfileId)?.name
+      ?? `Approval profile #${doc.data.approvalProfileId}`;
+  }, [approvalProfiles.data, doc.data]);
+
+  const referenceNames = useMemo(() => {
+    const ids = new Set(doc.data?.referenceDocumentIds ?? []);
+    return (relatedDocuments.data?.content ?? [])
+      .filter((document) => ids.has(document.id))
+      .map((document) => `${document.documentNumber} — ${document.title}`);
+  }, [doc.data?.referenceDocumentIds, relatedDocuments.data?.content]);
 
   const folderName = useMemo(() => {
     if (!doc.data?.folderId || !folders.data) return null;
@@ -224,18 +241,19 @@ export default function DocumentDetailPage() {
       <div className="border-b border-border bg-background px-4 py-4">
         <h1 className="text-h1 text-brand-primary">
           {d.title}{" "}
-          <span className="text-h3 font-normal text-muted-foreground">[v{d.majorVersion}.00]</span>
+          <span className="text-h3 font-normal text-muted-foreground">[v{d.majorVersion}.{String(d.minorVersion ?? 0).padStart(2, "0")}]</span>
         </h1>
       </div>
 
       {/* ── Metadata fields ─────────────────────────────────────── */}
       <div className="border-b border-border bg-background px-4 pb-4 pt-3">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <ReadOnlyBox label="Format" value={DOCUMENT_TYPE_LABELS[d.type]} />
           <ReadOnlyBox label="Owner" value={ownerName} />
+          <ReadOnlyBox label="Approval Type" value={approvalProfileName} />
           <ReadOnlyBox label="Created On" value={formatDateTime(d.createdAt).replace(" UTC", "")} />
-        </div>
-        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <ReadOnlyBox label="Folder" value={folderName ?? "—"} />
+          <ReadOnlyBox label="Version" value={`v${d.majorVersion}.${String(d.minorVersion ?? 0).padStart(2, "0")}`} />
           <ReadOnlyBox
             label="Status"
             value={
@@ -255,6 +273,15 @@ export default function DocumentDetailPage() {
           {d.nextReviewDate && (
             <ReadOnlyBox label="Next Review" value={formatDate(d.nextReviewDate)} />
           )}
+          <ReadOnlyBox label="PDF Rendition" value={d.pdfRenditionRequired === false ? "Not required" : "Required"} />
+        </div>
+        <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <ReadOnlyBox label="Keywords" value={d.keywords || "—"} />
+          <ReadOnlyBox
+            label="Reference URL"
+            value={d.referenceUrl ? <a href={d.referenceUrl} target="_blank" rel="noreferrer" className="text-brand-secondary hover:underline">{d.referenceUrl}</a> : "—"}
+          />
+          <ReadOnlyBox label="Reference Documents" value={referenceNames.length ? referenceNames.join("; ") : "—"} />
         </div>
       </div>
 
@@ -798,7 +825,7 @@ function HistoryPanel({
             <HistoryRow label="Document Number" value={d.documentNumber} />
             <HistoryRow label="Folder" value={folderName ?? "—"} />
             <HistoryRow label="Document Created" value={`${formatDateTime(d.createdAt).replace(" UTC", "")} ${ownerName}`} />
-            <HistoryRow label="Document Version" value={`v${d.majorVersion}.00`} />
+            <HistoryRow label="Document Version" value={`v${d.majorVersion}.${String(d.minorVersion ?? 0).padStart(2, "0")}`} />
             {d.nextReviewDate && <HistoryRow label="Next Review" value={formatDate(d.nextReviewDate)} />}
           </dl>
 

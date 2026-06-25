@@ -19,4 +19,9 @@ public record UpdateDocumentRequest(
         Long folderId,
         String reason
 ) {
+    /** Backwards-compatible form from before folder assignment was added. */
+    public UpdateDocumentRequest(Integer expectedVersion, String title, DocumentType type, String content,
+                                 Integer reviewPeriodMonths, String reason) {
+        this(expectedVersion, title, type, content, reviewPeriodMonths, null, reason);
+    }
 }

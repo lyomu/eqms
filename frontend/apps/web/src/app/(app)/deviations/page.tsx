@@ -403,14 +403,13 @@ export default function DeviationListPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-body">
             <thead>
-              <tr className="border-b border-border bg-muted/30">
+              <tr className="border-b border-border bg-muted/30 [&>th:first-child]:pl-4 [&>th:last-child]:pr-4">
                 <SortableHeader label="Dev No." sortKey="devNo" current={sortKey} dir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Title" sortKey="title" current={sortKey} dir={sortDir} onSort={toggleSort} />
                 <th className="py-2 pr-4 text-left text-label uppercase tracking-wide text-muted-foreground">Type</th>
                 <SortableHeader label="Category" sortKey="category" current={sortKey} dir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Department" sortKey="department" current={sortKey} dir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Severity" sortKey="severity" current={sortKey} dir={sortDir} onSort={toggleSort} />
-                <SortableHeader label="Risk Level" sortKey="riskLevel" current={sortKey} dir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Status" sortKey="status" current={sortKey} dir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Inv. Due" sortKey="invDue" current={sortKey} dir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Age" sortKey="age" current={sortKey} dir={sortDir} onSort={toggleSort} />
@@ -420,21 +419,20 @@ export default function DeviationListPage() {
             <tbody>
               {pageRows.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="py-8 text-center text-body text-muted-foreground">No deviations found.</td>
+                  <td colSpan={10} className="py-8 text-center text-body text-muted-foreground">No deviations found.</td>
                 </tr>
               ) : (
                 pageRows.map((d) => {
                   const age = ageInDays(d.createdAt);
                   const invDays = daysUntil(d.targetInvestigationDueDate);
                   const isExpanded = expandedId === d.id;
-                  const riskLevel = d.finalRiskLevel ?? d.initialRiskLevel;
                   return [
                     <tr
                       key={d.id}
                       onClick={() => setExpandedId(isExpanded ? null : d.id)}
                       className="cursor-pointer border-b border-border last:border-0 hover:bg-accent/20 transition-colors"
                     >
-                      <td className="py-2 pr-4 font-medium text-brand-primary whitespace-nowrap">
+                      <td className="py-2 pl-4 pr-4 font-medium text-brand-primary whitespace-nowrap">
                         <Link href={`/deviations/${d.id}`} onClick={(ev) => ev.stopPropagation()} className="hover:underline">
                           {d.deviationNumber}
                         </Link>
@@ -451,11 +449,6 @@ export default function DeviationListPage() {
                       <td className="py-2 pr-4 text-muted-foreground">{d.department ?? "—"}</td>
                       <td className="py-2 pr-4">
                         <Badge variant={deviationSeverityVariant(d.severity)}>{d.severity}</Badge>
-                      </td>
-                      <td className="py-2 pr-4">
-                        {riskLevel ? (
-                          <Badge variant={deviationRiskVariant(riskLevel)}>{RISK_LEVEL_LABELS[riskLevel]}</Badge>
-                        ) : "—"}
                       </td>
                       <td className="py-2 pr-4">
                         <Badge variant={deviationStatusVariant(d.status)}>{STATUS_LABELS[d.status]}</Badge>

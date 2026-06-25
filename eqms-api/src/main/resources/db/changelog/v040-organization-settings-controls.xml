@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <changeSet id="v040-001-admin-settings-change-metadata" author="eqms">
+        <sql dbms="postgresql" splitStatements="false"><![CDATA[
+            ALTER TABLE admin_settings_audit_logs
+                ADD COLUMN IF NOT EXISTS effective_date DATE,
+                ADD COLUMN IF NOT EXISTS change_impact VARCHAR(1000),
+                ADD COLUMN IF NOT EXISTS approval_status VARCHAR(80) NOT NULL DEFAULT 'Not Required';
+
+            CREATE INDEX IF NOT EXISTS ix_admin_settings_audit_org_section_ts
+                ON admin_settings_audit_logs (organization_id, section, utc_timestamp DESC);
+        ]]></sql>
+    </changeSet>
+
+</databaseChangeLog>

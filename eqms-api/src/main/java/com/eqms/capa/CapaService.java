@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.eqms.audit.AuditEntryRequest;
 import com.eqms.audit.AuditLog;
 import com.eqms.audit.AuditService;
+import com.eqms.admin.settings.OrganizationSettingsPolicyService;
 import com.eqms.capa.dto.CreateCapaActionRequest;
 import com.eqms.capa.dto.CreateCapaRequest;
 import com.eqms.capa.dto.UpdateCapaDetailsRequest;
@@ -25,6 +26,7 @@ import com.eqms.signatures.SignatureRequest;
 import com.eqms.signatures.SignatureService;
 import com.eqms.workflows.StaleVersionException;
 import com.eqms.workflows.TransitionRequest;
+import com.eqms.workflows.WorkflowException;
 import com.eqms.workflows.WorkflowService;
 
 /**
@@ -43,17 +45,20 @@ public class CapaService {
     private final WorkflowService workflowService;
     private final SignatureService signatureService;
     private final AuditService auditService;
+    private final OrganizationSettingsPolicyService settingsPolicy;
     private final Clock clock;
 
     public CapaService(CapaRepository capaRepository, CapaActionRepository actionRepository,
                        SequenceService sequenceService, WorkflowService workflowService,
-                       SignatureService signatureService, AuditService auditService, Clock utcClock) {
+                       SignatureService signatureService, AuditService auditService,
+                       OrganizationSettingsPolicyService settingsPolicy, Clock utcClock) {
         this.capaRepository = capaRepository;
         this.actionRepository = actionRepository;
         this.sequenceService = sequenceService;
         this.workflowService = workflowService;
         this.signatureService = signatureService;
         this.auditService = auditService;
+        this.settingsPolicy = settingsPolicy;
         this.clock = utcClock;
     }
 
@@ -180,6 +185,9 @@ public class CapaService {
     @Transactional
     public Capa submitForApproval(Long id, int v, String reason, Long actorId, String actorName, String ip, String ua) {
         Capa capa = requireCapa(id);
+        if (settingsPolicy.enabled("quality-events", "rootCauseRequired", true) && isBlank(capa.getRootCause())) {
+            throw new WorkflowException("Root cause is required before submitting CAPA for approval");
+        }
         capa.setSubmittedBy(actorId);
         transition(capa, CapaWorkflow.SUBMIT_FOR_APPROVAL, v, reason, actorId, actorName, ip, ua);
         return capa;
@@ -222,6 +230,10 @@ public class CapaService {
                       boolean firstSignatureInSession, String meaningStatement, String effectivenessResult,
                       Long actorId, String actorName, String ip, String ua) {
         Capa capa = requireCapa(id);
+        if (settingsPolicy.enabled("quality-events", "effectivenessCheckRequired", true)
+                && capa.isEffectivenessCheckRequired() && isBlank(effectivenessResult)) {
+            throw new WorkflowException("Effectiveness check result is required before closing CAPA");
+        }
         capa.setEffectivenessCheckResult(effectivenessResult);
         capa.setClosedDate(Instant.now(clock));
         sign(capa, password, totpCode, firstSignatureInSession,
@@ -361,6 +373,10 @@ public class CapaService {
             throw new StaleVersionException("Stale version: record is at v" + current
                     + " but the request was made against v" + expected);
         }
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     private Capa requireCapa(Long id) {

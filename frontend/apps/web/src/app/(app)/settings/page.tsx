@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
+  Building2,
   KeyRound,
   LogOut,
   RefreshCw,
@@ -82,6 +83,10 @@ function roleLabel(authority: string) {
     .replace(/_/g, " ")
     .toLowerCase()
     .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function isOrgAdmin(authorities?: string[]) {
+  return (authorities ?? []).some((authority) => authority === "ROLE_ADMIN" || authority === "ADMIN");
 }
 
 function settingSummary(label: string, value: string, icon: React.ReactNode) {
@@ -173,6 +178,28 @@ export default function SettingsPage() {
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,420px)]">
         <div className="space-y-4">
+          {isOrgAdmin(currentUser?.authorities) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5" aria-hidden="true" />
+                  Organization Settings
+                </CardTitle>
+                <CardDescription>
+                  Tenant-wide QMS configuration, approvals, numbering, and audit-ready controls.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button asChild variant="outline" className="w-full justify-start">
+                  <Link href="/settings/organization">
+                    <Building2 className="h-4 w-4" />
+                    Open organization settings
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

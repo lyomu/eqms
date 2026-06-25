@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
@@ -53,12 +54,13 @@ class DeviationIntegrationTest extends AbstractIntegrationTest {
     @Autowired PasswordEncoder passwordEncoder;
     @Autowired TotpService totpService;
     @Autowired ObjectMapper objectMapper;
+    @Autowired JdbcTemplate jdbc;
 
     @Test
     void createAssignsDeviationNumberAndStartsInDraft() throws Exception {
         Ctx author = newUser("ADMIN");
         mockMvc.perform(post("/api/deviations").session(author.session).contentType(MediaType.APPLICATION_JSON)
-                        .content(json(new CreateDeviationRequest("Temperature excursion", DeviationSeverity.MAJOR,
+                        .content(json(deviationRequest("Temperature excursion", DeviationSeverity.MAJOR,
                                 "Cold room exceeded 8C", "Quarantined affected lots", null))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value("DRAFT"))
@@ -128,7 +130,7 @@ class DeviationIntegrationTest extends AbstractIntegrationTest {
     void creatingWithoutPermissionIsForbidden() throws Exception {
         Ctx operator = newUser("OPERATOR");
         mockMvc.perform(post("/api/deviations").session(operator.session).contentType(MediaType.APPLICATION_JSON)
-                        .content(json(new CreateDeviationRequest("Nope", DeviationSeverity.MINOR, "x", null, null))))
+                        .content(json(deviationRequest("Nope", DeviationSeverity.MINOR, "x", null, null))))
                 .andExpect(status().isForbidden());
     }
 
@@ -136,10 +138,49 @@ class DeviationIntegrationTest extends AbstractIntegrationTest {
 
     private JsonNode create(Ctx ctx) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/deviations").session(ctx.session).contentType(MediaType.APPLICATION_JSON)
-                        .content(json(new CreateDeviationRequest("Process deviation", DeviationSeverity.MAJOR,
+                        .content(json(deviationRequest("Process deviation", DeviationSeverity.MAJOR,
                                 "Out of range result", "Contained", null))))
                 .andExpect(status().isCreated()).andReturn();
         return objectMapper.readTree(result.getResponse().getContentAsString());
+    }
+
+    private CreateDeviationRequest deviationRequest(String title, DeviationSeverity severity, String description,
+            String immediateAction, Instant occurredDate) {
+        return new CreateDeviationRequest(
+                title,
+                severity,
+                description,
+                immediateAction,
+                occurredDate,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                null,
+                null);
     }
 
     private int transition(Ctx ctx, long id, String action, int version, String expectedStatus) throws Exception {
@@ -172,7 +213,25 @@ class DeviationIntegrationTest extends AbstractIntegrationTest {
     private Ctx newUser(String roleName) throws Exception {
         String secret = totpService.generateSecret();
         String suffix = UUID.randomUUID().toString().substring(0, 8);
+        Long orgId = jdbc.queryForObject("""
+                insert into organizations (code, name, status, version, created_at, updated_at)
+                values (?, ?, 'active', 0, now(), now())
+                returning id
+                """, Long.class, "DEV-" + suffix, "Deviation Test Org " + suffix);
+        jdbc.update("""
+                insert into organization_licenses (organization_id, status, user_limit, starts_at, expires_at, version, created_at, updated_at)
+                values (?, 'active', 25, now(), now() + interval '30 days', 0, now(), now())
+                """, orgId);
+        jdbc.update("""
+                insert into organization_module_licenses (organization_id, module_id, enabled, status, starts_at, expires_at, version, created_at, updated_at)
+                select ?, id, true, 'active', now(), now() + interval '30 days', 0, now(), now()
+                from modules
+                where code = 'deviations'
+                on conflict (organization_id, module_id) do update
+                  set enabled = excluded.enabled, status = excluded.status, updated_at = now()
+                """, orgId);
         User user = new User();
+        user.setOrganizationId(orgId);
         user.setEmail("dev-" + suffix + "@test.io");
         user.setUsername("dev-" + suffix);
         user.setFullName("Dev User " + suffix);

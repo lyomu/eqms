@@ -76,6 +76,22 @@ public class ChangeControlController {
                 principal.getId(), principal.getFullName(), clientIp(http), userAgent(http)));
     }
 
+    @PostMapping("/{id}/request-changes")
+    @PreAuthorize("hasAuthority('CHANGE_APPROVE')")
+    public ChangeControlResponse requestChanges(@PathVariable Long id, @Valid @RequestBody ChangeActionRequest request,
+                                                @AuthenticationPrincipal UserPrincipal principal, HttpServletRequest http) {
+        return ChangeControlResponse.from(service.requestChanges(id, request.expectedVersion(), request.reason(),
+                principal.getId(), principal.getFullName(), clientIp(http), userAgent(http)));
+    }
+
+    @PostMapping("/{id}/resubmit-for-review")
+    @PreAuthorize("hasAuthority('CHANGE_CREATE')")
+    public ChangeControlResponse resubmitForReview(@PathVariable Long id, @Valid @RequestBody ChangeActionRequest request,
+                                                   @AuthenticationPrincipal UserPrincipal principal, HttpServletRequest http) {
+        return ChangeControlResponse.from(service.resubmitForReview(id, request.expectedVersion(), request.reason(),
+                principal.getId(), principal.getFullName(), clientIp(http), userAgent(http)));
+    }
+
     @PostMapping("/{id}/submit-for-approval")
     @PreAuthorize("hasAuthority('CHANGE_APPROVE')")
     public ChangeControlResponse submitForApproval(@PathVariable Long id, @Valid @RequestBody ChangeActionRequest request,

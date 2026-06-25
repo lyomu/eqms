@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.eqms.audit.AuditEntryRequest;
 import com.eqms.audit.AuditLog;
 import com.eqms.audit.AuditService;
+import com.eqms.admin.settings.OrganizationSettingsPolicyService;
 import com.eqms.common.ResourceNotFoundException;
 import com.eqms.sequences.SequenceService;
 import com.eqms.shared.constants.AuditAction;
@@ -43,6 +44,7 @@ public class DocumentService {
     private final WorkflowService workflowService;
     private final SignatureService signatureService;
     private final AuditService auditService;
+    private final OrganizationSettingsPolicyService settingsPolicy;
     private final Clock clock;
 
     public DocumentService(DocumentRepository documentRepository,
@@ -50,7 +52,8 @@ public class DocumentService {
                            DocumentVersionRepository versionRepository,
                            ElectronicSignatureRepository signatureRepository,
                            SequenceService sequenceService, WorkflowService workflowService,
-                           SignatureService signatureService, AuditService auditService, Clock utcClock) {
+                           SignatureService signatureService, AuditService auditService,
+                           OrganizationSettingsPolicyService settingsPolicy, Clock utcClock) {
         this.documentRepository = documentRepository;
         this.readAssignmentRepository = readAssignmentRepository;
         this.versionRepository = versionRepository;
@@ -59,12 +62,16 @@ public class DocumentService {
         this.workflowService = workflowService;
         this.signatureService = signatureService;
         this.auditService = auditService;
+        this.settingsPolicy = settingsPolicy;
         this.clock = utcClock;
     }
 
     @Transactional
     public Document create(String title, DocumentType type, String content, Integer reviewPeriodMonths,
-                           Long folderId, Long actorId, String actorName, String ip, String userAgent) {
+                           Long folderId, Long ownerId, Long approvalProfileId, String keywords,
+                           String referenceUrl, Integer majorVersion, Integer minorVersion,
+                           Boolean pdfRenditionRequired, List<Long> referenceDocumentIds,
+                           Long actorId, String actorName, String ip, String userAgent) {
         int year = Instant.now(clock).atZone(ZoneOffset.UTC).getYear();
         String number = sequenceService.next(type.prefix(), year);
 
@@ -75,14 +82,24 @@ public class DocumentService {
         document.setContent(content);
         document.setReviewPeriodMonths(reviewPeriodMonths);
         document.setFolderId(folderId);
+        document.setOwnerId(ownerId != null ? ownerId : actorId);
+        document.setApprovalProfileId(approvalProfileId);
+        document.setKeywords(normalizeOptional(keywords));
+        document.setReferenceUrl(normalizeOptional(referenceUrl));
+        document.setMajorVersion(majorVersion != null ? majorVersion : 1);
+        document.setMinorVersion(minorVersion != null ? minorVersion : 0);
+        document.setPdfRenditionRequired(pdfRenditionRequired == null || pdfRenditionRequired);
+        if (referenceDocumentIds != null) {
+            document.getReferenceDocumentIds().addAll(referenceDocumentIds.stream()
+                    .filter(java.util.Objects::nonNull).distinct().toList());
+        }
         document.setDocumentStatus(DocumentStatus.DRAFT);
-        document.setMajorVersion(1);
         document = documentRepository.save(document);
 
         auditService.record(AuditEntryRequest.builder()
                 .recordType(DocumentWorkflow.RECORD_TYPE).recordId(String.valueOf(document.getId()))
                 .action(AuditAction.CREATE)
-                .newValue(number)
+                .newValue(number + " v" + document.getMajorVersion() + "." + document.getMinorVersion())
                 .reasonForChange("Document created")
                 .userId(actorId).userFullName(actorName)
                 .ipAddress(ip).userAgent(userAgent)
@@ -113,6 +130,9 @@ public class DocumentService {
                            Integer reviewPeriodMonths, Long folderId, String reason,
                            Long actorId, String actorName, String ip, String userAgent) {
         Document document = require(id);
+        if (!settingsPolicy.enabled("document-control", "allowDraftEdits", true)) {
+            throw new WorkflowException("Draft document editing is disabled by organization settings");
+        }
         if (document.getDocumentStatus() != DocumentStatus.DRAFT) {
             throw new WorkflowException("Document can only be edited while in Draft");
         }
@@ -192,6 +212,9 @@ public class DocumentService {
                             boolean firstSignatureInSession, String meaningStatement,
                             Long actorId, String actorName, String ip, String userAgent) {
         Document document = require(id);
+        if (!settingsPolicy.enabled("document-control", "approvalWorkflowRequired", true)) {
+            throw new WorkflowException("Document approval workflow is disabled by organization settings");
+        }
 
         signatureService.sign(SignatureRequest.builder()
                 .userId(actorId)
@@ -312,7 +335,7 @@ public class DocumentService {
         versionRepository.save(DocumentVersion.builder()
                 .documentId(document.getId())
                 .majorVersion(document.getMajorVersion())
-                .versionLabel(document.getMajorVersion() + ".0")
+                .versionLabel(document.getMajorVersion() + "." + document.getMinorVersion())
                 .status(document.getDocumentStatus().name())
                 .title(document.getTitle())
                 .content(document.getContent())
@@ -352,5 +375,9 @@ public class DocumentService {
     private Document require(Long id) {
         return documentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Document not found: " + id));
+    }
+
+    private static String normalizeOptional(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 }

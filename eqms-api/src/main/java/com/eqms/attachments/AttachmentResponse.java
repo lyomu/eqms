@@ -10,12 +10,13 @@ public record AttachmentResponse(
         String contentType,
         long sizeBytes,
         String sha256,
+        String attachmentRole,
         Long uploadedBy,
         Instant uploadedAt
 ) {
     public static AttachmentResponse from(Attachment a) {
         return new AttachmentResponse(a.getId(), a.getRecordType(), a.getRecordId(),
                 a.getFileName(), a.getContentType(), a.getSizeBytes(),
-                a.getSha256(), a.getUploadedBy(), a.getUploadedAt());
+                a.getSha256(), a.getAttachmentRole(), a.getUploadedBy(), a.getUploadedAt());
     }
 }

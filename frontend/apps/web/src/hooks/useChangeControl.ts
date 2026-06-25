@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import type { AuditEntry, PageResponse } from "@/types/common";
 import type {
   ChangeControlResponse,
+  ChangeImpactTask,
   ChangeStatus,
   ChangeTypeKey,
 } from "@/types/change-control";
@@ -64,9 +65,61 @@ export interface CreateChangeInput {
   title: string;
   type: ChangeTypeKey;
   description: string;
+  locationName?: string | null;
+  purposeOfChange?: string | null;
+  regulatoryMandateEffectiveDate?: string | null;
+  regulatoryMandateSource?: string | null;
+  changeCategory?: string | null;
+  relatedMarket?: string | null;
+  relatedCustomer?: string | null;
+  vendorCode?: string | null;
+  vendorName?: string | null;
+  productItemCode?: string | null;
+  productItemDescription?: string | null;
+  equipmentIdNumber?: string | null;
+  equipmentName?: string | null;
+  documentName?: string | null;
+  documentNumber?: string | null;
+  currentStatusBrief?: string | null;
+  proposedChangeBrief?: string | null;
   justification?: string | null;
+  changeNature?: string | null;
+  temporaryChangePeriod?: string | null;
   effectivenessCheckRequired: boolean;
   targetImplementationDate?: string | null;
+  changeOwner?: string | null;
+  changeOwnerHod?: string | null;
+  qaResponsible?: string | null;
+  involvedDepartments?: string[];
+  impactTasks?: ChangeImpactTask[];
+  radAssessmentRequired?: string | null;
+  customerCgAssessmentRequired?: string | null;
+  customerCgComments?: string | null;
+  qaAssessmentBy?: string | null;
+  qaAssessmentOn?: string | null;
+  internalCustomer?: string | null;
+  changeAcceptance?: string | null;
+  qaComment?: string | null;
+  recommendations?: string | null;
+  qpComments?: string | null;
+  variationClassification?: string | null;
+  documentsRequestedForFiling?: string | null;
+  recommendationForRelease?: string | null;
+  otherRecommendations?: string | null;
+  radAssessment?: string | null;
+  otherDepartmentsReview?: string | null;
+  finalQaDecision?: string | null;
+  qaReviewDate?: string | null;
+  qaReviewer?: string | null;
+  implementationDetails?: string | null;
+  implementationReview?: string | null;
+  actionConfirmationComment?: string | null;
+  changeEffectiveDate?: string | null;
+  closureRemarks?: string | null;
+  batchArNumber?: string | null;
+  productMaterialCode?: string | null;
+  productMaterialName?: string | null;
+  closedByName?: string | null;
 }
 
 export function useCreateChange() {
@@ -81,6 +134,8 @@ export function useCreateChange() {
 /** Simple workflow actions: { expectedVersion, reason }. */
 export type ChangeAction =
   | "submit-for-review"
+  | "request-changes"
+  | "resubmit-for-review"
   | "submit-for-approval"
   | "reject"
   | "start-implementation"

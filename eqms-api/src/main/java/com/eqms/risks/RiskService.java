@@ -10,6 +10,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.eqms.admin.settings.OrganizationSettingsPolicyService;
 import com.eqms.audit.AuditEntryRequest;
 import com.eqms.audit.AuditLog;
 import com.eqms.audit.AuditService;
@@ -48,13 +49,15 @@ public class RiskService {
     private final WorkflowService workflowService;
     private final SignatureService signatureService;
     private final AuditService auditService;
+    private final OrganizationSettingsPolicyService settingsPolicy;
     private final Clock clock;
 
     public RiskService(RiskRepository repository, RiskAnalysisRepository analysisRepository,
                        RiskMitigationRepository mitigationRepository,
                        RiskControlEffectivenessRepository effectivenessRepository,
                        SequenceService sequenceService, WorkflowService workflowService,
-                       SignatureService signatureService, AuditService auditService, Clock utcClock) {
+                       SignatureService signatureService, AuditService auditService,
+                       OrganizationSettingsPolicyService settingsPolicy, Clock utcClock) {
         this.repository = repository;
         this.analysisRepository = analysisRepository;
         this.mitigationRepository = mitigationRepository;
@@ -63,6 +66,7 @@ public class RiskService {
         this.workflowService = workflowService;
         this.signatureService = signatureService;
         this.auditService = auditService;
+        this.settingsPolicy = settingsPolicy;
         this.clock = utcClock;
     }
 
@@ -241,7 +245,8 @@ public class RiskService {
         Risk risk = require(id);
         RiskControlEffectiveness latest = effectivenessRepository
                 .findByRiskIdOrderByVerificationDateDesc(id).stream().findFirst().orElse(null);
-        if (latest == null || !latest.isResidualRiskAcceptable()) {
+        if (settingsPolicy.enabled("risk", "residualRiskAcceptanceRequired", true)
+                && (latest == null || !latest.isResidualRiskAcceptable())) {
             throw new WorkflowException("Residual risk must be verified acceptable before acceptance");
         }
         signatureService.sign(SignatureRequest.builder()

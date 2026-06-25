@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.eqms.audit.AuditEntryRequest;
 import com.eqms.audit.AuditLog;
 import com.eqms.audit.AuditService;
+import com.eqms.admin.settings.OrganizationSettingsPolicyService;
 import com.eqms.capa.Capa;
 import com.eqms.capa.CapaService;
 import com.eqms.capa.CapaSource;
@@ -56,6 +57,7 @@ public class SupplierService {
     private final WorkflowService workflowService;
     private final SignatureService signatureService;
     private final AuditService auditService;
+    private final OrganizationSettingsPolicyService settingsPolicy;
     private final Clock clock;
 
     public SupplierService(SupplierRepository repository,
@@ -65,7 +67,8 @@ public class SupplierService {
                            SupplierFindingRepository findingRepository,
                            SupplierCapaLinkRepository capaLinkRepository, CapaService capaService,
                            SequenceService sequenceService, WorkflowService workflowService,
-                           SignatureService signatureService, AuditService auditService, Clock utcClock) {
+                           SignatureService signatureService, AuditService auditService,
+                           OrganizationSettingsPolicyService settingsPolicy, Clock utcClock) {
         this.repository = repository;
         this.qualificationRepository = qualificationRepository;
         this.certificationRepository = certificationRepository;
@@ -77,6 +80,7 @@ public class SupplierService {
         this.workflowService = workflowService;
         this.signatureService = signatureService;
         this.auditService = auditService;
+        this.settingsPolicy = settingsPolicy;
         this.clock = utcClock;
     }
 
@@ -196,6 +200,9 @@ public class SupplierService {
     @Transactional
     public Supplier makeConditional(Long id, int v, String reason, Long actorId, String actorName, String ip, String ua) {
         Supplier supplier = require(id);
+        if (!settingsPolicy.enabled("supplier", "conditionalApprovalAllowed", true)) {
+            throw new WorkflowException("Conditional supplier approval is disabled by organization settings");
+        }
         transition(supplier, SupplierWorkflow.MAKE_CONDITIONAL, v, reason, actorId, actorName, ip, ua);
         return supplier;
     }

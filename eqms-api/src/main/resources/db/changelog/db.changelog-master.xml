@@ -54,6 +54,8 @@
     <include file="db/changelog/v037-audit-enriched.xml"/>
     <include file="db/changelog/v038-materials-enriched.xml"/>
     <include file="db/changelog/v039-oos-enriched.xml"/>
+    <include file="db/changelog/v040-organization-settings-controls.xml"/>
+    <include file="db/changelog/v041-settings-change-requests.xml"/>
     <include file="db/changelog/v999-privileges.xml"/>
 
 </databaseChangeLog>

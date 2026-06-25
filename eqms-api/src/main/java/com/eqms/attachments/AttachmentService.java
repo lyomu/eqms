@@ -43,7 +43,7 @@ public class AttachmentService {
      */
     @Transactional
     public Attachment upload(String recordType, String recordId, MultipartFile file,
-                             Long actorId, String actorName, String ip, String ua) {
+                             String attachmentRole, Long actorId, String actorName, String ip, String ua) {
         String originalName = file.getOriginalFilename() != null
                 ? file.getOriginalFilename() : "unnamed";
         String contentType = file.getContentType() != null
@@ -72,6 +72,7 @@ public class AttachmentService {
         attachment.setSizeBytes(size);
         attachment.setStorageKey(key);
         attachment.setSha256(sha256);
+        attachment.setAttachmentRole(normalizeRole(attachmentRole));
         attachment.setUploadedBy(actorId);
         attachment.setUploadedAt(Instant.now(clock));
         attachment = repository.save(attachment);
@@ -85,6 +86,15 @@ public class AttachmentService {
                 .build());
 
         return attachment;
+    }
+
+    private static String normalizeRole(String role) {
+        if (role == null || role.isBlank()) return "SUPPORTING";
+        String normalized = role.trim().toUpperCase(java.util.Locale.ROOT);
+        return switch (normalized) {
+            case "SOURCE", "SUPPORTING" -> normalized;
+            default -> throw new IllegalArgumentException("Unsupported attachment role: " + role);
+        };
     }
 
     /** Download: return the storage key and metadata so the controller can stream the bytes. */

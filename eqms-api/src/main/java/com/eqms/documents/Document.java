@@ -1,6 +1,8 @@
 package com.eqms.documents;
 
 import java.time.Instant;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
@@ -10,9 +12,13 @@ import com.eqms.signatures.SignatureService;
 import com.eqms.workflows.WorkflowAware;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import lombok.Getter;
@@ -55,6 +61,9 @@ public class Document extends RegulatedEntity implements WorkflowAware {
     @Column(name = "major_version", nullable = false)
     private int majorVersion = 1;
 
+    @Column(name = "minor_version", nullable = false)
+    private int minorVersion = 0;
+
     @Column(name = "effective_date")
     private Instant effectiveDate;
 
@@ -72,6 +81,26 @@ public class Document extends RegulatedEntity implements WorkflowAware {
 
     @Column(name = "folder_id")
     private Long folderId;
+
+    @Column(name = "owner_id")
+    private Long ownerId;
+
+    @Column(name = "approval_profile_id")
+    private Long approvalProfileId;
+
+    @Column(name = "keywords", columnDefinition = "text")
+    private String keywords;
+
+    @Column(name = "reference_url", length = 1000)
+    private String referenceUrl;
+
+    @Column(name = "pdf_rendition_required", nullable = false)
+    private boolean pdfRenditionRequired = true;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "document_references", joinColumns = @JoinColumn(name = "document_id"))
+    @Column(name = "referenced_document_id")
+    private Set<Long> referenceDocumentIds = new LinkedHashSet<>();
 
     @Column(name = "checked_out_by")
     private Long checkedOutBy;
@@ -105,6 +134,8 @@ public class Document extends RegulatedEntity implements WorkflowAware {
         return SignatureService.sha256Hex(
                 (title == null ? "" : title) + "|"
                         + (content == null ? "" : content) + "|"
-                        + majorVersion);
+                        + majorVersion + "." + minorVersion + "|"
+                        + (keywords == null ? "" : keywords) + "|"
+                        + (referenceUrl == null ? "" : referenceUrl));
     }
 }

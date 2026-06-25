@@ -55,9 +55,10 @@ public class AttachmentController {
     public ResponseEntity<AttachmentResponse> upload(@PathVariable String recordType,
                                                      @PathVariable String recordId,
                                                      @RequestParam("file") MultipartFile file,
+                                                     @RequestParam(value = "role", defaultValue = "SUPPORTING") String role,
                                                      @AuthenticationPrincipal UserPrincipal p,
                                                      HttpServletRequest http) {
-        Attachment attachment = service.upload(recordType, recordId, file,
+        Attachment attachment = service.upload(recordType, recordId, file, role,
                 p.getId(), p.getFullName(), ip(http), ua(http));
         return ResponseEntity.status(HttpStatus.CREATED).body(AttachmentResponse.from(attachment));
     }
