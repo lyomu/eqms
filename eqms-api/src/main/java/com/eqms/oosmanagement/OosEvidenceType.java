@@ -1,0 +1,2 @@
+package com.eqms.oosmanagement;
+public enum OosEvidenceType { CHROMATOGRAM, SPECTRA, RAW_DATA, PHOTO, CALCULATION, LOGBOOK_ENTRY, EQUIPMENT_LOG, WITNESS_STATEMENT, OTHER }

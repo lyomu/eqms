@@ -42,7 +42,9 @@
                 organization_subscriptions, organization_licenses, organization_module_licenses,
                 platform_admins, organization_settings,
                 numbering_schemes, organization_notification_templates,
-                documents, document_read_assignments, change_controls,
+                documents, document_folders, document_notes, document_approval_profiles,
+                document_read_assignments, change_controls, change_control_departments,
+                change_control_impact_tasks,
                 capas, capa_actions, deviations, products, materials,
                 batch_records, batch_production_steps, batch_materials_used,
                 batch_qc_results, batch_deviations_link, batch_products_produced,
@@ -58,6 +60,8 @@
                 equipment, calibrations, maintenance_history, equipment_specifications,
                 oos_cases, oos_initial_assessment, oos_repeat_testing, oos_investigation,
                 oos_disposition, oos_capa_link,
+                oos_containment, oos_investigation_items, oos_retest_resample,
+                oos_impact_assessment, oos_root_cause, oos_linked_records, oos_evidence,
                 non_conformances, non_conformance_investigation, non_conformance_disposition,
                 non_conformance_use_as_is_approval, non_conformance_capa_link,
                 management_reviews, review_metrics, review_audit_results, review_product_feedback,
@@ -66,6 +70,9 @@
 
             -- Append-only document version history: SELECT + INSERT only (immutable snapshots).
             GRANT SELECT, INSERT ON document_versions TO ${app_role_name};
+
+            -- Reference links are fixed at intake and append-only for the runtime role.
+            GRANT SELECT, INSERT ON document_references TO ${app_role_name};
 
             -- Append-only audit trail: SELECT + INSERT only.
             GRANT SELECT, INSERT ON audit_logs TO ${app_role_name};

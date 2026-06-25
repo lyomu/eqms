@@ -1,0 +1,31 @@
+package com.eqms.oosmanagement.dto;
+import com.eqms.oosmanagement.LikelyCause;
+import com.eqms.oosmanagement.OosInitialAssessmentOutcome;
+import jakarta.validation.constraints.NotBlank;
+public record SaveLabAssessmentRequest(
+    @NotBlank String assessmentFindings,
+    LikelyCause likelyCause,
+    Long labSupervisorId,
+    String labSupervisorReview,
+    OosInitialAssessmentOutcome assessmentOutcome,
+    String labErrorDescription,
+    String assessmentComments,
+    Boolean labErrorSuspected,
+    Boolean correctSampleTested,
+    Boolean correctTestMethodUsed,
+    Boolean correctSpecificationApplied,
+    Boolean calculationsChecked,
+    Boolean dilutionsChecked,
+    Boolean systemSuitabilityChecked,
+    Boolean instrumentCalibrationValid,
+    Boolean instrumentPerformanceAcceptable,
+    Boolean reagentsStandardsValid,
+    Boolean analystFollowedProcedure,
+    Boolean environmentalConditionsAcceptable,
+    Boolean samplePreparationChecked,
+    Boolean rawDataReviewed,
+    Boolean transcriptionChecked,
+    Boolean previousResultsReviewed,
+    int expectedVersion,
+    String reason
+) {}

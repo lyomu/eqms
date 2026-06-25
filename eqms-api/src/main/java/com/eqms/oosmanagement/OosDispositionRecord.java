@@ -1,5 +1,6 @@
 package com.eqms.oosmanagement;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 import org.springframework.data.annotation.CreatedBy;
@@ -40,14 +41,39 @@ public class OosDispositionRecord {
     @Column(name = "rationale", columnDefinition = "text")
     private String rationale;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "qa_decision", length = 40)
+    private OosQaDecision qaDecision;
+
+    @Column(name = "final_conclusion", columnDefinition = "text")
+    private String finalConclusion;
+
+    @Column(name = "disposition_quantity", precision = 20, scale = 6)
+    private BigDecimal dispositionQuantity;
+
+    @Column(name = "affected_lots", columnDefinition = "text")
+    private String affectedLots;
+
+    @Column(name = "conditions_of_release", columnDefinition = "text")
+    private String conditionsOfRelease;
+
+    @Column(name = "closure_comments", columnDefinition = "text")
+    private String closureComments;
+
     @Column(name = "approved_by")
     private Long approvedBy;
 
     @Column(name = "approved_date")
     private Instant approvedDate;
 
+    @Column(name = "closed_by_id")
+    private Long closedById;
+
     @Column(name = "signature_id")
     private Long signatureId;
+
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)

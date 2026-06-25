@@ -53,6 +53,7 @@
     <include file="db/changelog/v036-change-control-depth.xml"/>
     <include file="db/changelog/v037-audit-enriched.xml"/>
     <include file="db/changelog/v038-materials-enriched.xml"/>
+    <include file="db/changelog/v039-oos-enriched.xml"/>
     <include file="db/changelog/v999-privileges.xml"/>
 
 </databaseChangeLog>

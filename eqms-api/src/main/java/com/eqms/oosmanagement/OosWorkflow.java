@@ -6,24 +6,11 @@ import com.eqms.shared.constants.SignatureMeaning;
 import com.eqms.workflows.WorkflowDefinition;
 import com.eqms.workflows.WorkflowTransition;
 
-/**
- * OOS Case state machine.
- *
- * <pre>
- * REPORTED ──ASSESS──► INITIAL_ASSESSMENT ─┬─ORDER_REPEAT──► AWAITING_REPEAT ─┬─RECORD_REPEAT_PASS──► DISPOSITION_DETERMINED
- *                                           │                                  └─RECORD_REPEAT_FAIL──► INVESTIGATING
- *                                           └─BEGIN_INVESTIGATION──► INVESTIGATING ──DETERMINE_DISPOSITION──► DISPOSITION_DETERMINED
- *
- * DISPOSITION_DETERMINED ──CLOSE──► CLOSED  (self-approval blocked; requires APPROVED signature)
- * </pre>
- *
- * DETERMINE_DISPOSITION requires an APPROVED signature (QA sign-off on the decision).
- * CLOSE blocks self-approval (the reporter cannot close their own case) and also requires APPROVED signature.
- */
 public final class OosWorkflow {
 
     public static final String RECORD_TYPE = "OosCase";
 
+    // Existing transitions (preserved)
     public static final String ASSESS = "ASSESS";
     public static final String ORDER_REPEAT = "ORDER_REPEAT";
     public static final String BEGIN_INVESTIGATION = "BEGIN_INVESTIGATION";
@@ -32,8 +19,26 @@ public final class OosWorkflow {
     public static final String DETERMINE_DISPOSITION = "DETERMINE_DISPOSITION";
     public static final String CLOSE = "CLOSE";
 
+    // New transitions
+    public static final String SUBMIT_DRAFT = "SUBMIT_DRAFT";
+    public static final String SUBMIT_FOR_QA_REVIEW = "SUBMIT_FOR_QA_REVIEW";
+    public static final String QA_ORDER_RETEST = "QA_ORDER_RETEST";
+    public static final String QA_ORDER_RESAMPLE = "QA_ORDER_RESAMPLE";
+    public static final String QA_APPROVE_INVESTIGATION = "QA_APPROVE_INVESTIGATION";
+    public static final String RETEST_PASS = "RETEST_PASS";
+    public static final String RETEST_FAIL = "RETEST_FAIL";
+    public static final String RESAMPLE_PASS = "RESAMPLE_PASS";
+    public static final String RESAMPLE_FAIL = "RESAMPLE_FAIL";
+    public static final String REQUIRE_CAPA = "REQUIRE_CAPA";
+    public static final String CAPA_COMPLETE_PROCEED = "CAPA_COMPLETE_PROCEED";
+    public static final String QA_DISPOSE = "QA_DISPOSE";
+    public static final String REOPEN = "REOPEN";
+    public static final String CANCEL = "CANCEL";
+    public static final String CANCEL_REPORTED = "CANCEL_REPORTED";
+
     public static final WorkflowDefinition DEFINITION = new WorkflowDefinition(RECORD_TYPE, List.of(
 
+            // --- Existing transitions (unchanged) ---
             WorkflowTransition.builder(ASSESS, "REPORTED", "INITIAL_ASSESSMENT")
                     .requiredAuthority("OOS_CREATE")
                     .build(),
@@ -63,6 +68,69 @@ public final class OosWorkflow {
                     .requiredAuthority("OOS_APPROVE")
                     .approval(true)
                     .requiredSignature(SignatureMeaning.APPROVED)
+                    .build(),
+
+            // --- New transitions ---
+            WorkflowTransition.builder(SUBMIT_DRAFT, "DRAFT", "REPORTED")
+                    .requiredAuthority("OOS_CREATE")
+                    .build(),
+
+            WorkflowTransition.builder(SUBMIT_FOR_QA_REVIEW, "INVESTIGATING", "QA_REVIEW")
+                    .requiredAuthority("OOS_INVESTIGATE")
+                    .build(),
+
+            WorkflowTransition.builder(QA_ORDER_RETEST, "QA_REVIEW", "RETEST_PENDING")
+                    .requiredAuthority("OOS_RETEST_APPROVE")
+                    .build(),
+
+            WorkflowTransition.builder(QA_ORDER_RESAMPLE, "QA_REVIEW", "RESAMPLE_PENDING")
+                    .requiredAuthority("OOS_RETEST_APPROVE")
+                    .build(),
+
+            WorkflowTransition.builder(QA_APPROVE_INVESTIGATION, "QA_REVIEW", "DISPOSITION_PENDING")
+                    .requiredAuthority("OOS_DISPOSE")
+                    .build(),
+
+            WorkflowTransition.builder(RETEST_PASS, "RETEST_PENDING", "DISPOSITION_PENDING")
+                    .requiredAuthority("OOS_RETEST_APPROVE")
+                    .build(),
+
+            WorkflowTransition.builder(RETEST_FAIL, "RETEST_PENDING", "INVESTIGATING")
+                    .requiredAuthority("OOS_RETEST_APPROVE")
+                    .build(),
+
+            WorkflowTransition.builder(RESAMPLE_PASS, "RESAMPLE_PENDING", "DISPOSITION_PENDING")
+                    .requiredAuthority("OOS_RETEST_APPROVE")
+                    .build(),
+
+            WorkflowTransition.builder(RESAMPLE_FAIL, "RESAMPLE_PENDING", "INVESTIGATING")
+                    .requiredAuthority("OOS_RETEST_APPROVE")
+                    .build(),
+
+            WorkflowTransition.builder(REQUIRE_CAPA, "INVESTIGATING", "CAPA_REQUIRED")
+                    .requiredAuthority("OOS_INVESTIGATE")
+                    .build(),
+
+            WorkflowTransition.builder(CAPA_COMPLETE_PROCEED, "CAPA_REQUIRED", "DISPOSITION_PENDING")
+                    .requiredAuthority("OOS_INVESTIGATE")
+                    .build(),
+
+            WorkflowTransition.builder(QA_DISPOSE, "DISPOSITION_PENDING", "DISPOSITION_DETERMINED")
+                    .requiredAuthority("OOS_DISPOSE")
+                    .requiredSignature(SignatureMeaning.APPROVED)
+                    .build(),
+
+            WorkflowTransition.builder(REOPEN, "CLOSED", "REOPENED")
+                    .requiredAuthority("OOS_REOPEN")
+                    .approval(true)
+                    .build(),
+
+            WorkflowTransition.builder(CANCEL, "DRAFT", "CANCELLED")
+                    .requiredAuthority("OOS_CREATE")
+                    .build(),
+
+            WorkflowTransition.builder(CANCEL_REPORTED, "REPORTED", "CANCELLED")
+                    .requiredAuthority("OOS_CREATE")
                     .build()
     ));
 

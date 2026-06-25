@@ -46,6 +46,80 @@ public class OosInitialAssessment {
     @Column(name = "assessment_date")
     private Instant assessmentDate;
 
+    @Column(name = "lab_supervisor_id")
+    private Long labSupervisorId;
+
+    @Column(name = "lab_supervisor_review", columnDefinition = "text")
+    private String labSupervisorReview;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "assessment_outcome", length = 40)
+    private OosInitialAssessmentOutcome assessmentOutcome;
+
+    @Column(name = "lab_error_description", columnDefinition = "text")
+    private String labErrorDescription;
+
+    @Column(name = "assessment_started_date")
+    private Instant assessmentStartedDate;
+
+    @Column(name = "assessment_completed_date")
+    private Instant assessmentCompletedDate;
+
+    @Column(name = "assessment_comments", columnDefinition = "text")
+    private String assessmentComments;
+
+    @Column(name = "lab_error_suspected")
+    private Boolean labErrorSuspected = false;
+
+    // Checklist items
+    @Column(name = "correct_sample_tested")
+    private Boolean correctSampleTested;
+
+    @Column(name = "correct_test_method_used")
+    private Boolean correctTestMethodUsed;
+
+    @Column(name = "correct_specification_applied")
+    private Boolean correctSpecificationApplied;
+
+    @Column(name = "calculations_checked")
+    private Boolean calculationsChecked;
+
+    @Column(name = "dilutions_checked")
+    private Boolean dilutionsChecked;
+
+    @Column(name = "system_suitability_checked")
+    private Boolean systemSuitabilityChecked;
+
+    @Column(name = "instrument_calibration_valid")
+    private Boolean instrumentCalibrationValid;
+
+    @Column(name = "instrument_performance_acceptable")
+    private Boolean instrumentPerformanceAcceptable;
+
+    @Column(name = "reagents_standards_valid")
+    private Boolean reagentsStandardsValid;
+
+    @Column(name = "analyst_followed_procedure")
+    private Boolean analystFollowedProcedure;
+
+    @Column(name = "environmental_conditions_acceptable")
+    private Boolean environmentalConditionsAcceptable;
+
+    @Column(name = "sample_preparation_checked")
+    private Boolean samplePreparationChecked;
+
+    @Column(name = "raw_data_reviewed")
+    private Boolean rawDataReviewed;
+
+    @Column(name = "transcription_checked")
+    private Boolean transcriptionChecked;
+
+    @Column(name = "previous_results_reviewed")
+    private Boolean previousResultsReviewed;
+
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

@@ -2,6 +2,7 @@ package com.eqms.oosmanagement;
 
 import java.time.Instant;
 
+import org.hibernate.annotations.SQLRestriction;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -20,11 +21,12 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Entity
-@Table(name = "oos_investigation")
+@Table(name = "oos_root_cause")
 @Getter
 @Setter
 @EntityListeners(AuditingEntityListener.class)
-public class OosInvestigation {
+@SQLRestriction("deleted_at IS NULL")
+public class OosRootCause {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -33,45 +35,40 @@ public class OosInvestigation {
     @Column(name = "oos_id", nullable = false, unique = true)
     private Long oosId;
 
-    @Column(name = "investigation_scope", columnDefinition = "text")
-    private String investigationScope;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "root_cause_category", length = 40)
+    private OosRootCauseCategory rootCauseCategory;
 
-    @Column(name = "investigation_plan", columnDefinition = "text")
-    private String investigationPlan;
+    @Column(name = "root_cause_description", columnDefinition = "text")
+    private String rootCauseDescription;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "investigation_status", length = 30)
-    private OosInvestigationStatus investigationStatus;
+    @Column(name = "root_cause_method", length = 40)
+    private OosRootCauseMethod rootCauseMethod;
 
-    @Column(name = "investigation_owner_id")
-    private Long investigationOwnerId;
+    @Column(name = "contributing_factors", columnDefinition = "text")
+    private String contributingFactors;
 
-    @Column(name = "investigation_team", columnDefinition = "text")
-    private String investigationTeam;
+    @Column(name = "immediate_cause", columnDefinition = "text")
+    private String immediateCause;
 
-    @Column(name = "investigation_start_date")
-    private Instant investigationStartDate;
+    @Column(name = "systematic_issue", nullable = false)
+    private boolean systematicIssue = false;
 
-    @Column(name = "investigation_due_date")
-    private Instant investigationDueDate;
+    @Column(name = "recurrence_prevention", columnDefinition = "text")
+    private String recurrencePrevention;
 
-    @Column(name = "investigation_completion_date")
-    private Instant investigationCompletionDate;
+    @Column(name = "assessed_by_id")
+    private Long assessedById;
 
-    @Column(name = "investigation_findings", columnDefinition = "text")
-    private String investigationFindings;
+    @Column(name = "assessed_date")
+    private Instant assessedDate;
 
-    @Column(name = "root_cause", columnDefinition = "text")
-    private String rootCause;
+    @Column(name = "reviewed_by_id")
+    private Long reviewedById;
 
-    @Column(name = "root_cause_method", length = 60)
-    private String rootCauseMethod;
-
-    @Column(name = "investigator_id")
-    private Long investigatorId;
-
-    @Column(name = "investigation_date")
-    private Instant investigationDate;
+    @Column(name = "reviewed_date")
+    private Instant reviewedDate;
 
     @Column(name = "deleted_at")
     private Instant deletedAt;
@@ -87,4 +84,7 @@ public class OosInvestigation {
     @LastModifiedDate
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+
+    @Column(name = "updated_by")
+    private Long updatedBy;
 }

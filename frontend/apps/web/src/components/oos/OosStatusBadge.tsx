@@ -1,6 +1,11 @@
-import { StatusPill } from "@/components/common/StatusPill";
-import { OOS_STATUS_CLASSES, OOS_STATUS_LABELS, type OosStatus } from "@/types/oos";
+import { Badge } from "@/components/ui/badge";
+import { OOS_STATUS_LABELS, OOS_STATUS_VARIANT, type OosStatus } from "@/types/oos";
 
-export function OosStatusBadge({ status, className }: { status: OosStatus; className?: string }) {
-  return <StatusPill status={status} labels={OOS_STATUS_LABELS} classes={OOS_STATUS_CLASSES} className={className} />;
+export function OosStatusBadge({ status, className }: { status: OosStatus | string; className?: string }) {
+  const s = status as OosStatus;
+  return (
+    <Badge variant={OOS_STATUS_VARIANT[s] ?? "neutral"} className={className}>
+      {OOS_STATUS_LABELS[s] ?? status}
+    </Badge>
+  );
 }

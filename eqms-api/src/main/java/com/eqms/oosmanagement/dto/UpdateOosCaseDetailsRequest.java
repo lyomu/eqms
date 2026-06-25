@@ -1,0 +1,59 @@
+package com.eqms.oosmanagement.dto;
+import com.eqms.oosmanagement.OosHoldTarget;
+import com.eqms.oosmanagement.OosQaDecision;
+import com.eqms.oosmanagement.OosRecordType;
+import com.eqms.oosmanagement.OosSampleType;
+import com.eqms.oosmanagement.OosSeverity;
+import com.eqms.oosmanagement.OosTestCategory;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+public record UpdateOosCaseDetailsRequest(
+    String title,
+    String description,
+    OosRecordType recordType,
+    OosSeverity severity,
+    String department,
+    String lab,
+    String dateDetected,
+    Long detectedById,
+    Long ownerId,
+    Long qaReviewerId,
+    LocalDate dueDate,
+    Long productId,
+    OosTestCategory testCategory,
+    String testName,
+    String testMethod,
+    BigDecimal specificationLimitMin,
+    BigDecimal specificationLimitMax,
+    String specificationReference,
+    String trendLimit,
+    String reportedResult,
+    String unitOfMeasure,
+    String sampleId,
+    OosSampleType sampleType,
+    String batchId,
+    Long materialId,
+    Long materialLotId,
+    Long analystId,
+    Long reviewerId,
+    String equipmentId,
+    String calibrationStatusAtTest,
+    String reagentUsed,
+    String reagentLot,
+    String referenceStdLot,
+    boolean immediateHoldRequired,
+    boolean holdApplied,
+    OosHoldTarget holdAppliedTo,
+    String holdReason,
+    String immediateActionTaken,
+    boolean productionImpact,
+    boolean releasedProductImpact,
+    boolean customerImpact,
+    boolean regulatoryImpact,
+    boolean investigationRequired,
+    boolean capaRequired,
+    boolean retestRequested,
+    boolean resampleRequested,
+    int expectedVersion,
+    String reason
+) {}
