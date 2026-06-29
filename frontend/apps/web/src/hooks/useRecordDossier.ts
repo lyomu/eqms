@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import type { IsoReadiness } from "@/components/common/IsoReadinessPanel";
 
 export interface RecordAttachmentResponse {
   id: number;
@@ -30,7 +31,19 @@ export const dossierKeys = {
     ["attachments", recordType, String(recordId)] as const,
   comments: (recordType: string, recordId: string | number) =>
     ["comments", recordType, String(recordId)] as const,
+  readiness: (recordType: string, recordId: string | number) =>
+    ["iso-readiness", recordType, String(recordId)] as const,
 };
+
+export function useRecordIsoReadiness(recordType: string, recordId: string | number) {
+  const id = String(recordId);
+  return useQuery({
+    queryKey: dossierKeys.readiness(recordType, id),
+    queryFn: async (): Promise<IsoReadiness> =>
+      (await api.get(`/api/iso-readiness/${recordType}/${id}`)).data,
+    enabled: Boolean(recordType) && Boolean(id),
+  });
+}
 
 export function useRecordAttachments(recordType: string, recordId: string | number) {
   const id = String(recordId);
@@ -55,7 +68,10 @@ export function useUploadRecordAttachment(recordType: string, recordId: string |
         })
       ).data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: dossierKeys.attachments(recordType, id) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: dossierKeys.attachments(recordType, id) });
+      qc.invalidateQueries({ queryKey: dossierKeys.readiness(recordType, id) });
+    },
   });
 }
 
@@ -75,7 +91,10 @@ export function useAddRecordComment(recordType: string, recordId: string | numbe
   return useMutation({
     mutationFn: async (content: string): Promise<RecordCommentResponse> =>
       (await api.post(`/api/comments/${recordType}/${id}`, { content })).data,
-    onSuccess: () => qc.invalidateQueries({ queryKey: dossierKeys.comments(recordType, id) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: dossierKeys.comments(recordType, id) });
+      qc.invalidateQueries({ queryKey: dossierKeys.readiness(recordType, id) });
+    },
   });
 }
 
@@ -85,6 +104,9 @@ export function useDeleteRecordComment(recordType: string, recordId: string | nu
   return useMutation({
     mutationFn: async (commentId: number) =>
       api.delete(`/api/comments/${recordType}/${id}/${commentId}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: dossierKeys.comments(recordType, id) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: dossierKeys.comments(recordType, id) });
+      qc.invalidateQueries({ queryKey: dossierKeys.readiness(recordType, id) });
+    },
   });
 }

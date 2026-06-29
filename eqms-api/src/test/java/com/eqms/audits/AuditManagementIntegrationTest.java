@@ -3,12 +3,14 @@ package com.eqms.audits;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -80,6 +82,7 @@ class AuditManagementIntegrationTest extends AbstractIntegrationTest {
         JsonNode created = create(auditor);
         long id = created.get("id").asLong();
         int v = created.get("version").asInt();
+        v = confirmAuditorIndependence(auditor, id, v);
 
         // Plan -> IN_PROGRESS
         MvcResult planned = mockMvc.perform(post("/api/audits/" + id + "/plan").session(auditor.session)
@@ -146,6 +149,7 @@ class AuditManagementIntegrationTest extends AbstractIntegrationTest {
         JsonNode created = create(auditor);
         long id = created.get("id").asLong();
         int v = created.get("version").asInt();
+        v = confirmAuditorIndependence(auditor, id, v);
 
         MvcResult planned = mockMvc.perform(post("/api/audits/" + id + "/plan").session(auditor.session)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -217,6 +221,18 @@ class AuditManagementIntegrationTest extends AbstractIntegrationTest {
                                 null, null, null, null, null, null, null, null, null))))
                 .andExpect(status().isCreated()).andReturn();
         return objectMapper.readTree(result.getResponse().getContentAsString());
+    }
+
+    private int confirmAuditorIndependence(Ctx ctx, long id, int version) throws Exception {
+        MvcResult result = mockMvc.perform(patch("/api/audits/" + id).session(ctx.session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of(
+                                "expectedVersion", version,
+                                "reason", "Confirm independence",
+                                "auditorIndependenceConfirmed", true))))
+                .andExpect(status().isOk())
+                .andReturn();
+        return version(result);
     }
 
     private int version(MvcResult result) throws Exception {

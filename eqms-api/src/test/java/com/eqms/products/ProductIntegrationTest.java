@@ -2,6 +2,7 @@ package com.eqms.products;
 
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -9,10 +10,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.time.Instant;
 import java.util.UUID;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
@@ -51,6 +54,13 @@ class ProductIntegrationTest extends AbstractIntegrationTest {
     @Autowired PasswordEncoder passwordEncoder;
     @Autowired TotpService totpService;
     @Autowired ObjectMapper objectMapper;
+    @Autowired JdbcTemplate jdbc;
+
+    @BeforeEach
+    void ensureDefaultOrganizationIsWritable() {
+        jdbc.update("update organizations set status = 'active', suspended_at = null, read_only_reason = null where id = 1");
+        jdbc.update("update organization_licenses set status = 'active', suspended_at = null where organization_id = 1");
+    }
 
     @Test
     void createAssignsProductCodeAndStartsInDraft() throws Exception {
@@ -81,6 +91,12 @@ class ProductIntegrationTest extends AbstractIntegrationTest {
         v = version(updated);
 
         v = transition(author, id, "submit-for-approval", v, "PENDING_APPROVAL");
+        seedApprovalEvidence(id, author);
+
+        mockMvc.perform(get("/api/products/" + id + "/iso-readiness").session(author.session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ready").value(true))
+                .andExpect(jsonPath("$.score").value(100));
 
         // activation signature (different user)
         String code = totpService.generateCode(approver.secret, totpService.currentTimeStep());
@@ -103,12 +119,34 @@ class ProductIntegrationTest extends AbstractIntegrationTest {
         long id = created.get("id").asLong();
         int v = created.get("version").asInt();
         v = transition(author, id, "submit-for-approval", v, "PENDING_APPROVAL");
+        seedApprovalEvidence(id, author);
 
         String code = totpService.generateCode(author.secret, totpService.currentTimeStep());
         mockMvc.perform(post("/api/products/" + id + "/approve").session(author.session)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(new ApproveProductRequest(v, "self", PASSWORD, code, "approve"))))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void isoReadinessExposesApprovalBlockers() throws Exception {
+        Ctx author = newUser("ADMIN");
+        JsonNode created = create(author);
+        long id = created.get("id").asLong();
+        int v = created.get("version").asInt();
+        v = transition(author, id, "submit-for-approval", v, "PENDING_APPROVAL");
+
+        mockMvc.perform(get("/api/products/" + id + "/iso-readiness").session(author.session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ready").value(false))
+                .andExpect(jsonPath("$.blockingMessages[0]").exists());
+
+        Ctx approver = newUser("ADMIN");
+        String code = totpService.generateCode(approver.secret, totpService.currentTimeStep());
+        mockMvc.perform(post("/api/products/" + id + "/approve").session(approver.session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(new ApproveProductRequest(v, "Activate", PASSWORD, code, "I approve."))))
+                .andExpect(status().isUnprocessableEntity());
     }
 
     @Test
@@ -150,6 +188,21 @@ class ProductIntegrationTest extends AbstractIntegrationTest {
         return version(result);
     }
 
+    private void seedApprovalEvidence(long id, Ctx ctx) throws Exception {
+        mockMvc.perform(post("/api/products/" + id + "/specifications").session(ctx.session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"specificationReference":"SPEC-1","documentName":"Product Specification","revision":"A","status":"APPROVED","testParameters":"<p>Assay</p>","acceptanceCriteria":"<p>Within limits</p>"}
+                                """))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/products/" + id + "/documents").session(ctx.session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"documentType":"Product Specification","documentName":"Product Specification","documentVersion":"A","status":"APPROVED","notes":"<p>Approved specification document</p>"}
+                                """))
+                .andExpect(status().isOk());
+    }
+
     private int version(MvcResult result) throws Exception {
         return objectMapper.readTree(result.getResponse().getContentAsString()).get("version").asInt();
     }
@@ -169,6 +222,7 @@ class ProductIntegrationTest extends AbstractIntegrationTest {
         user.setMfaSecret(secret);
         user.setMfaEnabled(true);
         user.setStatus(User.UserStatus.ACTIVE);
+        user.setOrganizationId(1L);
         user = userRepository.save(user);
 
         Role role = roleRepository.findByName(roleName).orElseThrow();

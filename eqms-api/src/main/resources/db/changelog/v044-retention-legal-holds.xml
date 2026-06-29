@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <changeSet id="v044-001-retention-policies" author="eqms">
+        <createTable tableName="record_retention_policies">
+            <column name="id" type="BIGSERIAL"><constraints primaryKey="true" primaryKeyName="pk_record_retention_policies" nullable="false"/></column>
+            <column name="organization_id" type="BIGINT"/>
+            <column name="record_type" type="VARCHAR(80)"><constraints nullable="false"/></column>
+            <column name="retention_years" type="INT"><constraints nullable="false"/></column>
+            <column name="disposition_method" type="VARCHAR(80)" defaultValue="ARCHIVE_REVIEW"><constraints nullable="false"/></column>
+            <column name="legal_basis" type="TEXT"/>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true"><constraints nullable="false"/></column>
+            <column name="version" type="INT" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="created_at" type="TIMESTAMPTZ" defaultValueComputed="now()"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMPTZ" defaultValueComputed="now()"><constraints nullable="false"/></column>
+            <column name="updated_by" type="BIGINT"/>
+            <column name="deleted_at" type="TIMESTAMPTZ"/>
+        </createTable>
+        <addUniqueConstraint tableName="record_retention_policies" columnNames="organization_id, record_type"
+                             constraintName="uk_retention_policy_org_type"/>
+    </changeSet>
+
+    <changeSet id="v044-002-legal-holds" author="eqms">
+        <createTable tableName="record_legal_holds">
+            <column name="id" type="BIGSERIAL"><constraints primaryKey="true" primaryKeyName="pk_record_legal_holds" nullable="false"/></column>
+            <column name="organization_id" type="BIGINT"/>
+            <column name="record_type" type="VARCHAR(80)"><constraints nullable="false"/></column>
+            <column name="record_id" type="VARCHAR(80)"><constraints nullable="false"/></column>
+            <column name="reason" type="TEXT"><constraints nullable="false"/></column>
+            <column name="released_at" type="TIMESTAMPTZ"/>
+            <column name="released_by" type="BIGINT"/>
+            <column name="release_reason" type="TEXT"/>
+            <column name="version" type="INT" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="created_at" type="TIMESTAMPTZ" defaultValueComputed="now()"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMPTZ" defaultValueComputed="now()"><constraints nullable="false"/></column>
+            <column name="updated_by" type="BIGINT"/>
+            <column name="deleted_at" type="TIMESTAMPTZ"/>
+        </createTable>
+        <createIndex tableName="record_legal_holds" indexName="idx_record_legal_holds_record">
+            <column name="organization_id"/>
+            <column name="record_type"/>
+            <column name="record_id"/>
+            <column name="released_at"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v044-003-default-retention-policies" author="eqms">
+        <sql dbms="postgresql" splitStatements="false"><![CDATA[
+            INSERT INTO record_retention_policies
+                (organization_id, record_type, retention_years, disposition_method, legal_basis, active)
+            VALUES
+                (NULL, 'Document', 10, 'ARCHIVE_REVIEW', 'Default controlled-document retention pending organization-specific policy.', true),
+                (NULL, 'Capa', 10, 'ARCHIVE_REVIEW', 'Default CAPA record retention pending organization-specific policy.', true),
+                (NULL, 'Deviation', 10, 'ARCHIVE_REVIEW', 'Default deviation record retention pending organization-specific policy.', true),
+                (NULL, 'NonConformance', 10, 'ARCHIVE_REVIEW', 'Default nonconformance record retention pending organization-specific policy.', true),
+                (NULL, 'ChangeControl', 10, 'ARCHIVE_REVIEW', 'Default change-control record retention pending organization-specific policy.', true),
+                (NULL, 'Risk', 10, 'ARCHIVE_REVIEW', 'Default risk record retention pending organization-specific policy.', true),
+                (NULL, 'Material', 10, 'ARCHIVE_REVIEW', 'Default material record retention pending organization-specific policy.', true),
+                (NULL, 'OosCase', 10, 'ARCHIVE_REVIEW', 'Default OOS/OOT record retention pending organization-specific policy.', true),
+                (NULL, 'BatchRecord', 10, 'ARCHIVE_REVIEW', 'Default batch record retention pending organization-specific policy.', true),
+                (NULL, 'Audit', 10, 'ARCHIVE_REVIEW', 'Default audit record retention pending organization-specific policy.', true),
+                (NULL, 'Supplier', 10, 'ARCHIVE_REVIEW', 'Default supplier record retention pending organization-specific policy.', true),
+                (NULL, 'Equipment', 10, 'ARCHIVE_REVIEW', 'Default equipment record retention pending organization-specific policy.', true),
+                (NULL, 'ManagementReview', 10, 'ARCHIVE_REVIEW', 'Default management review retention pending organization-specific policy.', true),
+                (NULL, 'Complaint', 10, 'ARCHIVE_REVIEW', 'Default complaint record retention pending organization-specific policy.', true),
+                (NULL, 'Product', 10, 'ARCHIVE_REVIEW', 'Default product master record retention pending organization-specific policy.', true),
+                (NULL, 'TrainingProgram', 10, 'ARCHIVE_REVIEW', 'Default training record retention pending organization-specific policy.', true),
+                (NULL, 'QmsProcess', 10, 'ARCHIVE_REVIEW', 'Default process register retention pending organization-specific policy.', true)
+            ON CONFLICT (organization_id, record_type) DO NOTHING;
+        ]]></sql>
+    </changeSet>
+</databaseChangeLog>

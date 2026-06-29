@@ -24,6 +24,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import com.eqms.auth.dto.LoginRequest;
 import com.eqms.auth.dto.MfaVerifyRequest;
 import com.eqms.auth.mfa.TotpService;
+import com.eqms.comments.dto.AddRecordCommentRequest;
 import com.eqms.deviations.dto.ApproveDeviationRequest;
 import com.eqms.deviations.dto.CreateDeviationRequest;
 import com.eqms.deviations.dto.DeviationTransitionRequest;
@@ -79,6 +80,7 @@ class DeviationIntegrationTest extends AbstractIntegrationTest {
 
         v = transition(author, id, "submit-for-investigation", v, "UNDER_INVESTIGATION");
         v = putRootCause(author, id, v, "Faulty thermostat sensor");
+        addReadinessComment(author, id, "Investigation evidence reviewed before approval.");
         v = transition(author, id, "submit-for-approval", v, "PENDING_APPROVAL");
 
         String code = totpService.generateCode(approver.secret, totpService.currentTimeStep());
@@ -106,6 +108,7 @@ class DeviationIntegrationTest extends AbstractIntegrationTest {
         int v = created.get("version").asInt();
         v = transition(author, id, "submit-for-investigation", v, "UNDER_INVESTIGATION");
         v = putRootCause(author, id, v, "Root cause");
+        addReadinessComment(author, id, "Approval evidence is available for QA review.");
         v = transition(author, id, "submit-for-approval", v, "PENDING_APPROVAL");
 
         String code = totpService.generateCode(author.secret, totpService.currentTimeStep());
@@ -139,13 +142,18 @@ class DeviationIntegrationTest extends AbstractIntegrationTest {
     private JsonNode create(Ctx ctx) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/deviations").session(ctx.session).contentType(MediaType.APPLICATION_JSON)
                         .content(json(deviationRequest("Process deviation", DeviationSeverity.MAJOR,
-                                "Out of range result", "Contained", null))))
+                                "Out of range result", "Contained", null, ctx.userId))))
                 .andExpect(status().isCreated()).andReturn();
         return objectMapper.readTree(result.getResponse().getContentAsString());
     }
 
     private CreateDeviationRequest deviationRequest(String title, DeviationSeverity severity, String description,
             String immediateAction, Instant occurredDate) {
+        return deviationRequest(title, severity, description, immediateAction, occurredDate, null);
+    }
+
+    private CreateDeviationRequest deviationRequest(String title, DeviationSeverity severity, String description,
+            String immediateAction, Instant occurredDate, Long ownerId) {
         return new CreateDeviationRequest(
                 title,
                 severity,
@@ -160,7 +168,7 @@ class DeviationIntegrationTest extends AbstractIntegrationTest {
                 null,
                 null,
                 null,
-                null,
+                ownerId,
                 null,
                 null,
                 null,
@@ -191,6 +199,13 @@ class DeviationIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.status").value(expectedStatus))
                 .andReturn();
         return version(result);
+    }
+
+    private void addReadinessComment(Ctx ctx, long id, String content) throws Exception {
+        mockMvc.perform(post("/api/comments/Deviation/" + id).session(ctx.session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(new AddRecordCommentRequest(content))))
+                .andExpect(status().isCreated());
     }
 
     private int putRootCause(Ctx ctx, long id, int version, String rootCause) throws Exception {
@@ -248,7 +263,7 @@ class DeviationIntegrationTest extends AbstractIntegrationTest {
         assignment.setGrantedAt(Instant.now());
         userRoleRepository.save(assignment);
 
-        return new Ctx(authenticate(user.getEmail(), secret), secret);
+        return new Ctx(authenticate(user.getEmail(), secret), secret, user.getId());
     }
 
     private MockHttpSession authenticate(String email, String secret) throws Exception {
@@ -263,6 +278,6 @@ class DeviationIntegrationTest extends AbstractIntegrationTest {
         return session;
     }
 
-    private record Ctx(MockHttpSession session, String secret) {
+    private record Ctx(MockHttpSession session, String secret, Long userId) {
     }
 }

@@ -8,10 +8,10 @@ import type { MaterialStatus } from "@/types/material";
 describe("ProductStatusBadge", () => {
   const cases: Array<{ status: ProductStatus; label: string; classFragment: string }> = [
     { status: "DRAFT", label: "Draft", classFragment: "bg-muted" },
-    { status: "PENDING_APPROVAL", label: "Pending Approval", classFragment: "bg-warning/20" },
+    { status: "PENDING_APPROVAL", label: "Under Review", classFragment: "bg-warning/20" },
     { status: "ACTIVE", label: "Active", classFragment: "bg-success" },
-    { status: "ON_HOLD", label: "On Hold", classFragment: "bg-warning/20" },
-    { status: "DISCONTINUED", label: "Discontinued", classFragment: "bg-slate-200" },
+    { status: "ON_HOLD", label: "Suspended", classFragment: "bg-warning/20" },
+    { status: "DISCONTINUED", label: "Obsolete", classFragment: "bg-slate-200" },
     { status: "REJECTED", label: "Rejected", classFragment: "bg-error/15" },
   ];
   it.each(cases)("renders $status", ({ status, label, classFragment }) => {

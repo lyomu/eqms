@@ -23,6 +23,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import com.eqms.auth.dto.LoginRequest;
 import com.eqms.auth.dto.MfaVerifyRequest;
 import com.eqms.auth.mfa.TotpService;
+import com.eqms.comments.dto.AddRecordCommentRequest;
 import com.eqms.capa.dto.ApproveCapaRequest;
 import com.eqms.capa.dto.CapaTransitionRequest;
 import com.eqms.capa.dto.CloseCapaRequest;
@@ -80,6 +81,7 @@ class CapaIntegrationTest extends AbstractIntegrationTest {
 
         v = transition(author, id, "submit-for-investigation", v, "UNDER_INVESTIGATION");
         v = putRootCause(author, id, v, "Operator used an outdated label roll");
+        addReadinessComment(author, id, "Root cause and approval evidence reviewed.");
         v = transition(author, id, "submit-for-approval", v, "PENDING_APPROVAL");
         v = approve(approver, id, v);                              // 1st signature (with TOTP)
         v = transition(approver, id, "start-actions", v, "IN_PROGRESS");
@@ -143,17 +145,22 @@ class CapaIntegrationTest extends AbstractIntegrationTest {
     private JsonNode create(Ctx ctx) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/capas").session(ctx.session).contentType(MediaType.APPLICATION_JSON)
                         .content(json(createRequest("Investigation", CapaSource.DEVIATION,
-                                "Problem description", true, null))))
+                                "Problem description", true, null, ctx.userId))))
                 .andExpect(status().isCreated()).andReturn();
         return objectMapper.readTree(result.getResponse().getContentAsString());
     }
 
     private CreateCapaRequest createRequest(String title, CapaSource source, String description,
                                             boolean effectivenessCheckRequired, Instant dueDate) {
+        return createRequest(title, source, description, effectivenessCheckRequired, dueDate, null);
+    }
+
+    private CreateCapaRequest createRequest(String title, CapaSource source, String description,
+                                            boolean effectivenessCheckRequired, Instant dueDate, Long assignedTo) {
         return new CreateCapaRequest(
                 title, source, description, effectivenessCheckRequired, dueDate,
                 null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null);
+                null, null, null, assignedTo, null, null);
     }
 
     private int transition(Ctx ctx, long id, String action, int version, String expectedStatus) throws Exception {
@@ -173,6 +180,13 @@ class CapaIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isOk())
                 .andReturn();
         return version(result);
+    }
+
+    private void addReadinessComment(Ctx ctx, long id, String content) throws Exception {
+        mockMvc.perform(post("/api/comments/Capa/" + id).session(ctx.session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(new AddRecordCommentRequest(content))))
+                .andExpect(status().isCreated());
     }
 
     private int approve(Ctx ctx, long id, int version) throws Exception {
@@ -240,7 +254,7 @@ class CapaIntegrationTest extends AbstractIntegrationTest {
         assignment.setGrantedAt(Instant.now());
         userRoleRepository.save(assignment);
 
-        return new Ctx(authenticate(user.getEmail(), secret), secret);
+        return new Ctx(authenticate(user.getEmail(), secret), secret, user.getId());
     }
 
     private MockHttpSession authenticate(String email, String secret) throws Exception {
@@ -255,6 +269,6 @@ class CapaIntegrationTest extends AbstractIntegrationTest {
         return session;
     }
 
-    private record Ctx(MockHttpSession session, String secret) {
+    private record Ctx(MockHttpSession session, String secret, Long userId) {
     }
 }

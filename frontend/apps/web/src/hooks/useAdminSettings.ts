@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { api } from "@/lib/api";
 import {
   approveSettingsChangeRequest,
   createSettingsChangeRequest,
@@ -33,7 +34,82 @@ export const ADMIN_SETTINGS_KEYS = {
   audit: ["admin-settings", "audit"] as const,
   references: ["admin-settings", "references"] as const,
   changeRequests: ["admin-settings", "change-requests"] as const,
+  processes: ["admin-settings", "processes"] as const,
 };
+
+export type QmsProcessStatus = "DRAFT" | "ACTIVE" | "UNDER_REVIEW" | "RETIRED";
+
+export interface QmsProcess {
+  id: number;
+  processCode: string;
+  name: string;
+  processOwnerId: number | null;
+  department: string | null;
+  purpose: string | null;
+  inputs: string | null;
+  outputs: string | null;
+  kpis: string | null;
+  linkedDocuments: string | null;
+  linkedRisks: string | null;
+  linkedTraining: string | null;
+  recordsGenerated: string | null;
+  reviewFrequencyMonths: number;
+  nextReviewDate: string | null;
+  status: QmsProcessStatus;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface QmsProcessInput {
+  name: string;
+  processOwnerId?: number | null;
+  department?: string | null;
+  purpose?: string | null;
+  inputs?: string | null;
+  outputs?: string | null;
+  kpis?: string | null;
+  linkedDocuments?: string | null;
+  linkedRisks?: string | null;
+  linkedTraining?: string | null;
+  recordsGenerated?: string | null;
+  reviewFrequencyMonths?: number;
+  nextReviewDate?: string | null;
+  status?: QmsProcessStatus;
+  expectedVersion?: number;
+  reason?: string;
+}
+
+export function useQmsProcesses() {
+  return useQuery({
+    queryKey: ADMIN_SETTINGS_KEYS.processes,
+    queryFn: async (): Promise<QmsProcess[]> => (await api.get("/api/admin/settings/processes")).data,
+  });
+}
+
+export function useCreateQmsProcess() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: QmsProcessInput): Promise<QmsProcess> =>
+      (await api.post("/api/admin/settings/processes", input)).data,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ADMIN_SETTINGS_KEYS.processes });
+      toast.success("QMS process created.");
+    },
+  });
+}
+
+export function useUpdateQmsProcess() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...input }: QmsProcessInput & { id: number }): Promise<QmsProcess> =>
+      (await api.put(`/api/admin/settings/processes/${id}`, input)).data,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ADMIN_SETTINGS_KEYS.processes });
+      toast.success("QMS process updated.");
+    },
+  });
+}
 
 export function useAdminSettingsSummary() {
   return useQuery({

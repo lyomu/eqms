@@ -4,6 +4,7 @@ import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { useUiStore } from "@/stores/ui-store";
 import { cn } from "@/lib/utils";
+import { RouteIsoReadinessBanner } from "@/components/common/RouteIsoReadinessBanner";
 
 /** App chrome: fixed sidebar (desktop) + mobile slide-over, header, scrollable content. */
 export function MainLayout({ children }: { children: React.ReactNode }) {
@@ -45,7 +46,10 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       {/* Content column */}
       <div className="flex min-w-0 flex-1 flex-col">
         <Header />
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+          <RouteIsoReadinessBanner />
+          {children}
+        </main>
       </div>
     </div>
   );

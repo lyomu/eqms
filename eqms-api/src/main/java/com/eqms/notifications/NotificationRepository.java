@@ -21,6 +21,9 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     long countByRecipientUserIdAndReadAtIsNull(Long recipientUserId);
 
+    boolean existsByRecipientUserIdAndTypeAndRecordTypeAndRecordId(Long recipientUserId, NotificationType type,
+                                                                   String recordType, String recordId);
+
     /** Mark all unread notifications for a user as read in one statement (server UTC time). */
     @Modifying
     @Query("update Notification n set n.readAt = :now where n.recipientUserId = :userId and n.readAt is null")

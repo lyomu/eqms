@@ -6,12 +6,14 @@ import { toast } from "sonner";
 import {
   useAddRecordComment,
   useDeleteRecordComment,
+  useRecordIsoReadiness,
   useRecordAttachments,
   useRecordComments,
   useUploadRecordAttachment,
 } from "@/hooks/useRecordDossier";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { IsoReadinessPanel } from "@/components/common/IsoReadinessPanel";
 import { Tabs } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDateTime } from "@/lib/format";
@@ -35,7 +37,7 @@ interface RecordDossierPanelProps {
   sections?: DossierSection[];
 }
 
-type TabKey = "report" | "attachments" | "comments";
+type TabKey = "report" | "iso" | "attachments" | "comments";
 
 export function RecordDossierPanel({
   recordType,
@@ -50,6 +52,7 @@ export function RecordDossierPanel({
   const fileRef = useRef<HTMLInputElement>(null);
   const attachments = useRecordAttachments(recordType, recordId);
   const comments = useRecordComments(recordType, recordId);
+  const readiness = useRecordIsoReadiness(recordType, recordId);
   const uploadAttachment = useUploadRecordAttachment(recordType, recordId);
   const addComment = useAddRecordComment(recordType, recordId);
   const deleteComment = useDeleteRecordComment(recordType, recordId);
@@ -122,6 +125,7 @@ export function RecordDossierPanel({
           onChange={(key) => setTab(key as TabKey)}
           tabs={[
             { key: "report", label: "Report" },
+            { key: "iso", label: "ISO Readiness", count: readiness.data?.blockingMessages.length },
             { key: "attachments", label: "Attachments", count: attachmentItems.length },
             { key: "comments", label: "Comments", count: commentItems.length },
           ]}
@@ -150,6 +154,10 @@ export function RecordDossierPanel({
               </div>
             )}
           </div>
+        )}
+
+        {tab === "iso" && (
+          <IsoReadinessPanel readiness={readiness.data} isLoading={readiness.isLoading} isError={readiness.isError} />
         )}
 
         {tab === "attachments" && (

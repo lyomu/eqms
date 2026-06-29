@@ -19,11 +19,17 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.eqms.auth.UserPrincipal;
 import com.eqms.common.dto.AuditEntryResponse;
+import com.eqms.common.dto.IsoReadinessResponse;
 import com.eqms.common.dto.PageResponse;
 import com.eqms.products.dto.ApproveProductRequest;
 import com.eqms.products.dto.CreateProductRequest;
+import com.eqms.products.dto.ProductApprovalHistoryResponse;
+import com.eqms.products.dto.ProductEvidenceRequest;
+import com.eqms.products.dto.ProductEvidenceResponse;
 import com.eqms.products.dto.ProductResponse;
+import com.eqms.products.dto.ProductSummaryResponse;
 import com.eqms.products.dto.ProductTransitionRequest;
+import com.eqms.products.dto.ProductTraceabilityResponse;
 import com.eqms.products.dto.UpdateProductRequest;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -45,9 +51,25 @@ public class ProductController {
 
     @GetMapping
     @PreAuthorize("isAuthenticated()")
-    public PageResponse<ProductResponse> list(@RequestParam(required = false) ProductStatus status, Pageable pageable) {
-        Page<Product> page = service.list(status, pageable);
+    public PageResponse<ProductResponse> list(@RequestParam(required = false) ProductStatus status,
+                                              @RequestParam(required = false) String search,
+                                              @RequestParam(required = false) String productType,
+                                              @RequestParam(required = false) String category,
+                                              @RequestParam(required = false) ProductCriticality criticality,
+                                              @RequestParam(required = false) Long ownerId,
+                                              @RequestParam(required = false) String specificationStatus,
+                                              @RequestParam(required = false) Boolean dueForReview,
+                                              @RequestParam(required = false) Boolean openQualityIssues,
+                                              Pageable pageable) {
+        Page<Product> page = service.list(status, search, productType, category, criticality, ownerId,
+                specificationStatus, dueForReview, openQualityIssues, pageable);
         return PageResponse.from(page, page.getContent().stream().map(ProductResponse::from).toList());
+    }
+
+    @GetMapping("/summary")
+    @PreAuthorize("isAuthenticated()")
+    public ProductSummaryResponse summary() {
+        return service.summary();
     }
 
     @PostMapping
@@ -64,6 +86,12 @@ public class ProductController {
         return ProductResponse.from(service.get(id));
     }
 
+    @GetMapping("/{id}/iso-readiness")
+    @PreAuthorize("isAuthenticated()")
+    public IsoReadinessResponse isoReadiness(@PathVariable Long id) {
+        return service.isoReadiness(id);
+    }
+
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('PRODUCT_CREATE')")
     public ProductResponse update(@PathVariable Long id, @Valid @RequestBody UpdateProductRequest request,
@@ -77,6 +105,13 @@ public class ProductController {
                                              @AuthenticationPrincipal UserPrincipal p, HttpServletRequest http) {
         return ProductResponse.from(service.submitForApproval(id, r.expectedVersion(), r.reason(),
                 p.getId(), p.getFullName(), ip(http), ua(http)));
+    }
+
+    @PostMapping("/{id}/submit")
+    @PreAuthorize("hasAnyAuthority('PRODUCT_CREATE','PRODUCT_SUBMIT')")
+    public ProductResponse submit(@PathVariable Long id, @Valid @RequestBody ProductTransitionRequest r,
+                                  @AuthenticationPrincipal UserPrincipal p, HttpServletRequest http) {
+        return submitForApproval(id, r, p, http);
     }
 
     @PostMapping("/{id}/approve")
@@ -108,6 +143,13 @@ public class ProductController {
                 p.getId(), p.getFullName(), ip(http), ua(http)));
     }
 
+    @PostMapping("/{id}/suspend")
+    @PreAuthorize("hasAuthority('PRODUCT_APPROVE')")
+    public ProductResponse suspend(@PathVariable Long id, @Valid @RequestBody ProductTransitionRequest r,
+                                   @AuthenticationPrincipal UserPrincipal p, HttpServletRequest http) {
+        return putOnHold(id, r, p, http);
+    }
+
     @PostMapping("/{id}/resume")
     @PreAuthorize("hasAuthority('PRODUCT_APPROVE')")
     public ProductResponse resume(@PathVariable Long id, @Valid @RequestBody ProductTransitionRequest r,
@@ -124,8 +166,55 @@ public class ProductController {
                 p.getId(), p.getFullName(), ip(http), ua(http)));
     }
 
+    @PostMapping("/{id}/obsolete")
+    @PreAuthorize("hasAnyAuthority('PRODUCT_APPROVE','PRODUCT_ARCHIVE')")
+    public ProductResponse obsolete(@PathVariable Long id, @Valid @RequestBody ProductTransitionRequest r,
+                                    @AuthenticationPrincipal UserPrincipal p, HttpServletRequest http) {
+        return discontinue(id, r, p, http);
+    }
+
+    @PostMapping("/{id}/revise")
+    @PreAuthorize("hasAnyAuthority('PRODUCT_APPROVE','PRODUCT_REVISE')")
+    public ProductResponse revise(@PathVariable Long id, @Valid @RequestBody ProductTransitionRequest r,
+                                  @AuthenticationPrincipal UserPrincipal p, HttpServletRequest http) {
+        return ProductResponse.from(service.revise(id, r.expectedVersion(), r.reason(),
+                p.getId(), p.getFullName(), ip(http), ua(http)));
+    }
+
+    @GetMapping("/{id}/{section:specifications|materials|process|qc-requirements|documents|quality-issues|risks|change-control}")
+    @PreAuthorize("isAuthenticated()")
+    public List<ProductEvidenceResponse> evidence(@PathVariable Long id, @PathVariable String section) {
+        return service.evidence(id, section);
+    }
+
+    @PostMapping("/{id}/{section:specifications|materials|process|qc-requirements|documents|quality-issues|risks|change-control}")
+    @PreAuthorize("hasAnyAuthority('PRODUCT_CREATE','PRODUCT_DOCUMENTS_MANAGE','PRODUCT_MATERIALS_MANAGE','PRODUCT_QUALITY_LINKS_MANAGE')")
+    public ProductEvidenceResponse addEvidence(@PathVariable Long id, @PathVariable String section,
+                                               @RequestBody ProductEvidenceRequest request,
+                                               @AuthenticationPrincipal UserPrincipal p, HttpServletRequest http) {
+        return service.addEvidence(id, section, request, p.getId(), p.getFullName(), ip(http), ua(http));
+    }
+
+    @GetMapping("/{id}/batches")
+    @PreAuthorize("isAuthenticated()")
+    public List<ProductEvidenceResponse> batches(@PathVariable Long id) {
+        return service.batches(id);
+    }
+
+    @GetMapping("/{id}/traceability")
+    @PreAuthorize("hasAnyAuthority('PRODUCT_TRACEABILITY_VIEW','AUDIT_VIEW')")
+    public ProductTraceabilityResponse traceability(@PathVariable Long id) {
+        return service.traceability(id);
+    }
+
+    @GetMapping("/{id}/approval-history")
+    @PreAuthorize("isAuthenticated()")
+    public List<ProductApprovalHistoryResponse> approvalHistory(@PathVariable Long id) {
+        return service.approvalHistory(id);
+    }
+
     @GetMapping("/{id}/audit-trail")
-    @PreAuthorize("hasAuthority('AUDIT_VIEW')")
+    @PreAuthorize("hasAnyAuthority('AUDIT_VIEW','PRODUCT_AUDIT_TRAIL_VIEW')")
     public List<AuditEntryResponse> auditTrail(@PathVariable Long id) {
         return service.auditTrail(id).stream().map(AuditEntryResponse::from).toList();
     }

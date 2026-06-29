@@ -56,6 +56,9 @@
     <include file="db/changelog/v039-oos-enriched.xml"/>
     <include file="db/changelog/v040-organization-settings-controls.xml"/>
     <include file="db/changelog/v041-settings-change-requests.xml"/>
+    <include file="db/changelog/v042-product-lifecycle-depth.xml"/>
+    <include file="db/changelog/v043-qms-process-register.xml"/>
+    <include file="db/changelog/v044-retention-legal-holds.xml"/>
     <include file="db/changelog/v999-privileges.xml"/>
 
 </databaseChangeLog>

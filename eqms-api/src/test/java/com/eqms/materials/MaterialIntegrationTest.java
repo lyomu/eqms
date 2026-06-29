@@ -22,6 +22,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import com.eqms.auth.dto.LoginRequest;
 import com.eqms.auth.dto.MfaVerifyRequest;
 import com.eqms.auth.mfa.TotpService;
+import com.eqms.comments.dto.AddRecordCommentRequest;
 import com.eqms.identity.Role;
 import com.eqms.identity.RoleRepository;
 import com.eqms.identity.User;
@@ -82,6 +83,7 @@ class MaterialIntegrationTest extends AbstractIntegrationTest {
         v = version(updated);
 
         v = transition(author, id, "submit-for-approval", v, "PENDING_APPROVAL");
+        addReadinessComment(author, id, "Specification and material approval evidence reviewed.");
 
         String code = totpService.generateCode(approver.secret, totpService.currentTimeStep());
         MvcResult approved = mockMvc.perform(post("/api/materials/" + id + "/approve").session(approver.session)
@@ -189,6 +191,13 @@ class MaterialIntegrationTest extends AbstractIntegrationTest {
 
     private int version(MvcResult result) throws Exception {
         return objectMapper.readTree(result.getResponse().getContentAsString()).get("version").asInt();
+    }
+
+    private void addReadinessComment(Ctx ctx, long id, String content) throws Exception {
+        mockMvc.perform(post("/api/comments/Material/" + id).session(ctx.session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(new AddRecordCommentRequest(content))))
+                .andExpect(status().isCreated());
     }
 
     private String json(Object value) throws Exception {

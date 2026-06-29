@@ -47,6 +47,67 @@ public class Product extends RegulatedEntity implements WorkflowAware {
     @Column(name = "registration_number", length = 100)
     private String registrationNumber;
 
+    @Column(name = "product_type", length = 60)
+    private String productType;
+
+    @Column(name = "category", length = 160)
+    private String category;
+
+    @Column(name = "intended_use", columnDefinition = "text")
+    private String intendedUse;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "criticality", nullable = false, length = 20)
+    private ProductCriticality criticality = ProductCriticality.MINOR;
+
+    @Column(name = "owner_id")
+    private Long ownerId;
+
+    @Column(name = "department", length = 160)
+    private String department;
+
+    @Column(name = "site_location", length = 160)
+    private String siteLocation;
+
+    @Column(name = "revision", nullable = false, length = 40)
+    private String revision = "A";
+
+    @Column(name = "specification_reference", length = 160)
+    private String specificationReference;
+
+    @Column(name = "specification_status", nullable = false, length = 40)
+    private String specificationStatus = "DRAFT";
+
+    @Column(name = "storage_requirements", columnDefinition = "text")
+    private String storageRequirements;
+
+    @Column(name = "shelf_life", length = 120)
+    private String shelfLife;
+
+    @Column(name = "expiry_required", nullable = false)
+    private boolean expiryRequired;
+
+    @Column(name = "qc_testing_required", nullable = false)
+    private boolean qcTestingRequired;
+
+    @Column(name = "batch_lot_tracking_required", nullable = false)
+    private boolean batchLotTrackingRequired;
+
+    @Column(name = "regulatory_customer_requirements", columnDefinition = "text")
+    private String regulatoryCustomerRequirements;
+
+    @Column(name = "notes", columnDefinition = "text")
+    private String notes;
+
+    @Column(name = "approved_by")
+    private Long approvedBy;
+
+    @Column(name = "approved_at")
+    private java.time.Instant approvedAt;
+
+    @Column(name = "next_review_date")
+    private java.time.LocalDate nextReviewDate;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 40)
     private ProductStatus productStatus = ProductStatus.DRAFT;
@@ -80,6 +141,8 @@ public class Product extends RegulatedEntity implements WorkflowAware {
                 (productCode == null ? "" : productCode) + "|"
                         + (name == null ? "" : name) + "|"
                         + (dosageForm == null ? "" : dosageForm.name()) + "|"
-                        + (strength == null ? "" : strength));
+                        + (strength == null ? "" : strength) + "|"
+                        + (revision == null ? "" : revision) + "|"
+                        + (specificationReference == null ? "" : specificationReference));
     }
 }

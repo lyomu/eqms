@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <changeSet id="v042-001-product-master-depth" author="eqms">
+        <sql dbms="postgresql"><![CDATA[
+            ALTER TABLE products
+                ADD COLUMN IF NOT EXISTS product_type VARCHAR(60),
+                ADD COLUMN IF NOT EXISTS category VARCHAR(160),
+                ADD COLUMN IF NOT EXISTS intended_use TEXT,
+                ADD COLUMN IF NOT EXISTS criticality VARCHAR(20) NOT NULL DEFAULT 'MINOR',
+                ADD COLUMN IF NOT EXISTS owner_id BIGINT,
+                ADD COLUMN IF NOT EXISTS department VARCHAR(160),
+                ADD COLUMN IF NOT EXISTS site_location VARCHAR(160),
+                ADD COLUMN IF NOT EXISTS revision VARCHAR(40) NOT NULL DEFAULT 'A',
+                ADD COLUMN IF NOT EXISTS specification_reference VARCHAR(160),
+                ADD COLUMN IF NOT EXISTS specification_status VARCHAR(40) NOT NULL DEFAULT 'DRAFT',
+                ADD COLUMN IF NOT EXISTS storage_requirements TEXT,
+                ADD COLUMN IF NOT EXISTS shelf_life VARCHAR(120),
+                ADD COLUMN IF NOT EXISTS expiry_required BOOLEAN NOT NULL DEFAULT false,
+                ADD COLUMN IF NOT EXISTS qc_testing_required BOOLEAN NOT NULL DEFAULT false,
+                ADD COLUMN IF NOT EXISTS batch_lot_tracking_required BOOLEAN NOT NULL DEFAULT false,
+                ADD COLUMN IF NOT EXISTS regulatory_customer_requirements TEXT,
+                ADD COLUMN IF NOT EXISTS notes TEXT,
+                ADD COLUMN IF NOT EXISTS approved_by BIGINT,
+                ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ,
+                ADD COLUMN IF NOT EXISTS next_review_date DATE;
+
+            UPDATE products SET
+                product_type = COALESCE(product_type, dosage_form),
+                owner_id = COALESCE(owner_id, created_by),
+                specification_reference = COALESCE(specification_reference, registration_number),
+                specification_status = CASE WHEN status = 'ACTIVE' THEN 'APPROVED' ELSE specification_status END
+            WHERE product_type IS NULL OR owner_id IS NULL OR specification_reference IS NULL;
+
+            CREATE INDEX IF NOT EXISTS ix_products_org_status ON products (organization_id, status);
+            CREATE INDEX IF NOT EXISTS ix_products_org_type ON products (organization_id, product_type);
+            CREATE INDEX IF NOT EXISTS ix_products_org_criticality ON products (organization_id, criticality);
+            CREATE INDEX IF NOT EXISTS ix_products_next_review ON products (next_review_date);
+        ]]></sql>
+    </changeSet>
+
+    <changeSet id="v042-002-product-lifecycle-tables" author="eqms">
+        <sql dbms="postgresql"><![CDATA[
+            CREATE TABLE IF NOT EXISTS product_specifications (
+                id BIGSERIAL PRIMARY KEY,
+                product_id BIGINT NOT NULL REFERENCES products(id),
+                organization_id BIGINT,
+                specification_reference VARCHAR(160) NOT NULL,
+                document_id BIGINT,
+                document_name VARCHAR(400),
+                revision VARCHAR(40),
+                effective_date DATE,
+                review_date DATE,
+                test_parameters TEXT,
+                acceptance_criteria TEXT,
+                storage_conditions TEXT,
+                shelf_life VARCHAR(120),
+                packaging_requirements TEXT,
+                labeling_requirements TEXT,
+                status VARCHAR(40) NOT NULL DEFAULT 'DRAFT',
+                version INT NOT NULL DEFAULT 0,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                created_by BIGINT,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                updated_by BIGINT,
+                deleted_at TIMESTAMPTZ
+            );
+
+            CREATE TABLE IF NOT EXISTS product_material_components (
+                id BIGSERIAL PRIMARY KEY,
+                product_id BIGINT NOT NULL REFERENCES products(id),
+                organization_id BIGINT,
+                material_id BIGINT,
+                material_code VARCHAR(80),
+                material_name VARCHAR(240) NOT NULL,
+                quantity_ratio VARCHAR(120),
+                uom VARCHAR(40),
+                approved_supplier_required BOOLEAN NOT NULL DEFAULT false,
+                material_criticality VARCHAR(30),
+                status VARCHAR(40) NOT NULL DEFAULT 'ACTIVE',
+                notes TEXT,
+                version INT NOT NULL DEFAULT 0,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                created_by BIGINT,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                updated_by BIGINT,
+                deleted_at TIMESTAMPTZ
+            );
+
+            CREATE TABLE IF NOT EXISTS product_process_info (
+                id BIGSERIAL PRIMARY KEY,
+                product_id BIGINT NOT NULL REFERENCES products(id),
+                organization_id BIGINT,
+                process_name VARCHAR(240) NOT NULL,
+                process_owner VARCHAR(180),
+                site_department VARCHAR(180),
+                related_sops TEXT,
+                equipment_required TEXT,
+                environmental_conditions TEXT,
+                in_process_controls TEXT,
+                process_parameters TEXT,
+                validation_required BOOLEAN NOT NULL DEFAULT false,
+                notes TEXT,
+                version INT NOT NULL DEFAULT 0,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                created_by BIGINT,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                updated_by BIGINT,
+                deleted_at TIMESTAMPTZ
+            );
+
+            CREATE TABLE IF NOT EXISTS product_qc_requirements (
+                id BIGSERIAL PRIMARY KEY,
+                product_id BIGINT NOT NULL REFERENCES products(id),
+                organization_id BIGINT,
+                qc_testing_required BOOLEAN NOT NULL DEFAULT false,
+                test_methods TEXT,
+                acceptance_criteria TEXT,
+                sampling_requirements TEXT,
+                release_approval_required BOOLEAN NOT NULL DEFAULT true,
+                qa_release_role VARCHAR(160),
+                coa_required BOOLEAN NOT NULL DEFAULT false,
+                batch_review_required BOOLEAN NOT NULL DEFAULT true,
+                version INT NOT NULL DEFAULT 0,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                created_by BIGINT,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                updated_by BIGINT,
+                deleted_at TIMESTAMPTZ
+            );
+
+            CREATE TABLE IF NOT EXISTS product_documents (
+                id BIGSERIAL PRIMARY KEY,
+                product_id BIGINT NOT NULL REFERENCES products(id),
+                organization_id BIGINT,
+                document_type VARCHAR(80) NOT NULL,
+                document_name VARCHAR(400) NOT NULL,
+                document_version VARCHAR(80),
+                status VARCHAR(40) NOT NULL DEFAULT 'DRAFT',
+                effective_date DATE,
+                review_date DATE,
+                linked_document_id BIGINT,
+                verified_by BIGINT,
+                notes TEXT,
+                version INT NOT NULL DEFAULT 0,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                created_by BIGINT,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                updated_by BIGINT,
+                deleted_at TIMESTAMPTZ
+            );
+
+            CREATE TABLE IF NOT EXISTS product_quality_issue_links (
+                id BIGSERIAL PRIMARY KEY,
+                product_id BIGINT NOT NULL REFERENCES products(id),
+                organization_id BIGINT,
+                record_type VARCHAR(60) NOT NULL,
+                record_id BIGINT,
+                reference_number VARCHAR(120) NOT NULL,
+                title TEXT NOT NULL,
+                severity VARCHAR(40),
+                status VARCHAR(60),
+                owner VARCHAR(180),
+                due_date DATE,
+                notes TEXT,
+                version INT NOT NULL DEFAULT 0,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                created_by BIGINT,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                updated_by BIGINT,
+                deleted_at TIMESTAMPTZ
+            );
+
+            CREATE TABLE IF NOT EXISTS product_risk_links (
+                id BIGSERIAL PRIMARY KEY,
+                product_id BIGINT NOT NULL REFERENCES products(id),
+                organization_id BIGINT,
+                risk_reference VARCHAR(120) NOT NULL,
+                risk_level VARCHAR(40),
+                risk_owner VARCHAR(180),
+                inherent_risk TEXT,
+                controls TEXT,
+                residual_risk TEXT,
+                review_date DATE,
+                status VARCHAR(40) NOT NULL DEFAULT 'OPEN',
+                version INT NOT NULL DEFAULT 0,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                created_by BIGINT,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                updated_by BIGINT,
+                deleted_at TIMESTAMPTZ
+            );
+
+            CREATE TABLE IF NOT EXISTS product_change_control_links (
+                id BIGSERIAL PRIMARY KEY,
+                product_id BIGINT NOT NULL REFERENCES products(id),
+                organization_id BIGINT,
+                change_type VARCHAR(100) NOT NULL,
+                reference_number VARCHAR(120) NOT NULL,
+                title TEXT NOT NULL,
+                status VARCHAR(60),
+                owner VARCHAR(180),
+                due_date DATE,
+                notes TEXT,
+                version INT NOT NULL DEFAULT 0,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                created_by BIGINT,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                updated_by BIGINT,
+                deleted_at TIMESTAMPTZ
+            );
+
+            CREATE TABLE IF NOT EXISTS product_approval_history (
+                id BIGSERIAL PRIMARY KEY,
+                product_id BIGINT NOT NULL REFERENCES products(id),
+                organization_id BIGINT,
+                action VARCHAR(60) NOT NULL,
+                from_status VARCHAR(60),
+                to_status VARCHAR(60),
+                actor_id BIGINT,
+                actor_name VARCHAR(240),
+                comment TEXT,
+                action_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            );
+
+            CREATE INDEX IF NOT EXISTS ix_product_specs_product ON product_specifications(product_id);
+            CREATE INDEX IF NOT EXISTS ix_product_materials_product ON product_material_components(product_id);
+            CREATE INDEX IF NOT EXISTS ix_product_process_product ON product_process_info(product_id);
+            CREATE INDEX IF NOT EXISTS ix_product_qc_product ON product_qc_requirements(product_id);
+            CREATE INDEX IF NOT EXISTS ix_product_docs_product ON product_documents(product_id);
+            CREATE INDEX IF NOT EXISTS ix_product_quality_product ON product_quality_issue_links(product_id);
+            CREATE INDEX IF NOT EXISTS ix_product_risks_product ON product_risk_links(product_id);
+            CREATE INDEX IF NOT EXISTS ix_product_changes_product ON product_change_control_links(product_id);
+            CREATE INDEX IF NOT EXISTS ix_product_history_product ON product_approval_history(product_id);
+        ]]></sql>
+    </changeSet>
+
+    <changeSet id="v042-003-product-permissions-depth" author="eqms">
+        <sql dbms="postgresql"><![CDATA[
+            INSERT INTO permissions (code, description, version, created_at, updated_at) VALUES
+              ('PRODUCT_VIEW', 'View product master data', 0, now(), now()),
+              ('PRODUCT_SUBMIT', 'Submit product records for review', 0, now(), now()),
+              ('PRODUCT_REVIEW', 'Review product records', 0, now(), now()),
+              ('PRODUCT_REVISE', 'Create product revisions', 0, now(), now()),
+              ('PRODUCT_ARCHIVE', 'Archive or obsolete products', 0, now(), now()),
+              ('PRODUCT_DOCUMENTS_MANAGE', 'Manage product document links', 0, now(), now()),
+              ('PRODUCT_MATERIALS_MANAGE', 'Manage product materials/components', 0, now(), now()),
+              ('PRODUCT_QUALITY_LINKS_MANAGE', 'Manage product quality links', 0, now(), now()),
+              ('PRODUCT_TRACEABILITY_VIEW', 'View product traceability', 0, now(), now()),
+              ('PRODUCT_AUDIT_TRAIL_VIEW', 'View product audit trail', 0, now(), now())
+            ON CONFLICT (code) DO NOTHING;
+
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r CROSS JOIN permissions p
+            WHERE r.name = 'ADMIN'
+              AND p.code LIKE 'PRODUCT_%'
+              AND NOT EXISTS (
+                SELECT 1 FROM role_permissions rp WHERE rp.role_id = r.id AND rp.permission_id = p.id
+              );
+
+            INSERT INTO role_permissions (role_id, permission_id, version, created_at, updated_at)
+            SELECT r.id, p.id, 0, now(), now()
+            FROM roles r JOIN permissions p ON p.code IN (
+                'PRODUCT_VIEW','PRODUCT_APPROVE','PRODUCT_REVIEW','PRODUCT_REVISE','PRODUCT_ARCHIVE',
+                'PRODUCT_DOCUMENTS_MANAGE','PRODUCT_QUALITY_LINKS_MANAGE','PRODUCT_TRACEABILITY_VIEW','PRODUCT_AUDIT_TRAIL_VIEW'
+            )
+            WHERE r.name = 'QA_MANAGER'
+              AND NOT EXISTS (
+                SELECT 1 FROM role_permissions rp WHERE rp.role_id = r.id AND rp.permission_id = p.id
+              );
+        ]]></sql>
+    </changeSet>
+</databaseChangeLog>

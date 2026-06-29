@@ -8,6 +8,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -135,11 +138,33 @@ class ChangeControlIntegrationTest extends AbstractIntegrationTest {
     private JsonNode create(Ctx ctx) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/change-controls").session(ctx.session)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(json(new CreateChangeControlRequest("Process change", ChangeType.MAJOR,
+                        .content(json(changeRequest("Process change", ChangeType.MAJOR,
                                 "Description of the change", "Justification", true, null))))
                 .andExpect(status().isCreated())
                 .andReturn();
         return objectMapper.readTree(result.getResponse().getContentAsString());
+    }
+
+    private Map<String, Object> changeRequest(String title, ChangeType type, String description,
+                                              String justification, boolean effectivenessCheckRequired,
+                                              Instant targetImplementationDate) {
+        Map<String, Object> request = new LinkedHashMap<>();
+        request.put("title", title);
+        request.put("type", type);
+        request.put("description", description);
+        request.put("currentStatusBrief", "Current process");
+        request.put("proposedChangeBrief", "Proposed process change");
+        request.put("justification", justification);
+        request.put("effectivenessCheckRequired", effectivenessCheckRequired);
+        request.put("targetImplementationDate", targetImplementationDate);
+        request.put("impactTasks", List.of(Map.of(
+                        "checkpointNo", 1,
+                        "impactArea", "Quality",
+                        "applicability", "Applicable",
+                        "proposedTask", "Assess affected documents and training",
+                        "taskAssignee", "QA",
+                        "remarks", "Required before approval")));
+        return request;
     }
 
     private int action(Ctx ctx, long id, String action, int expectedVersion, String expectedStatus) throws Exception {

@@ -21,9 +21,9 @@ describe("EquipmentStatusBadge", () => {
 
 describe("OosStatusBadge", () => {
   const cases: Array<[OosStatus, string, string]> = [
-    ["REPORTED", "Reported", "bg-muted"],
+    ["REPORTED", "Reported", "bg-accent"],
     ["AWAITING_REPEAT", "Awaiting Repeat", "bg-warning/20"],
-    ["INVESTIGATING", "Investigating", "bg-brand-light"],
+    ["INVESTIGATING", "Investigating", "bg-warning/20"],
     ["DISPOSITION_DETERMINED", "Disposition Determined", "bg-success/15"],
     ["CLOSED", "Closed", "bg-success"],
   ];

@@ -6,6 +6,7 @@ import {
   Building2,
   KeyRound,
   LogOut,
+  Network,
   RefreshCw,
   Save,
   Settings as SettingsIcon,
@@ -194,6 +195,12 @@ export default function SettingsPage() {
                   <Link href="/settings/organization">
                     <Building2 className="h-4 w-4" />
                     Open organization settings
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" className="mt-2 w-full justify-start">
+                  <Link href="/settings/processes">
+                    <Network className="h-4 w-4" />
+                    Open process register
                   </Link>
                 </Button>
               </CardContent>

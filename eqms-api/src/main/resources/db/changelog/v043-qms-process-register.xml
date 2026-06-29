@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <changeSet id="v043-001-qms-processes" author="eqms">
+        <createTable tableName="qms_processes">
+            <column name="id" type="BIGSERIAL">
+                <constraints primaryKey="true" primaryKeyName="pk_qms_processes" nullable="false"/>
+            </column>
+            <column name="organization_id" type="BIGINT"/>
+            <column name="process_code" type="VARCHAR(40)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uk_qms_processes_code"/>
+            </column>
+            <column name="name" type="VARCHAR(240)"><constraints nullable="false"/></column>
+            <column name="process_owner_id" type="BIGINT"/>
+            <column name="department" type="VARCHAR(160)"/>
+            <column name="purpose" type="TEXT"/>
+            <column name="inputs" type="TEXT"/>
+            <column name="outputs" type="TEXT"/>
+            <column name="kpis" type="TEXT"/>
+            <column name="linked_documents" type="TEXT"/>
+            <column name="linked_risks" type="TEXT"/>
+            <column name="linked_training" type="TEXT"/>
+            <column name="records_generated" type="TEXT"/>
+            <column name="review_frequency_months" type="INT" defaultValueNumeric="12"><constraints nullable="false"/></column>
+            <column name="next_review_date" type="DATE"/>
+            <column name="status" type="VARCHAR(40)" defaultValue="DRAFT"><constraints nullable="false"/></column>
+            <column name="version" type="INT" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="created_at" type="TIMESTAMPTZ" defaultValueComputed="now()"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMPTZ" defaultValueComputed="now()"><constraints nullable="false"/></column>
+            <column name="updated_by" type="BIGINT"/>
+            <column name="deleted_at" type="TIMESTAMPTZ"/>
+        </createTable>
+        <createIndex tableName="qms_processes" indexName="idx_qms_processes_org_status">
+            <column name="organization_id"/>
+            <column name="status"/>
+        </createIndex>
+        <addForeignKeyConstraint baseTableName="qms_processes" baseColumnNames="organization_id"
+                                 referencedTableName="organizations" referencedColumnNames="id"
+                                 constraintName="fk_qms_processes_org"/>
+    </changeSet>
+</databaseChangeLog>

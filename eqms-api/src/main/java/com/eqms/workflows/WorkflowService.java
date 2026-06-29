@@ -9,6 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.eqms.attachments.AttachmentRepository;
 import com.eqms.audit.AuditEntryRequest;
 import com.eqms.audit.AuditService;
+import com.eqms.common.IsoReadinessService;
+import com.eqms.common.dto.IsoReadinessResponse;
 import com.eqms.shared.constants.AuditAction;
 
 /**
@@ -33,12 +35,15 @@ public class WorkflowService {
     private final AuditService auditService;
     private final AttachmentRepository attachmentRepository;
     private final com.eqms.signatures.SignatureService signatureService;
+    private final IsoReadinessService isoReadinessService;
 
     public WorkflowService(AuditService auditService, AttachmentRepository attachmentRepository,
-                           com.eqms.signatures.SignatureService signatureService) {
+                           com.eqms.signatures.SignatureService signatureService,
+                           IsoReadinessService isoReadinessService) {
         this.auditService = auditService;
         this.attachmentRepository = attachmentRepository;
         this.signatureService = signatureService;
+        this.isoReadinessService = isoReadinessService;
     }
 
     @Transactional
@@ -91,6 +96,8 @@ public class WorkflowService {
             }
         }
 
+        enforceIsoReadinessForControlledTransition(entity, transition);
+
         // Apply + audit in the same transaction — rule 1
         String fromStatus = entity.getStatus();
         entity.setStatus(transition.toStatus());
@@ -115,5 +122,38 @@ public class WorkflowService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return authentication != null && authentication.getAuthorities().stream()
                 .anyMatch(granted -> granted.getAuthority().equals(authority));
+    }
+
+    private void enforceIsoReadinessForControlledTransition(WorkflowAware entity, WorkflowTransition transition) {
+        if (!requiresIsoGate(transition)) {
+            return;
+        }
+        if (!isoReadinessService.supports(entity.getRecordType())) {
+            return;
+        }
+        IsoReadinessResponse readiness = isoReadinessService.readiness(entity.getRecordType(), String.valueOf(entity.getId()));
+        if (!readiness.ready()) {
+            throw new WorkflowException(entity.getRecordType() + " " + entity.getId()
+                    + " is not ISO-ready for " + transition.action() + ": "
+                    + String.join("; ", readiness.blockingMessages()));
+        }
+    }
+
+    private boolean requiresIsoGate(WorkflowTransition transition) {
+        String action = transition.action().toUpperCase();
+        String toStatus = transition.toStatus().toUpperCase();
+        return transition.approval()
+                || transition.requiredSignature() != null
+                || action.contains("APPROVE")
+                || action.contains("CLOSE")
+                || action.contains("RELEASE")
+                || action.contains("FINALIZE")
+                || toStatus.equals("ACTIVE")
+                || toStatus.equals("APPROVED")
+                || toStatus.equals("EFFECTIVE")
+                || toStatus.equals("RELEASED")
+                || toStatus.equals("CLOSED")
+                || toStatus.equals("COMPLETED")
+                || toStatus.equals("FINALIZED");
     }
 }

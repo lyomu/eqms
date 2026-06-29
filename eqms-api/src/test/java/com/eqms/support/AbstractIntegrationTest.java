@@ -23,7 +23,10 @@ import org.springframework.test.context.TestPropertySource;
  */
 @SpringBootTest
 @ActiveProfiles("test")
-@TestPropertySource(properties = "eqms.security.csrf.enabled=false")
+@TestPropertySource(properties = {
+        "eqms.security.csrf.enabled=false",
+        "eqms.licensing.interceptor.enabled=false"
+})
 @Import(TestStorageConfig.class)
 public abstract class AbstractIntegrationTest {
 
